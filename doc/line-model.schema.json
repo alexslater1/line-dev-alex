@@ -1,0 +1,1123 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://line-solver.sourceforge.net/line-model.schema.json",
+  "title": "LINE Model",
+  "description": "Universal JSON format for declaring LINE queueing network models. Captures the initial model before solver invocation. Works across MATLAB, JAR/Kotlin, Python native, and Python wrapper codebases.",
+  "type": "object",
+  "properties": {
+    "format": { "const": "line-model" },
+    "version": { "type": "string", "pattern": "^\\d+\\.\\d+$" },
+    "import": {
+      "description": "Import model from an external file instead of inline declaration.",
+      "type": "object",
+      "required": ["format", "path"],
+      "properties": {
+        "format": { "enum": ["lqnx", "jmva", "jsimg", "line-model"] },
+        "path": { "type": "string", "description": "File path (absolute or relative to this file)" }
+      }
+    },
+    "model": {
+      "oneOf": [
+        { "$ref": "#/$defs/Network" },
+        { "$ref": "#/$defs/LayeredNetwork" },
+        { "$ref": "#/$defs/Environment" }
+      ]
+    }
+  },
+  "required": ["format", "version", "model"],
+
+  "$defs": {
+
+    "Network": {
+      "type": "object",
+      "required": ["type", "name", "nodes", "classes", "routing"],
+      "properties": {
+        "type": { "const": "Network" },
+        "name": { "type": "string" },
+        "nodes": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/Node" }
+        },
+        "classes": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/JobClass" }
+        },
+        "routing": { "$ref": "#/$defs/Routing" },
+        "initialState": { "$ref": "#/$defs/InitialState" },
+        "finiteCapacityRegions": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/FiniteCapacityRegion" }
+        },
+        "rewards": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/Reward" }
+        }
+      }
+    },
+
+    "Node": {
+      "type": "object",
+      "required": ["name", "type"],
+      "properties": {
+        "name": { "type": "string" },
+        "type": {
+          "enum": [
+            "Source", "Sink", "Queue", "Delay", "Fork", "Join",
+            "Router", "Cache", "ClassSwitch", "Place", "Transition",
+            "Logger"
+          ]
+        },
+        "scheduling": {
+          "description": "Scheduling strategy at the node.",
+          "enum": [
+            "FCFS", "LCFS", "LCFSPR", "PS", "DPS", "GPS", "GPSPRIO",
+            "PSPRIO", "HOL", "INF", "RAND", "SIRO",
+            "SEPT", "LEPT", "SJF", "LJF",
+            "FCFSPRIO", "EXT",
+            "POLLING", "FORK", "REF"
+          ]
+        },
+        "servers": {
+          "description": "Number of servers (default 1, -1 for infinite).",
+          "type": "integer"
+        },
+        "buffer": {
+          "description": "Finite buffer capacity (omit or -1 for infinite).",
+          "type": "integer"
+        },
+        "classCap": {
+          "description": "Per-class buffer capacity: {className: capacity}.",
+          "type": "object",
+          "additionalProperties": { "type": "integer" }
+        },
+        "dropRule": {
+          "description": "Per-class drop rule: {className: rule}.",
+          "type": "object",
+          "additionalProperties": {
+            "enum": ["drop", "waitingQueue", "blockingAfterService", "retrial", "retrialWithLimit"]
+          }
+        },
+        "service": {
+          "description": "Per-class service/arrival distribution: {className: Distribution}.",
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/Distribution" }
+        },
+        "schedParams": {
+          "description": "Per-class scheduling parameters (DPS weights, GPS shares, priorities): {className: value}.",
+          "type": "object",
+          "additionalProperties": { "type": "number" }
+        },
+        "serverTypes": {
+          "description": "Heterogeneous server types for this node.",
+          "type": "array",
+          "items": { "$ref": "#/$defs/ServerType" }
+        },
+        "switchoverTimes": {
+          "description": "Class-to-class switchover times: [{from, to, distribution}].",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["from", "to", "distribution"],
+            "properties": {
+              "from": { "type": "string" },
+              "to": { "type": "string" },
+              "distribution": { "$ref": "#/$defs/Distribution" }
+            }
+          }
+        },
+        "pollingType": {
+          "description": "Polling strategy for POLLING scheduling.",
+          "enum": ["Exhaustive", "Gated", "KLimited"]
+        },
+        "pollingLimit": {
+          "description": "K-limit for KLimited polling.",
+          "type": "integer"
+        },
+        "loadDependence": {
+          "description": "Load-dependent scaling factor f(n) at this station.",
+          "$ref": "#/$defs/LoadDependence"
+        },
+        "heteroSchedPolicy": {
+          "description": "Heterogeneous server scheduling policy.",
+          "enum": ["ORDER", "ALIS", "ALFS", "FAIRNESS", "FSF", "RAIS"]
+        },
+        "balking": {
+          "description": "Per-class balking configuration. Keys are class names.",
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "strategy": {
+                "description": "Balking strategy type.",
+                "enum": ["QUEUE_LENGTH", "EXPECTED_WAIT", "COMBINED"]
+              },
+              "thresholds": {
+                "description": "List of balking thresholds.",
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "minJobs": { "type": "integer" },
+                    "maxJobs": { "type": "integer", "description": "-1 for infinity" },
+                    "probability": { "type": "number", "minimum": 0, "maximum": 1 }
+                  },
+                  "required": ["minJobs", "maxJobs", "probability"]
+                }
+              }
+            },
+            "required": ["strategy", "thresholds"]
+          }
+        },
+        "retrial": {
+          "description": "Per-class retrial configuration. Keys are class names.",
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "delay": {
+                "description": "Retrial delay distribution.",
+                "$ref": "#/$defs/Distribution"
+              },
+              "maxAttempts": {
+                "description": "Maximum retrial attempts (-1 = unlimited).",
+                "type": "integer"
+              }
+            },
+            "required": ["delay"]
+          }
+        },
+        "patience": {
+          "description": "Per-class patience (reneging) configuration. Keys are class names.",
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "distribution": {
+                "description": "Patience distribution.",
+                "$ref": "#/$defs/Distribution"
+              },
+              "impatienceType": {
+                "description": "Type of impatience.",
+                "enum": ["reneging", "balking", "retrial"]
+              }
+            },
+            "required": ["distribution"]
+          }
+        },
+        "classSwitchMatrix": {
+          "description": "For ClassSwitch nodes: explicit switching probability matrix. {fromClass: {toClass: probability}}.",
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": { "type": "number" }
+          }
+        },
+        "forkType": {
+          "description": "Fork type.",
+          "enum": ["Standard"]
+        },
+        "joinStrategy": {
+          "description": "Join strategy.",
+          "enum": ["STD", "PARTIAL", "QUORUM", "GUARD"]
+        },
+        "joinQuorum": {
+          "description": "Quorum count for QUORUM join.",
+          "type": "integer"
+        },
+        "cache": {
+          "description": "Cache configuration for Cache nodes.",
+          "$ref": "#/$defs/CacheConfig"
+        },
+        "modes": {
+          "description": "For Transition (SPN) nodes: firing modes.",
+          "type": "array",
+          "items": { "$ref": "#/$defs/TransitionMode" }
+        },
+        "numberOfTokens": {
+          "description": "For Place (SPN) nodes: initial token count.",
+          "type": "integer"
+        }
+      }
+    },
+
+    "ServerType": {
+      "type": "object",
+      "required": ["name", "count"],
+      "properties": {
+        "name": { "type": "string" },
+        "count": { "type": "integer" },
+        "compatibleClasses": {
+          "description": "List of class names this server type can serve.",
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "service": {
+          "description": "Per-class service distribution for this server type: {className: Distribution}.",
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/Distribution" }
+        }
+      }
+    },
+
+    "CacheConfig": {
+      "type": "object",
+      "required": ["items", "capacity", "replacement"],
+      "properties": {
+        "items": {
+          "description": "Total number of items.",
+          "type": "integer"
+        },
+        "capacity": {
+          "description": "Cache capacity per list level.",
+          "oneOf": [
+            { "type": "integer" },
+            { "type": "array", "items": { "type": "integer" } }
+          ]
+        },
+        "replacement": {
+          "description": "Replacement policy.",
+          "enum": ["LRU", "FIFO", "RR", "SFIFO"]
+        },
+        "hitClass": {
+          "description": "Hit class mapping: {inputClassName: outputClassName}.",
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        },
+        "missClass": {
+          "description": "Miss class mapping: {inputClassName: outputClassName}.",
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        },
+        "popularity": {
+          "description": "Per-class item popularity distributions: {className: Distribution}.",
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/Distribution" }
+        }
+      }
+    },
+
+    "TransitionMode": {
+      "description": "A firing mode for a Transition node in an SPN.",
+      "type": "object",
+      "required": ["name", "firingDistribution"],
+      "properties": {
+        "name": { "type": "string" },
+        "firingDistribution": { "$ref": "#/$defs/Distribution" },
+        "firingPriority": { "type": "integer" },
+        "firingWeight": { "type": "number" },
+        "enablingConditions": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/ArcCondition" }
+        },
+        "inhibitingConditions": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/ArcCondition" }
+        },
+        "firingOutcomes": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/ArcOutcome" }
+        }
+      }
+    },
+
+    "ArcCondition": {
+      "type": "object",
+      "required": ["place", "class"],
+      "properties": {
+        "place": { "type": "string", "description": "Name of the Place node." },
+        "class": { "type": "string", "description": "Name of the job class." },
+        "min": { "type": "integer", "description": "Minimum tokens required (default 1)." }
+      }
+    },
+
+    "ArcOutcome": {
+      "type": "object",
+      "required": ["place", "class", "delta"],
+      "properties": {
+        "place": { "type": "string", "description": "Name of the Place node." },
+        "class": { "type": "string", "description": "Name of the job class." },
+        "delta": { "type": "integer", "description": "Token change (+N to add, -N to remove)." }
+      }
+    },
+
+    "JobClass": {
+      "type": "object",
+      "required": ["name", "type"],
+      "properties": {
+        "name": { "type": "string" },
+        "type": {
+          "enum": ["Open", "Closed", "Signal"]
+        },
+        "population": {
+          "description": "For Closed classes: number of jobs.",
+          "type": "integer"
+        },
+        "refNode": {
+          "description": "Reference node name (Source for Open, home station for Closed/ClosedSignal).",
+          "type": "string"
+        },
+        "priority": {
+          "description": "Class priority (0=highest).",
+          "type": "integer"
+        },
+        "deadline": {
+          "description": "Class deadline (Inf = no deadline).",
+          "type": "number"
+        },
+        "signalType": {
+          "description": "For Signal classes: signal type.",
+          "enum": ["negative", "reply", "catastrophe"]
+        },
+        "openOrClosed": {
+          "description": "For Signal classes: whether the signal is open or closed.",
+          "enum": ["Open", "Closed"]
+        },
+        "targetClass": {
+          "description": "For Signal classes: name of the associated job class.",
+          "type": "string"
+        },
+        "removalDistribution": {
+          "description": "For Signal classes: distribution for batch removal count.",
+          "$ref": "#/$defs/Distribution"
+        },
+        "removalPolicy": {
+          "description": "For Signal classes: policy for selecting jobs to remove.",
+          "enum": ["random", "fcfs", "lcfs"]
+        }
+      }
+    },
+
+    "Routing": {
+      "description": "Routing specification. Supports probability matrix, link-based, or state-dependent routing.",
+      "oneOf": [
+        { "$ref": "#/$defs/RoutingMatrix" },
+        { "$ref": "#/$defs/LinkRouting" }
+      ]
+    },
+
+    "RoutingMatrix": {
+      "description": "Class-switching routing probability matrix P{r,s}(i,j).",
+      "type": "object",
+      "required": ["type", "matrix"],
+      "properties": {
+        "type": { "const": "matrix" },
+        "matrix": {
+          "description": "Routing probabilities. Keys: 'fromClass,toClass', values: {fromNode: {toNode: probability}}.",
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "object",
+              "additionalProperties": { "type": "number" }
+            }
+          }
+        }
+      }
+    },
+
+    "LinkRouting": {
+      "description": "Node-level routing strategy with optional links.",
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": { "const": "link" },
+        "links": {
+          "description": "Topology links between nodes.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["from", "to"],
+            "properties": {
+              "from": { "type": "string" },
+              "to": { "type": "string" }
+            }
+          }
+        },
+        "nodeStrategies": {
+          "description": "Per-node, per-class routing strategy overrides: {nodeName: {className: strategy}}.",
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": {
+              "enum": ["RAND", "RROBIN", "WRROBIN", "JSQ", "PROB", "DISABLED"]
+            }
+          }
+        },
+        "nodeWeights": {
+          "description": "Per-node, per-class, per-destination routing weights for PROB/WRROBIN: {nodeName: {className: {destNode: weight}}}.",
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "object",
+              "additionalProperties": { "type": "number" }
+            }
+          }
+        }
+      }
+    },
+
+    "LoadDependence": {
+      "description": "Load-dependent service rate scaling.",
+      "type": "object",
+      "properties": {
+        "type": {
+          "enum": ["loadDependent", "classDependent", "jointDependent"]
+        },
+        "scaling": {
+          "description": "For loadDependent: array of f(n) values indexed by n=1..N.",
+          "type": "array",
+          "items": { "type": "number" }
+        },
+        "classScaling": {
+          "description": "For classDependent: {className: [f(n) values]}.",
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": { "type": "number" }
+          }
+        },
+        "jointScaling": {
+          "description": "For jointDependent: array of {state: {className: count}, factor: number}.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["state", "factor"],
+            "properties": {
+              "state": {
+                "type": "object",
+                "additionalProperties": { "type": "integer" }
+              },
+              "factor": { "type": "number" }
+            }
+          }
+        },
+        "cutoffs": {
+          "description": "Per-class cutoffs for joint dependence: {className: value}.",
+          "type": "object",
+          "additionalProperties": { "type": "integer" }
+        }
+      }
+    },
+
+    "InitialState": {
+      "description": "Initial state specification for transient analysis.",
+      "type": "object",
+      "properties": {
+        "type": {
+          "enum": ["default", "marginal", "explicit"]
+        },
+        "marginals": {
+          "description": "For marginal: per-node marginal counts {nodeName: {className: count}}.",
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": { "type": "integer" }
+          }
+        },
+        "statePriors": {
+          "description": "Per-node state prior probability vectors: {nodeName: [probabilities]}.",
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": { "type": "number" }
+          }
+        }
+      }
+    },
+
+    "FiniteCapacityRegion": {
+      "description": "A finite capacity region grouping multiple stations.",
+      "type": "object",
+      "required": ["name", "stations"],
+      "properties": {
+        "name": { "type": "string" },
+        "stations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["node"],
+            "properties": {
+              "node": { "type": "string" },
+              "classCap": {
+                "type": "object",
+                "additionalProperties": { "type": "integer" }
+              },
+              "classWeight": {
+                "type": "object",
+                "additionalProperties": { "type": "number" }
+              },
+              "classSize": {
+                "type": "object",
+                "additionalProperties": { "type": "number" }
+              }
+            }
+          }
+        },
+        "globalMaxJobs": {
+          "description": "Maximum total jobs in the region.",
+          "type": "integer"
+        },
+        "globalMaxMemory": {
+          "description": "Maximum total memory in the region.",
+          "type": "integer"
+        },
+        "classMaxJobs": {
+          "description": "Per-class maximum jobs: {className: maxJobs}.",
+          "type": "object",
+          "additionalProperties": { "type": "integer" }
+        },
+        "classMaxMemory": {
+          "description": "Per-class maximum memory: {className: maxMemory}.",
+          "type": "object",
+          "additionalProperties": { "type": "integer" }
+        },
+        "dropRule": {
+          "description": "Per-class drop rule: {className: rule}.",
+          "type": "object",
+          "additionalProperties": {
+            "enum": ["drop", "waitingQueue", "blockingAfterService", "retrial", "retrialWithLimit"]
+          }
+        }
+      }
+    },
+
+    "Reward": {
+      "description": "Reward metric definition for CTMC analysis.",
+      "type": "object",
+      "required": ["name", "type", "node"],
+      "properties": {
+        "name": { "type": "string" },
+        "type": {
+          "enum": ["QLen", "Util", "Tput", "RespT", "ArvR", "Custom"]
+        },
+        "node": { "type": "string" },
+        "class": { "type": "string" },
+        "expression": {
+          "description": "Custom reward expression (for Custom type).",
+          "type": "string"
+        }
+      }
+    },
+
+    "Distribution": {
+      "description": "Probability distribution specification.",
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": {
+          "enum": [
+            "Exp", "Erlang", "HyperExp", "Coxian", "APH",
+            "Det", "Uniform", "Gamma", "Pareto", "Weibull",
+            "Lognormal", "Normal", "Beta",
+            "MAP", "MMPP2", "MMAP",
+            "PH", "Cox2",
+            "Disabled", "Immediate", "Replayer",
+            "Zipf", "DiscreteSampler", "Geometric", "Binomial", "Poisson",
+            "Bernoulli", "DiscreteUniform",
+            "Prior",
+            "Workflow",
+            "Expolynomial"
+          ]
+        },
+        "params": {
+          "description": "Direct parameterization (distribution-specific).",
+          "type": "object",
+          "additionalProperties": true
+        },
+        "fit": {
+          "description": "Fit factory specification — fits a distribution from summary statistics.",
+          "$ref": "#/$defs/FitSpec"
+        },
+        "rand": {
+          "description": "Generate random instance from this distribution family.",
+          "type": "object",
+          "properties": {
+            "seed": { "type": "integer" }
+          }
+        },
+        "map": {
+          "description": "For MAP/MMPP2/MMAP: matrix representations.",
+          "$ref": "#/$defs/MAPSpec"
+        },
+        "ph": {
+          "description": "For PH/APH/Coxian/Cox2: phase-type representation.",
+          "$ref": "#/$defs/PHSpec"
+        },
+        "replayer": {
+          "description": "For Replayer: trace file path.",
+          "type": "object",
+          "required": ["file"],
+          "properties": {
+            "file": { "type": "string" },
+            "format": { "enum": ["csv", "dlm"] }
+          }
+        },
+        "prior": {
+          "description": "For Prior: weighted set of alternative distributions for posterior/uncertainty analysis.",
+          "type": "object",
+          "required": ["alternatives", "probabilities"],
+          "properties": {
+            "alternatives": {
+              "type": "array",
+              "items": { "$ref": "#/$defs/Distribution" }
+            },
+            "probabilities": {
+              "type": "array",
+              "items": { "type": "number" }
+            }
+          }
+        },
+        "workflow": {
+          "description": "For Workflow: activity graph compiled to a PH distribution.",
+          "$ref": "#/$defs/WorkflowSpec"
+        },
+        "expolynomial": {
+          "description": "Expolynomial density specification: f(x) = Σ cᵢ · x^αᵢ · e^(-λᵢ·x)",
+          "type": "object",
+          "required": ["density", "eft", "lft"],
+          "properties": {
+            "density": { "type": "string", "description": "Density expression in Sirio format, e.g. '0.5 * x^2 * Exp[-0.3 x] + 0.2 * Exp[-1.0 x]'" },
+            "eft": { "type": "number", "description": "Earliest firing time (lower bound of support)" },
+            "lft": { "description": "Latest firing time (upper bound of support, use \"Inf\" for unbounded)", "oneOf": [{"type": "number"}, {"type": "string", "const": "Inf"}] }
+          }
+        }
+      }
+    },
+
+    "FitSpec": {
+      "description": "Fit a distribution from summary statistics.",
+      "type": "object",
+      "required": ["method"],
+      "properties": {
+        "method": {
+          "enum": ["fitMean", "fitMeanAndSCV", "fitMeanAndOrder", "fitCentral"]
+        },
+        "mean": { "type": "number" },
+        "scv": { "type": "number", "description": "Squared coefficient of variation." },
+        "order": { "type": "integer", "description": "Number of phases/stages." },
+        "moments": {
+          "description": "Central moments for fitCentral.",
+          "type": "array",
+          "items": { "type": "number" }
+        }
+      }
+    },
+
+    "PHSpec": {
+      "description": "Phase-type distribution matrices.",
+      "type": "object",
+      "required": ["alpha", "T"],
+      "properties": {
+        "alpha": {
+          "description": "Initial probability row vector.",
+          "type": "array",
+          "items": { "type": "number" }
+        },
+        "T": {
+          "description": "Sub-generator matrix (negative diagonal, non-negative off-diagonal).",
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": { "type": "number" }
+          }
+        }
+      }
+    },
+
+    "MAPSpec": {
+      "description": "Markovian Arrival Process (MAP) matrix specification.",
+      "type": "object",
+      "required": ["D0", "D1"],
+      "properties": {
+        "D0": {
+          "description": "Background transition matrix.",
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": { "type": "number" }
+          }
+        },
+        "D1": {
+          "description": "Arrival transition matrix (single class) or array of per-class matrices (MMAP).",
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "array",
+                "items": { "type": "number" }
+              }
+            },
+            {
+              "type": "array",
+              "items": {
+                "description": "Per-class D_k matrix.",
+                "type": "array",
+                "items": {
+                  "type": "array",
+                  "items": { "type": "number" }
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+
+    "WorkflowSpec": {
+      "description": "Workflow activity graph that compiles to a PH distribution.",
+      "type": "object",
+      "required": ["activities", "precedences"],
+      "properties": {
+        "activities": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "distribution"],
+            "properties": {
+              "name": { "type": "string" },
+              "distribution": { "$ref": "#/$defs/Distribution" }
+            }
+          }
+        },
+        "precedences": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/WorkflowPrecedence" }
+        }
+      }
+    },
+
+    "WorkflowPrecedence": {
+      "description": "Precedence relation between workflow activities.",
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": {
+          "enum": ["Serial", "AndFork", "AndJoin", "OrFork", "OrJoin", "Loop"]
+        },
+        "activities": {
+          "description": "Ordered list of activity names involved.",
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "probabilities": {
+          "description": "For OrFork: branch probabilities.",
+          "type": "array",
+          "items": { "type": "number" }
+        },
+        "loopCount": {
+          "description": "For Loop: mean number of iterations.",
+          "type": "number"
+        }
+      }
+    },
+
+    "LayeredNetwork": {
+      "type": "object",
+      "required": ["type", "name", "processors", "tasks", "entries", "activities"],
+      "properties": {
+        "type": { "const": "LayeredNetwork" },
+        "name": { "type": "string" },
+        "processors": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/LProcessor" }
+        },
+        "tasks": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/LTask" }
+        },
+        "entries": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/LEntry" }
+        },
+        "activities": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/LActivity" }
+        },
+        "precedences": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/LPrecedence" }
+        }
+      }
+    },
+
+    "LProcessor": {
+      "description": "LQN processor (host).",
+      "type": "object",
+      "required": ["name"],
+      "properties": {
+        "name": { "type": "string" },
+        "multiplicity": { "type": "integer", "description": "Number of processors (default 1)." },
+        "scheduling": {
+          "enum": ["FCFS", "PS", "INF", "HOL", "RAND"],
+          "description": "Processor scheduling (default INF)."
+        },
+        "quantum": {
+          "type": "number",
+          "description": "Scheduling quantum (time slice) for PS."
+        },
+        "speedFactor": {
+          "type": "number",
+          "description": "Processor speed factor (default 1.0)."
+        },
+        "replication": {
+          "type": "integer",
+          "description": "Number of replicas."
+        }
+      }
+    },
+
+    "LTask": {
+      "description": "LQN task.",
+      "type": "object",
+      "required": ["name", "processor"],
+      "properties": {
+        "name": { "type": "string" },
+        "processor": { "type": "string", "description": "Name of host processor." },
+        "multiplicity": { "type": "integer", "description": "Number of task threads/copies (default 1)." },
+        "scheduling": {
+          "enum": ["REF", "FCFS", "INF", "HOL", "POLL"],
+          "description": "Task scheduling strategy."
+        },
+        "thinkTime": {
+          "description": "Think time distribution (for REF tasks).",
+          "$ref": "#/$defs/Distribution"
+        },
+        "replication": {
+          "type": "integer",
+          "description": "Number of replicas."
+        },
+        "fanIn": {
+          "description": "Fan-in from tasks: {taskName: factor}.",
+          "type": "object",
+          "additionalProperties": { "type": "number" }
+        },
+        "fanOut": {
+          "description": "Fan-out to tasks: {taskName: factor}.",
+          "type": "object",
+          "additionalProperties": { "type": "number" }
+        },
+        "isFunction": {
+          "type": "boolean",
+          "description": "True if this is a FunctionTask."
+        },
+        "setupTime": {
+          "description": "Setup time distribution (FunctionTask).",
+          "$ref": "#/$defs/Distribution"
+        },
+        "delayOffTime": {
+          "description": "Delay-off time distribution (FunctionTask).",
+          "$ref": "#/$defs/Distribution"
+        },
+        "isCache": {
+          "type": "boolean",
+          "description": "True if this is a CacheTask."
+        },
+        "cacheConfig": {
+          "description": "Cache configuration (for CacheTask).",
+          "$ref": "#/$defs/LCacheConfig"
+        }
+      }
+    },
+
+    "LCacheConfig": {
+      "description": "CacheTask configuration in a LayeredNetwork.",
+      "type": "object",
+      "required": ["items", "capacity", "replacement"],
+      "properties": {
+        "items": { "type": "integer" },
+        "capacity": {
+          "oneOf": [
+            { "type": "integer" },
+            { "type": "array", "items": { "type": "integer" } }
+          ]
+        },
+        "replacement": {
+          "enum": ["LRU", "FIFO", "RR", "SFIFO"]
+        }
+      }
+    },
+
+    "LEntry": {
+      "description": "LQN entry.",
+      "type": "object",
+      "required": ["name", "task"],
+      "properties": {
+        "name": { "type": "string" },
+        "task": { "type": "string", "description": "Name of parent task." },
+        "isItemEntry": {
+          "type": "boolean",
+          "description": "True if this is an ItemEntry for a CacheTask."
+        },
+        "cardinality": {
+          "type": "integer",
+          "description": "Number of items for ItemEntry."
+        },
+        "popularity": {
+          "description": "Item popularity distribution for ItemEntry.",
+          "$ref": "#/$defs/Distribution"
+        },
+        "arrival": {
+          "description": "Open arrival distribution for this entry.",
+          "$ref": "#/$defs/Distribution"
+        }
+      }
+    },
+
+    "LActivity": {
+      "description": "LQN activity.",
+      "type": "object",
+      "required": ["name", "task"],
+      "properties": {
+        "name": { "type": "string" },
+        "task": { "type": "string", "description": "Name of parent task." },
+        "hostDemand": {
+          "description": "Host demand distribution.",
+          "$ref": "#/$defs/Distribution"
+        },
+        "boundTo": {
+          "type": "string",
+          "description": "Entry name this activity is bound to."
+        },
+        "repliesTo": {
+          "type": "string",
+          "description": "Entry name this activity replies to."
+        },
+        "synchCalls": {
+          "description": "Synchronous (blocking) calls to entries.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["entry"],
+            "properties": {
+              "entry": { "type": "string" },
+              "mean": {
+                "type": "number",
+                "description": "Mean number of calls (default 1).",
+                "default": 1
+              }
+            }
+          }
+        },
+        "asynchCalls": {
+          "description": "Asynchronous (non-blocking) calls to entries.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["entry"],
+            "properties": {
+              "entry": { "type": "string" },
+              "mean": {
+                "type": "number",
+                "description": "Mean number of calls (default 1).",
+                "default": 1
+              }
+            }
+          }
+        }
+      }
+    },
+
+    "LPrecedence": {
+      "description": "Activity precedence within a task.",
+      "type": "object",
+      "required": ["task", "type", "activities"],
+      "properties": {
+        "task": { "type": "string", "description": "Parent task name." },
+        "type": {
+          "enum": ["Serial", "AndFork", "AndJoin", "OrFork", "OrJoin", "Loop"]
+        },
+        "activities": {
+          "description": "Ordered list of activity names.",
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "probabilities": {
+          "description": "For OrFork/OrJoin: branch probabilities.",
+          "type": "array",
+          "items": { "type": "number" }
+        },
+        "loopCount": {
+          "description": "For Loop: mean number of iterations.",
+          "type": "number"
+        }
+      }
+    },
+
+    "Environment": {
+      "type": "object",
+      "required": ["type", "name", "stages"],
+      "properties": {
+        "type": { "const": "Environment" },
+        "name": { "type": "string" },
+        "stages": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/EnvStage" }
+        },
+        "transitions": {
+          "description": "Transition rates between stages.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["from", "to", "rate"],
+            "properties": {
+              "from": { "type": "string" },
+              "to": { "type": "string" },
+              "rate": { "type": "number" }
+            }
+          }
+        },
+        "resetPolicy": {
+          "description": "State reset policy on environment transition.",
+          "enum": ["clear", "keep"]
+        },
+        "nodeFailures": {
+          "description": "Convenience API for node failure/repair modeling. Creates a two-stage environment per failed node.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["node", "breakdownRate", "repairRate"],
+            "properties": {
+              "node": {
+                "type": "string",
+                "description": "Name of the node subject to failure."
+              },
+              "breakdownRate": {
+                "description": "Rate of node breakdown.",
+                "$ref": "#/$defs/Distribution"
+              },
+              "repairRate": {
+                "description": "Rate of node repair.",
+                "$ref": "#/$defs/Distribution"
+              },
+              "downService": {
+                "description": "Service distribution while node is down (optional; default Disabled).",
+                "$ref": "#/$defs/Distribution"
+              },
+              "breakdownResetPolicy": {
+                "description": "State reset policy on breakdown.",
+                "enum": ["clear", "keep"],
+                "default": "keep"
+              },
+              "repairResetPolicy": {
+                "description": "State reset policy on repair.",
+                "enum": ["clear", "keep"],
+                "default": "keep"
+              }
+            }
+          }
+        }
+      }
+    },
+
+    "EnvStage": {
+      "description": "One stage (environment state) containing an embedded Network model.",
+      "type": "object",
+      "required": ["name", "model"],
+      "properties": {
+        "name": { "type": "string" },
+        "model": { "$ref": "#/$defs/Network" }
+      }
+    }
+  }
+}

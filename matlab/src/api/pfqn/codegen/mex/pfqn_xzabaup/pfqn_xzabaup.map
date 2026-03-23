@@ -1,0 +1,16 @@
+MEX {
+	global:
+		mexFunction;
+		mexfilerequiredapiversion;
+		emlrtMexFcnProperties;
+		pfqn_xzabaup;
+		pfqn_xzabaup_initialize;
+		pfqn_xzabaup_terminate;
+		pfqn_xzabaup_atexit;
+		emlrt_marshallOut;
+		emxFree_real_T;
+		emxInit_real_T;
+		emxEnsureCapacity_real_T;
+	local:
+		*;
+};

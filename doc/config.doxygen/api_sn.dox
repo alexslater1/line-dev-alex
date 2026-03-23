@@ -1,0 +1,710 @@
+/**
+@page api_sn Stochastic Network Utilities
+@brief Network analysis and transformation utilities
+
+Network analysis utilities for checking properties and computing derived metrics.
+
+@subsection stochastic_network_utilities_matlab_src_api_sn__list Function List
+
+- @ref sn_deaggregate_chain_results "sn_deaggregate_chain_results" - Deaggregates chain-level performance metrics to class-level metrics
+- @ref sn_get_arvr_from_tput "sn_get_arvr_from_tput" - Computes average arrival rates at stations from throughputs
+- @ref sn_get_demands_chain "sn_get_demands_chain" - Computes aggregated demand parameters per chain
+- @ref sn_get_node_arvr_from_tput "sn_get_node_arvr_from_tput" - Computes average arrival rates at nodes from station throughputs
+- @ref sn_get_node_tput_from_tput "sn_get_node_tput_from_tput" - Computes average throughputs at nodes from station throughputs
+- @ref sn_get_product_form_chain_params "sn_get_product_form_chain_params" - Extracts product-form parameters aggregated by chain
+- @ref sn_get_product_form_params "sn_get_product_form_params" - Extracts standard product-form parameters from the network structure
+- @ref sn_get_residt_from_respt "sn_get_residt_from_respt" - Computes residence times from response times
+- @ref sn_get_state_aggr "sn_get_state_aggr" - Returns the aggregated initial state of the network
+- @ref sn_has_class_switching "sn_has_class_switching" - Checks if the network has class switching
+- @ref sn_has_closed_classes "sn_has_closed_classes" - Checks if the network contains closed classes
+- @ref sn_has_dps "sn_has_dps" - Checks if the network uses Discriminatory Processor Sharing
+- @ref sn_has_dps_prio "sn_has_dps_prio" - Checks if the network uses DPS with priorities
+- @ref sn_has_fcfs "sn_has_fcfs" - Checks if the network has FCFS scheduling
+- @ref sn_has_fork_join "sn_has_fork_join" - Checks if the network contains fork-join nodes
+- @ref sn_has_fractional_populations "sn_has_fractional_populations" - Checks if the network has fractional population values
+- @ref sn_has_gps "sn_has_gps" - Checks if the network uses GPS scheduling
+- @ref sn_has_gps_prio "sn_has_gps_prio" - Checks if the network uses GPS with priorities
+- @ref sn_has_hol "sn_has_hol" - Checks if the network uses HOL scheduling
+- @ref sn_has_homogeneous_scheduling "sn_has_homogeneous_scheduling" - Checks if all stations use the same scheduling policy
+- @ref sn_has_inf "sn_has_inf" - Checks if the network has infinite server stations
+- @ref sn_has_lcfs "sn_has_lcfs" - Checks if the network uses LCFS scheduling
+- @ref sn_has_lcfs_pi "sn_has_lcfs_pi" - Checks if the network uses LCFS with preemptive-identical scheduling
+- @ref sn_has_lcfs_pr "sn_has_lcfs_pr" - Checks if the network uses LCFS with preemptive-resume scheduling
+- @ref sn_has_lept "sn_has_lept" - Checks if the network uses LEPT scheduling
+- @ref sn_has_ljf "sn_has_ljf" - Checks if the network uses LJF scheduling
+- @ref sn_has_load_dependence "sn_has_load_dependence" - Checks if the network has load-dependent service rates
+- @ref sn_has_mixed_classes "sn_has_mixed_classes" - Checks if the network has both open and closed classes
+- @ref sn_has_multi_chain "sn_has_multi_chain" - Checks if the network has multiple chains
+- @ref sn_has_multi_class_fcfs "sn_has_multi_class_fcfs" - Checks if the network has multi-class FCFS stations
+- @ref sn_has_multi_class_heter_exp_fcfs "sn_has_multi_class_heter_exp_fcfs" - Checks for multi-class FCFS with heterogeneous exponential service
+- @ref sn_has_multi_class_heter_fcfs "sn_has_multi_class_heter_fcfs" - Checks for multi-class FCFS with heterogeneous service
+- @ref sn_has_multi_class "sn_has_multi_class" - Checks if the network has multiple classes
+- @ref sn_has_multiple_closed_classes "sn_has_multiple_closed_classes" - Checks if the network has multiple closed classes
+- @ref sn_has_multi_server "sn_has_multi_server" - Checks if the network has multi-server stations
+- @ref sn_has_open_classes "sn_has_open_classes" - Checks if the network contains open classes
+- @ref sn_has_priorities "sn_has_priorities" - Checks if the network uses priority scheduling
+- @ref sn_has_product_form "sn_has_product_form" - Checks if the network has product-form solution
+- @ref sn_has_product_form_not_het_fcfs "sn_has_product_form_not_het_fcfs" - Checks for product-form excluding heterogeneous FCFS
+- @ref sn_has_ps "sn_has_ps" - Checks if the network uses PS scheduling
+- @ref sn_has_ps_prio "sn_has_ps_prio" - Checks if the network uses PS with priorities
+- @ref sn_has_sept "sn_has_sept" - Checks if the network uses SEPT scheduling
+- @ref sn_has_single_chain "sn_has_single_chain" - Checks if the network has a single chain
+- @ref sn_has_single_class "sn_has_single_class" - Checks if the network has a single class
+- @ref sn_has_siro "sn_has_siro" - Checks if the network uses SIRO scheduling
+- @ref sn_has_sjf "sn_has_sjf" - Checks if the network uses SJF scheduling
+- @ref sn_is_closed_model "sn_is_closed_model" - Checks if the network is a closed model
+- @ref sn_is_mixed_model "sn_is_mixed_model" - Checks if the network is a mixed model
+- @ref sn_is_open_model "sn_is_open_model" - Checks if the network is an open model
+- @ref sn_is_population_model "sn_is_population_model" - Checks if the network is defined by populations
+- @ref sn_is_state_valid "sn_is_state_valid" - Validates a network state
+- @ref sn_print "sn_print" - Prints comprehensive information about a NetworkStruct object
+- @ref sn_print_routing_matrix "sn_print_routing_matrix" - Prints the routing matrix of the network
+- @ref sn_refresh_visits "sn_refresh_visits" - Solves traffic equations to compute visit ratios
+- @ref sn_rtnodes_to_rtorig "sn_rtnodes_to_rtorig" - Converts node routing matrix to the original routing matrix format
+
+@anchor sn_deaggregate_chain_results
+### sn_deaggregate_chain_results
+  <b>Description:</b> Deaggregates chain-level performance metrics to class-level metrics
+
+  <b>Syntax:</b>
+  @code
+  [Q, U, R, T, C, X] = sn_deaggregate_chain_results(sn, Lchain, ST, STchain, Vchain, alpha, Qchain, Uchain, Rchain, Tchain, Cchain, Xchain)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>sn</td><td>Stochastic network structure</td></tr>
+  <tr><td>Lchain</td><td>Service demand per chain</td></tr>
+  <tr><td>ST</td><td>Service time matrix</td></tr>
+  <tr><td>STchain</td><td>Service time per chain</td></tr>
+  <tr><td>Vchain</td><td>Visit ratios per chain</td></tr>
+  <tr><td>alpha</td><td>Initial probability vector or shape parameter</td></tr>
+  <tr><td>Qchain</td><td>Queue length per chain</td></tr>
+  <tr><td>Uchain</td><td>Utilization per chain</td></tr>
+  <tr><td>Rchain</td><td>Response time per chain</td></tr>
+  <tr><td>Tchain</td><td>Response time per chain</td></tr>
+  <tr><td>Cchain</td><td>Cycle time per chain</td></tr>
+  <tr><td>Xchain</td><td>Throughput per chain</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>Q</td><td>Generator matrix or queue lengths</td></tr>
+  <tr><td>U</td><td>Utilization matrix</td></tr>
+  <tr><td>R</td><td>R matrix (QBD) or response times</td></tr>
+  <tr><td>T</td><td>Transient generator or service times</td></tr>
+  <tr><td>C</td><td>Coefficient matrix or cost</td></tr>
+  <tr><td>X</td><td>Throughput matrix</td></tr>
+  </table>
+
+@anchor sn_get_arvr_from_tput
+### sn_get_arvr_from_tput
+  <b>Description:</b> Computes average arrival rates at stations from throughputs
+
+  <b>Syntax:</b>
+  @code
+  sn_get_arvr_from_tput(...)
+  @endcode
+
+@anchor sn_get_demands_chain
+### sn_get_demands_chain
+  <b>Description:</b> Computes aggregated demand parameters per chain
+
+  <b>Syntax:</b>
+  @code
+  [Lchain, STchain, Vchain, alpha, Nchain, SCVchain, refstatchain] = sn_get_demands_chain(sn)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>sn</td><td>Stochastic network structure</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>Lchain</td><td>Service demand per chain</td></tr>
+  <tr><td>STchain</td><td>Service time per chain</td></tr>
+  <tr><td>Vchain</td><td>Visit ratios per chain</td></tr>
+  <tr><td>alpha</td><td>Initial probability vector (phase-type)</td></tr>
+  <tr><td>Nchain</td><td>Population per chain</td></tr>
+  <tr><td>SCVchain</td><td>Squared coefficient of variation per chain</td></tr>
+  <tr><td>refstatchain</td><td>Reference state per chain</td></tr>
+  </table>
+
+@anchor sn_get_node_arvr_from_tput
+### sn_get_node_arvr_from_tput
+  <b>Description:</b> Computes average arrival rates at nodes from station throughputs
+
+  <b>Syntax:</b>
+  @code
+  sn_get_node_arvr_from_tput(...)
+  @endcode
+
+@anchor sn_get_node_tput_from_tput
+### sn_get_node_tput_from_tput
+  <b>Description:</b> Computes average throughputs at nodes from station throughputs
+
+  <b>Syntax:</b>
+  @code
+  sn_get_node_tput_from_tput(...)
+  @endcode
+
+@anchor sn_get_product_form_chain_params
+### sn_get_product_form_chain_params
+  <b>Description:</b> Extracts product-form parameters aggregated by chain
+
+  <b>Syntax:</b>
+  @code
+  [lambda, D, N, Z, mu, S, V] = sn_get_product_form_chain_params(sn)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>sn</td><td>Stochastic network structure</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>lambda</td><td>Arrival rates or eigenvalues</td></tr>
+  <tr><td>D</td><td>Service demand matrix</td></tr>
+  <tr><td>N</td><td>Population vector or number of classes</td></tr>
+  <tr><td>Z</td><td>Think times or partition function</td></tr>
+  <tr><td>mu</td><td>Service rates or mean values</td></tr>
+  <tr><td>S</td><td>Service time or state probabilities</td></tr>
+  <tr><td>V</td><td>Visit ratios</td></tr>
+  </table>
+
+@anchor sn_get_product_form_params
+### sn_get_product_form_params
+  <b>Description:</b> Extracts standard product-form parameters from the network structure
+
+  <b>Syntax:</b>
+  @code
+  [lambda, D, N, Z, mu, S, V] = sn_get_product_form_params(sn)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>sn</td><td>Stochastic network structure</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>lambda</td><td>Arrival rates or eigenvalues</td></tr>
+  <tr><td>D</td><td>Service demand matrix</td></tr>
+  <tr><td>N</td><td>Population vector or number of classes</td></tr>
+  <tr><td>Z</td><td>Think times or partition function</td></tr>
+  <tr><td>mu</td><td>Service rates or mean values</td></tr>
+  <tr><td>S</td><td>Service time or state probabilities</td></tr>
+  <tr><td>V</td><td>Visit ratios</td></tr>
+  </table>
+
+@anchor sn_get_residt_from_respt
+### sn_get_residt_from_respt
+  <b>Description:</b> Computes residence times from response times
+
+  <b>Syntax:</b>
+  @code
+  sn_get_residt_from_respt(...)
+  @endcode
+
+@anchor sn_get_state_aggr
+### sn_get_state_aggr
+  <b>Description:</b> Returns the aggregated initial state of the network
+
+  <b>Syntax:</b>
+  @code
+  initialStateAggr = sn_get_state_aggr(sn)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>sn</td><td>Stochastic network structure</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>initialStateAggr</td><td>Initial state after aggregation</td></tr>
+  </table>
+
+@anchor sn_has_class_switching
+### sn_has_class_switching
+  <b>Description:</b> Checks if the network has class switching
+
+  <b>Syntax:</b>
+  @code
+  sn_has_class_switching(...)
+  @endcode
+
+@anchor sn_has_closed_classes
+### sn_has_closed_classes
+  <b>Description:</b> Checks if the network contains closed classes
+
+  <b>Syntax:</b>
+  @code
+  sn_has_closed_classes(...)
+  @endcode
+
+@anchor sn_has_dps
+### sn_has_dps
+  <b>Description:</b> Checks if the network uses Discriminatory Processor Sharing
+
+  <b>Syntax:</b>
+  @code
+  sn_has_dps(...)
+  @endcode
+
+@anchor sn_has_dps_prio
+### sn_has_dps_prio
+  <b>Description:</b> Checks if the network uses DPS with priorities
+
+  <b>Syntax:</b>
+  @code
+  sn_has_dps_prio(...)
+  @endcode
+
+@anchor sn_has_fcfs
+### sn_has_fcfs
+  <b>Description:</b> Checks if the network has FCFS scheduling
+
+  <b>Syntax:</b>
+  @code
+  sn_has_fcfs(...)
+  @endcode
+
+@anchor sn_has_fork_join
+### sn_has_fork_join
+  <b>Description:</b> Checks if the network contains fork-join nodes
+
+  <b>Syntax:</b>
+  @code
+  sn_has_fork_join(...)
+  @endcode
+
+@anchor sn_has_fractional_populations
+### sn_has_fractional_populations
+  <b>Description:</b> Checks if the network has fractional population values
+
+  <b>Syntax:</b>
+  @code
+  sn_has_fractional_populations(...)
+  @endcode
+
+@anchor sn_has_gps
+### sn_has_gps
+  <b>Description:</b> Checks if the network uses GPS scheduling
+
+  <b>Syntax:</b>
+  @code
+  sn_has_gps(...)
+  @endcode
+
+@anchor sn_has_gps_prio
+### sn_has_gps_prio
+  <b>Description:</b> Checks if the network uses GPS with priorities
+
+  <b>Syntax:</b>
+  @code
+  sn_has_gps_prio(...)
+  @endcode
+
+@anchor sn_has_hol
+### sn_has_hol
+  <b>Description:</b> Checks if the network uses HOL scheduling
+
+  <b>Syntax:</b>
+  @code
+  sn_has_hol(...)
+  @endcode
+
+@anchor sn_has_homogeneous_scheduling
+### sn_has_homogeneous_scheduling
+  <b>Description:</b> Checks if all stations use the same scheduling policy
+
+  <b>Syntax:</b>
+  @code
+  sn_has_homogeneous_scheduling(...)
+  @endcode
+
+@anchor sn_has_inf
+### sn_has_inf
+  <b>Description:</b> Checks if the network has infinite server stations
+
+  <b>Syntax:</b>
+  @code
+  sn_has_inf(...)
+  @endcode
+
+@anchor sn_has_lcfs
+### sn_has_lcfs
+  <b>Description:</b> Checks if the network uses LCFS scheduling
+
+  <b>Syntax:</b>
+  @code
+  sn_has_lcfs(...)
+  @endcode
+
+@anchor sn_has_lcfs_pi
+### sn_has_lcfs_pi
+  <b>Description:</b> Checks if the network uses LCFS with preemptive-identical scheduling
+
+  <b>Syntax:</b>
+  @code
+  sn_has_lcfs_pi(...)
+  @endcode
+
+@anchor sn_has_lcfs_pr
+### sn_has_lcfs_pr
+  <b>Description:</b> Checks if the network uses LCFS with preemptive-resume scheduling
+
+  <b>Syntax:</b>
+  @code
+  sn_has_lcfs_pr(...)
+  @endcode
+
+@anchor sn_has_lept
+### sn_has_lept
+  <b>Description:</b> Checks if the network uses LEPT scheduling
+
+  <b>Syntax:</b>
+  @code
+  sn_has_lept(...)
+  @endcode
+
+@anchor sn_has_ljf
+### sn_has_ljf
+  <b>Description:</b> Checks if the network uses LJF scheduling
+
+  <b>Syntax:</b>
+  @code
+  sn_has_ljf(...)
+  @endcode
+
+@anchor sn_has_load_dependence
+### sn_has_load_dependence
+  <b>Description:</b> Checks if the network has load-dependent service rates
+
+  <b>Syntax:</b>
+  @code
+  sn_has_load_dependence(...)
+  @endcode
+
+@anchor sn_has_mixed_classes
+### sn_has_mixed_classes
+  <b>Description:</b> Checks if the network has both open and closed classes
+
+  <b>Syntax:</b>
+  @code
+  sn_has_mixed_classes(...)
+  @endcode
+
+@anchor sn_has_multi_chain
+### sn_has_multi_chain
+  <b>Description:</b> Checks if the network has multiple chains
+
+  <b>Syntax:</b>
+  @code
+  sn_has_multi_chain(...)
+  @endcode
+
+@anchor sn_has_multi_class_fcfs
+### sn_has_multi_class_fcfs
+  <b>Description:</b> Checks if the network has multi-class FCFS stations
+
+  <b>Syntax:</b>
+  @code
+  sn_has_multi_class_fcfs(...)
+  @endcode
+
+@anchor sn_has_multi_class_heter_exp_fcfs
+### sn_has_multi_class_heter_exp_fcfs
+  <b>Description:</b> Checks for multi-class FCFS with heterogeneous exponential service
+
+  <b>Syntax:</b>
+  @code
+  sn_has_multi_class_heter_exp_fcfs(...)
+  @endcode
+
+@anchor sn_has_multi_class_heter_fcfs
+### sn_has_multi_class_heter_fcfs
+  <b>Description:</b> Checks for multi-class FCFS with heterogeneous service
+
+  <b>Syntax:</b>
+  @code
+  sn_has_multi_class_heter_fcfs(...)
+  @endcode
+
+@anchor sn_has_multi_class
+### sn_has_multi_class
+  <b>Description:</b> Checks if the network has multiple classes
+
+  <b>Syntax:</b>
+  @code
+  sn_has_multi_class(...)
+  @endcode
+
+@anchor sn_has_multiple_closed_classes
+### sn_has_multiple_closed_classes
+  <b>Description:</b> Checks if the network has multiple closed classes
+
+  <b>Syntax:</b>
+  @code
+  sn_has_multiple_closed_classes(...)
+  @endcode
+
+@anchor sn_has_multi_server
+### sn_has_multi_server
+  <b>Description:</b> Checks if the network has multi-server stations
+
+  <b>Syntax:</b>
+  @code
+  sn_has_multi_server(...)
+  @endcode
+
+@anchor sn_has_open_classes
+### sn_has_open_classes
+  <b>Description:</b> Checks if the network contains open classes
+
+  <b>Syntax:</b>
+  @code
+  sn_has_open_classes(...)
+  @endcode
+
+@anchor sn_has_priorities
+### sn_has_priorities
+  <b>Description:</b> Checks if the network uses priority scheduling
+
+  <b>Syntax:</b>
+  @code
+  sn_has_priorities(...)
+  @endcode
+
+@anchor sn_has_product_form
+### sn_has_product_form
+  <b>Description:</b> Checks if the network has product-form solution
+
+  <b>Syntax:</b>
+  @code
+  sn_has_product_form(...)
+  @endcode
+
+@anchor sn_has_product_form_not_het_fcfs
+### sn_has_product_form_not_het_fcfs
+  <b>Description:</b> Checks for product-form excluding heterogeneous FCFS
+
+  <b>Syntax:</b>
+  @code
+  sn_has_product_form_not_het_fcfs(...)
+  @endcode
+
+@anchor sn_has_ps
+### sn_has_ps
+  <b>Description:</b> Checks if the network uses PS scheduling
+
+  <b>Syntax:</b>
+  @code
+  sn_has_ps(...)
+  @endcode
+
+@anchor sn_has_ps_prio
+### sn_has_ps_prio
+  <b>Description:</b> Checks if the network uses PS with priorities
+
+  <b>Syntax:</b>
+  @code
+  sn_has_ps_prio(...)
+  @endcode
+
+@anchor sn_has_sept
+### sn_has_sept
+  <b>Description:</b> Checks if the network uses SEPT scheduling
+
+  <b>Syntax:</b>
+  @code
+  sn_has_sept(...)
+  @endcode
+
+@anchor sn_has_single_chain
+### sn_has_single_chain
+  <b>Description:</b> Checks if the network has a single chain
+
+  <b>Syntax:</b>
+  @code
+  sn_has_single_chain(...)
+  @endcode
+
+@anchor sn_has_single_class
+### sn_has_single_class
+  <b>Description:</b> Checks if the network has a single class
+
+  <b>Syntax:</b>
+  @code
+  sn_has_single_class(...)
+  @endcode
+
+@anchor sn_has_siro
+### sn_has_siro
+  <b>Description:</b> Checks if the network uses SIRO scheduling
+
+  <b>Syntax:</b>
+  @code
+  sn_has_siro(...)
+  @endcode
+
+@anchor sn_has_sjf
+### sn_has_sjf
+  <b>Description:</b> Checks if the network uses SJF scheduling
+
+  <b>Syntax:</b>
+  @code
+  sn_has_sjf(...)
+  @endcode
+
+@anchor sn_is_closed_model
+### sn_is_closed_model
+  <b>Description:</b> Checks if the network is a closed model
+
+  <b>Syntax:</b>
+  @code
+  sn_is_closed_model(...)
+  @endcode
+
+@anchor sn_is_mixed_model
+### sn_is_mixed_model
+  <b>Description:</b> Checks if the network is a mixed model
+
+  <b>Syntax:</b>
+  @code
+  sn_is_mixed_model(...)
+  @endcode
+
+@anchor sn_is_open_model
+### sn_is_open_model
+  <b>Description:</b> Checks if the network is an open model
+
+  <b>Syntax:</b>
+  @code
+  sn_is_open_model(...)
+  @endcode
+
+@anchor sn_is_population_model
+### sn_is_population_model
+  <b>Description:</b> Checks if the network is defined by populations
+
+  <b>Syntax:</b>
+  @code
+  sn_is_population_model(...)
+  @endcode
+
+@anchor sn_is_state_valid
+### sn_is_state_valid
+  <b>Description:</b> Validates a network state
+
+  <b>Syntax:</b>
+  @code
+  isvalid = sn_is_state_valid(sn)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>sn</td><td>Stochastic network structure</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>isvalid</td><td>Validation flag (boolean)</td></tr>
+  </table>
+
+@anchor sn_print
+### sn_print
+  <b>Description:</b> Prints comprehensive information about a NetworkStruct object
+
+  <b>Syntax:</b>
+  @code
+  function sn_print(sn)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>sn</td><td>Stochastic network structure</td></tr>
+  </table>
+
+@anchor sn_print_routing_matrix
+### sn_print_routing_matrix
+  <b>Description:</b> Prints the routing matrix of the network
+
+  <b>Syntax:</b>
+  @code
+  function sn_print_routing_matrix(sn, onlyclass)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>sn</td><td>Stochastic network structure</td></tr>
+  <tr><td>onlyclass</td><td>Restrict computation to specific class</td></tr>
+  </table>
+
+@anchor sn_refresh_visits
+### sn_refresh_visits
+  <b>Description:</b> Solves traffic equations to compute visit ratios
+
+  <b>Syntax:</b>
+  @code
+  [visits, nodevisits, sn] = sn_refresh_visits(sn, chains, rt, rtnodes)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>sn</td><td>Stochastic network structure</td></tr>
+  <tr><td>chains</td><td>Chain indices or chain structure</td></tr>
+  <tr><td>rt</td><td>Response time values</td></tr>
+  <tr><td>rtnodes</td><td>Routing nodes</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>visits</td><td>Visit counts or ratios</td></tr>
+  <tr><td>nodevisits</td><td>Visit counts per node</td></tr>
+  <tr><td>sn</td><td>Stochastic network structure</td></tr>
+  </table>
+
+@anchor sn_rtnodes_to_rtorig
+### sn_rtnodes_to_rtorig
+  <b>Description:</b> Converts node routing matrix to the original routing matrix format
+
+  <b>Syntax:</b>
+  @code
+  [rtorigcell, rtorig] = sn_rtnodes_to_rtorig(sn)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>sn</td><td>Stochastic network structure</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>rtorigcell</td><td>Original routing as cell array</td></tr>
+  <tr><td>rtorig</td><td>Original routing matrix</td></tr>
+  </table>
+
+*/
+*/

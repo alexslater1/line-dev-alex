@@ -1,0 +1,523 @@
+\documentclass[11pt]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[top=1in, bottom=1in, left=1in, right=1in]{geometry}
+\usepackage{graphicx,listings}
+\usepackage{textcomp}
+\usepackage{fancyhdr}
+\usepackage{xspace}
+\usepackage{url}
+\usepackage{times}
+\usepackage[dvipsnames]{xcolor}
+\usepackage[hidelinks]{hyperref}
+\urlstyle{sf}
+\hypersetup{
+    colorlinks,
+    linkcolor={blue},
+    citecolor={blue},
+    urlcolor={blue}
+}
+\usepackage{tcolorbox}
+\tcbuselibrary{most}
+\usepackage{tabularx}
+\usepackage{booktabs}
+\usepackage{array}
+
+% Header/footer
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\footnotesize LINE MCP Getting Started}
+\fancyhead[R]{\footnotesize\thepage}
+\fancyfoot[R]{\footnotesize{Last revision: \today{}}}
+\fancyfoot[C]{}
+\renewcommand{\footrulewidth}{0.4pt}
+
+% Python code style
+\lstdefinestyle{pythonstyle}{
+    language=Python,
+    basicstyle=\ttfamily\small,
+    keywordstyle=\color{NavyBlue}\bfseries,
+    stringstyle=\color{OliveGreen},
+    commentstyle=\color{gray}\itshape,
+    showstringspaces=false,
+    breaklines=true,
+    frame=single,
+    framesep=4pt,
+    backgroundcolor=\color{gray!5},
+    xleftmargin=4pt,
+    xrightmargin=4pt,
+    aboveskip=8pt,
+    belowskip=8pt,
+    tabsize=4,
+    columns=fullflexible,
+}
+
+% JSON code style
+\lstdefinestyle{jsonstyle}{
+    basicstyle=\ttfamily\small,
+    stringstyle=\color{OliveGreen},
+    showstringspaces=false,
+    breaklines=true,
+    frame=single,
+    framesep=4pt,
+    backgroundcolor=\color{gray!5},
+    xleftmargin=4pt,
+    xrightmargin=4pt,
+    aboveskip=8pt,
+    belowskip=8pt,
+    columns=fullflexible,
+    literate={:}{{\textcolor{black}{:}}}1
+             {,}{{\textcolor{black}{,}}}1
+             {\{}{{\textcolor{black}{\{}}}1
+             {\}}{{\textcolor{black}{\}}}}1
+             {[}{{\textcolor{black}{[}}}1
+             {]}{{\textcolor{black}{]}}}1,
+}
+
+% Shell style
+\lstdefinestyle{shellstyle}{
+    basicstyle=\ttfamily\small,
+    showstringspaces=false,
+    breaklines=true,
+    frame=single,
+    framesep=4pt,
+    backgroundcolor=\color{black!5},
+    xleftmargin=4pt,
+    xrightmargin=4pt,
+    aboveskip=8pt,
+    belowskip=8pt,
+    columns=fullflexible,
+}
+
+% Tool box
+\newtcolorbox{toolbox}[1]{
+    colback=blue!3,
+    colframe=blue!40,
+    fonttitle=\bfseries,
+    title=#1,
+    boxrule=0.5pt,
+    arc=2pt,
+    left=6pt,
+    right=6pt,
+    top=4pt,
+    bottom=4pt,
+}
+
+% Tip box
+\newtcolorbox{tipbox}{
+    colback=green!3,
+    colframe=green!40,
+    fonttitle=\bfseries,
+    title=Tip,
+    boxrule=0.5pt,
+    arc=2pt,
+    left=6pt,
+    right=6pt,
+    top=4pt,
+    bottom=4pt,
+}
+
+\title{\vspace{-1cm}\textbf{LINE MCP Server}\\[6pt]\Large Getting Started Guide}
+\author{LINE Development Team}
+\date{\today}
+
+\begin{document}
+\maketitle
+\thispagestyle{fancy}
+
+% ============================================================================
+\section{What is LINE MCP?}
+% ============================================================================
+
+LINE exposes its queueing analysis capabilities as a \textbf{Model Context Protocol (MCP)} server, allowing Large Language Models such as Claude to build, solve, and analyze queueing models conversationally. Instead of writing code manually, you describe your system in natural language and the LLM calls LINE tools to produce quantitative results.
+
+The MCP server provides 9 tools ranging from quick one-line analyses (no code required) to full custom model building via Python code execution.
+
+% ============================================================================
+\section{Setup}
+% ============================================================================
+
+\subsection{Installation}
+
+Install the LINE solver Python package:
+
+\begin{lstlisting}[style=shellstyle]
+pip install line-solver
+\end{lstlisting}
+
+Alternatively, clone the repository:
+
+\begin{lstlisting}[style=shellstyle]
+git clone https://github.com/imperial-qore/line-solver.git
+cd line-solver/python
+pip install -e .
+pip install mcp numpy pandas
+\end{lstlisting}
+
+\subsection{Claude Desktop Configuration}
+
+Add the following to your Claude Desktop configuration file (\texttt{claude\_desktop\_config.json}):
+
+\begin{lstlisting}[style=jsonstyle]
+{
+  "mcpServers": {
+    "line-solver": {
+      "command": "python",
+      "args": [
+        "/path/to/line-solver/python/mcp_server.py"
+      ]
+    }
+  }
+}
+\end{lstlisting}
+
+Replace \texttt{/path/to/line-solver} with the actual path to your LINE installation.
+
+\subsection{Claude Code Configuration}
+
+For Claude Code (CLI), add to your \texttt{.claude/settings.json}:
+
+\begin{lstlisting}[style=jsonstyle]
+{
+  "mcpServers": {
+    "line-solver": {
+      "command": "python",
+      "args": [
+        "/path/to/line-solver/python/mcp_server.py"
+      ]
+    }
+  }
+}
+\end{lstlisting}
+
+\begin{tipbox}
+Once configured, you can ask Claude questions like ``What is the average queue length for an M/M/1 queue with arrival rate 2 and service rate 3?'' and it will automatically use the LINE MCP tools to compute the answer.
+\end{tipbox}
+
+% ============================================================================
+\section{Quick-Start Tools}
+% ============================================================================
+
+These tools require no code---just provide parameter values.
+
+\subsection{\texttt{analyze\_queue} --- Open Queue Analysis}
+
+\begin{toolbox}{analyze\_queue}
+Builds and solves an M/M/k (or M/M/k/N) open queueing model.
+\vspace{4pt}
+
+\begin{tabularx}{\textwidth}{llX}
+\toprule
+\textbf{Parameter} & \textbf{Default} & \textbf{Description} \\
+\midrule
+\texttt{arrival\_rate} & (required) & Job arrival rate ($\lambda$) \\
+\texttt{service\_rate} & (required) & Service rate per server ($\mu$) \\
+\texttt{servers} & 1 & Number of servers ($k$) \\
+\texttt{queue\_capacity} & $-1$ & Total capacity ($-1$ = infinite) \\
+\texttt{scheduling} & FCFS & FCFS, PS, LCFS, or INF \\
+\texttt{solver} & MVA & MVA, CTMC, NC, SSA, FLD, or MAM \\
+\texttt{format} & text & Output format: \texttt{text} or \texttt{json} \\
+\bottomrule
+\end{tabularx}
+\end{toolbox}
+
+\noindent\textbf{Example prompt:} ``Analyze an M/M/1 queue with arrival rate 2 and service rate 5.''
+
+The LLM will call:
+\begin{lstlisting}[style=pythonstyle]
+analyze_queue(arrival_rate=2.0, service_rate=5.0)
+\end{lstlisting}
+
+\noindent\textbf{Example output:}
+\begin{lstlisting}[style=shellstyle]
+Model: M/M/1
+  arrival_rate (lambda) = 2.0
+  service_rate (mu)     = 5.0
+  servers (k)           = 1
+  utilization (rho)     = 0.400000
+  solver                = MVA
+
+  Station  Class  QLen   Tput  RespT  ResidT  ArvR  Util
+  Queue    Class1 0.667  2.0   0.333  0.333   2.0   0.4
+\end{lstlisting}
+
+\subsection{\texttt{analyze\_closed\_network} --- Closed Network Analysis}
+
+\begin{toolbox}{analyze\_closed\_network}
+Builds and solves a closed queueing network with a Delay (think time) and a Queue.
+\vspace{4pt}
+
+\begin{tabularx}{\textwidth}{llX}
+\toprule
+\textbf{Parameter} & \textbf{Default} & \textbf{Description} \\
+\midrule
+\texttt{population} & (required) & Number of circulating jobs ($N$) \\
+\texttt{think\_time} & (required) & Mean think time at Delay node ($Z$) \\
+\texttt{service\_rate} & (required) & Service rate per server ($\mu$) \\
+\texttt{servers} & 1 & Number of servers ($k$) \\
+\texttt{scheduling} & FCFS & FCFS, PS, LCFS, or INF \\
+\texttt{solver} & MVA & MVA, CTMC, NC, SSA, FLD, or MAM \\
+\texttt{format} & text & Output format: \texttt{text} or \texttt{json} \\
+\bottomrule
+\end{tabularx}
+\end{toolbox}
+
+\noindent\textbf{Example prompt:} ``Analyze a closed system with 10 users, 5 seconds think time, and service rate 2.''
+
+\begin{lstlisting}[style=pythonstyle]
+analyze_closed_network(population=10, think_time=5.0,
+                       service_rate=2.0)
+\end{lstlisting}
+
+\subsection{\texttt{sweep\_parameter} --- Parameter Sweep}
+
+\begin{toolbox}{sweep\_parameter}
+Sweeps one parameter over a range and collects performance metrics at each point.
+\vspace{4pt}
+
+\begin{tabularx}{\textwidth}{llX}
+\toprule
+\textbf{Parameter} & \textbf{Default} & \textbf{Description} \\
+\midrule
+\texttt{param} & (required) & Parameter to sweep (\texttt{arrival\_rate}, \texttt{service\_rate}, \texttt{servers}, \texttt{population}, \texttt{think\_time}) \\
+\texttt{values} & (required) & Comma-separated values or range notation (\texttt{start:stop:step}) \\
+\texttt{model\_type} & open & \texttt{open} or \texttt{closed} \\
+\multicolumn{3}{l}{\textit{Plus all base parameters from \texttt{analyze\_queue} / \texttt{analyze\_closed\_network}}} \\
+\bottomrule
+\end{tabularx}
+\end{toolbox}
+
+\noindent\textbf{Example prompt:} ``How does queue length change as arrival rate goes from 0.5 to 4.5 in steps of 0.5, with service rate 5?''
+
+\begin{lstlisting}[style=pythonstyle]
+sweep_parameter(param="arrival_rate",
+                values="0.5:4.5:0.5",
+                service_rate=5.0)
+\end{lstlisting}
+
+% ============================================================================
+\section{Building Custom Models}
+% ============================================================================
+
+The \texttt{solve\_line\_model} tool executes arbitrary LINE Python code in a sandboxed environment with \texttt{from line\_solver import *}, \texttt{numpy}, and \texttt{pandas} pre-loaded.
+
+\subsection{Open Network Example}
+
+\begin{lstlisting}[style=pythonstyle]
+model = Network('M/M/1')
+source = Source(model, 'Source')
+queue = Queue(model, 'Queue', SchedStrategy.FCFS)
+sink = Sink(model, 'Sink')
+
+oclass = OpenClass(model, 'Class1')
+source.setArrival(oclass, Exp(1.0))
+queue.setService(oclass, Exp(2.0))
+
+model.link(Network.serial_routing([source, queue, sink]))
+avg_table = MVA(model).avg_table()
+print(avg_table)
+\end{lstlisting}
+
+\subsection{Closed Network Example}
+
+\begin{lstlisting}[style=pythonstyle]
+model = Network('ClosedQN')
+delay = Delay(model, 'Think')
+queue = Queue(model, 'Queue', SchedStrategy.PS)
+
+cclass = ClosedClass(model, 'Users', 5, delay)
+delay.setService(cclass, Exp(1.0))
+queue.setService(cclass, Exp(3.0))
+
+model.link(Network.serial_routing([delay, queue]))
+avg_table = MVA(model).avg_table()
+print(avg_table)
+\end{lstlisting}
+
+\subsection{Multiclass Example}
+
+\begin{lstlisting}[style=pythonstyle]
+model = Network('Multiclass')
+source = Source(model, 'Source')
+queue = Queue(model, 'Queue', SchedStrategy.FCFS)
+sink = Sink(model, 'Sink')
+
+class1 = OpenClass(model, 'Web')
+class2 = OpenClass(model, 'API')
+
+source.setArrival(class1, Exp(1.0))
+source.setArrival(class2, Exp(0.5))
+queue.setService(class1, Exp(4.0))
+queue.setService(class2, Exp(3.0))
+
+model.link(Network.serial_routing([source, queue, sink]))
+avg_table = MVA(model).avg_table()
+print(avg_table)
+\end{lstlisting}
+
+\subsection{Persistent Sessions}
+
+Use \texttt{session\_id} to persist variables across multiple \texttt{solve\_line\_model} calls:
+
+\begin{lstlisting}[style=pythonstyle]
+# Call 1: Build model
+solve_line_model(code="...", session_id="my_session")
+
+# Call 2: Reuse model from previous call
+solve_line_model(
+    code="avg_table = NC(model).avg_table()\nprint(avg_table)",
+    session_id="my_session"
+)
+\end{lstlisting}
+
+% ============================================================================
+\section{Advanced Tools}
+% ============================================================================
+
+\subsection{\texttt{compare\_solvers} --- Multi-Solver Comparison}
+
+Runs the same model with multiple solvers and returns a merged results table.
+
+\begin{lstlisting}[style=pythonstyle]
+compare_solvers(
+    code="""
+model = Network('M/M/1')
+source = Source(model, 'Source')
+queue = Queue(model, 'Queue', SchedStrategy.FCFS)
+sink = Sink(model, 'Sink')
+oclass = OpenClass(model, 'Class1')
+source.setArrival(oclass, Exp(1.0))
+queue.setService(oclass, Exp(2.0))
+model.link(Network.serial_routing([source, queue, sink]))
+""",
+    solvers="MVA,NC,MAM"
+)
+\end{lstlisting}
+
+\subsection{\texttt{visualize\_model} --- Mermaid Diagrams}
+
+Generates a Mermaid graph definition from a queueing network model, showing nodes, connections, and class information.
+
+\begin{lstlisting}[style=pythonstyle]
+visualize_model(code="""
+model = Network('WebApp')
+source = Source(model, 'Arrivals')
+lb = Queue(model, 'LoadBalancer', SchedStrategy.PS)
+app = Queue(model, 'AppServer', SchedStrategy.FCFS)
+sink = Sink(model, 'Departures')
+oclass = OpenClass(model, 'Requests')
+source.setArrival(oclass, Exp(5.0))
+lb.setService(oclass, Exp(100.0))
+app.setService(oclass, Exp(10.0))
+P = model.initRoutingMatrix()
+P[oclass, source, lb] = 1.0
+P[oclass, lb, app] = 1.0
+P[oclass, app, sink] = 1.0
+model.link(P)
+""")
+\end{lstlisting}
+
+The output is a Mermaid diagram that can be rendered by any Mermaid-compatible tool (GitHub, Notion, Mermaid Live Editor, etc.).
+
+\subsection{\texttt{list\_examples} and \texttt{get\_example\_code}}
+
+Browse and retrieve source code from LINE's built-in example gallery:
+
+\begin{itemize}
+    \item \texttt{list\_examples()} --- returns a categorized list of available examples
+    \item \texttt{get\_example\_code(name)} --- returns the Python source code for a named example (e.g., \texttt{"gallery\_mm1"}, \texttt{"cqn\_multiserver"})
+\end{itemize}
+
+\noindent\textbf{Example prompt:} ``Show me the code for the multiclass open queueing network example.''
+
+\subsection{\texttt{clear\_session} --- Session Cleanup}
+
+Removes a persistent code session created with \texttt{session\_id}:
+
+\begin{lstlisting}[style=pythonstyle]
+clear_session(session_id="my_session")
+\end{lstlisting}
+
+% ============================================================================
+\section{Solver Reference}
+% ============================================================================
+
+\begin{table}[h]
+\centering
+\begin{tabularx}{\textwidth}{lX}
+\toprule
+\textbf{Solver} & \textbf{Best For} \\
+\midrule
+\textbf{MVA} & Product-form networks with exponential service (fast, exact) \\
+\textbf{NC} & Closed networks needing exact normalizing-constant analysis \\
+\textbf{CTMC} & Small state-space models; supports non-product-form features \\
+\textbf{MAM} & Phase-type / MAP service distributions (matrix analytic) \\
+\textbf{SSA} & Stochastic simulation; works for any supported model \\
+\textbf{FLD} & Fluid / ODE approximation for transient and large models \\
+\bottomrule
+\end{tabularx}
+\caption{LINE MCP solver guide}
+\end{table}
+
+All solvers are available through every MCP tool. The quick-start tools (\texttt{analyze\_queue}, \texttt{analyze\_closed\_network}) accept a \texttt{solver} parameter; for custom models via \texttt{solve\_line\_model}, instantiate the solver class directly (e.g., \texttt{MVA(model)}, \texttt{CTMC(model)}).
+
+% ============================================================================
+\section{Output Formats}
+% ============================================================================
+
+All analysis tools accept a \texttt{format} parameter:
+
+\begin{itemize}
+    \item \textbf{\texttt{text}} (default) --- Human-readable table output with model summary header.
+    \item \textbf{\texttt{json}} --- Structured JSON with \texttt{metadata} and \texttt{results} keys, suitable for programmatic consumption.
+\end{itemize}
+
+\noindent\textbf{JSON output example:}
+\begin{lstlisting}[style=jsonstyle]
+{
+  "metadata": {
+    "model": "M/M/1",
+    "arrival_rate": 2.0,
+    "service_rate": 5.0,
+    "utilization": 0.4,
+    "solver": "MVA"
+  },
+  "results": [
+    {
+      "Station": "Queue",
+      "Class": "Class1",
+      "QLen": 0.6667,
+      "Tput": 2.0,
+      "RespT": 0.3333,
+      "Util": 0.4
+    }
+  ]
+}
+\end{lstlisting}
+
+% ============================================================================
+\section{Tool Summary}
+% ============================================================================
+
+\begin{table}[h]
+\centering
+\begin{tabularx}{\textwidth}{lX}
+\toprule
+\textbf{Tool} & \textbf{Purpose} \\
+\midrule
+\texttt{analyze\_queue} & Quick M/M/k or M/M/k/N open-queue analysis (no code) \\
+\texttt{analyze\_closed\_network} & Quick closed-network analysis (no code) \\
+\texttt{sweep\_parameter} & Sweep one parameter over a range and collect metrics \\
+\texttt{solve\_line\_model} & Execute arbitrary LINE Python code (sandboxed) \\
+\texttt{compare\_solvers} & Run the same model with multiple solvers side-by-side \\
+\texttt{visualize\_model} & Generate a Mermaid diagram of a queueing network \\
+\texttt{list\_examples} & Browse available example models by category \\
+\texttt{get\_example\_code} & Retrieve source code of a named example \\
+\texttt{clear\_session} & Remove a persistent code session \\
+\bottomrule
+\end{tabularx}
+\caption{All LINE MCP tools}
+\end{table}
+
+\end{document}

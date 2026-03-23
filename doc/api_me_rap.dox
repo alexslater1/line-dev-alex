@@ -1,0 +1,534 @@
+/**
+@page api_me_rap Matrix Exponential and Rational Arrival Process Distributions
+@brief ME and RAP distribution classes for advanced queueing models
+
+These modules provide support for Matrix Exponential (ME) and Rational Arrival Process (RAP)
+distributions, which generalize phase-type and MAP distributions respectively.
+
+@section me_overview Matrix Exponential (ME) Distribution
+
+The Matrix Exponential distribution is a generalization of the phase-type (PH) distribution.
+It is parameterized by an initial vector \f$\alpha\f$ and a matrix \f$A\f$, where \f$\alpha\f$
+need not sum to 1 (unlike PH distributions).
+
+<b>Mathematical Definition:</b>
+
+The CDF is defined as:
+\f[
+F(t) = 1 - \alpha e^{At} \mathbf{e}
+\f]
+
+where \f$\mathbf{e}\f$ is a column vector of ones.
+
+<b>Properties:</b>
+- The initial vector \f$\alpha\f$ can have entries that sum to less than or greater than 1
+- All eigenvalues of \f$A\f$ must have negative real parts
+- The dominant eigenvalue (closest to zero) must be real
+- More general than PH distributions (every PH is an ME, but not vice versa)
+
+<b>Process Representation:</b>
+
+Internally, ME distributions are represented as a two-matrix process:
+- \f$D_0 = A\f$
+- \f$D_1 = -A \mathbf{e} \alpha\f$
+
+This allows compatibility with MAP-based algorithms for moment computation and analysis.
+
+@subsection me_constructors Constructors
+
+@subsubsection me_constructor_basic Basic Constructor
+
+<b>MATLAB:</b>
+@code
+me = ME(alpha, A)
+@endcode
+
+<b>Java:</b>
+@code
+ME me = new ME(alpha, A);
+@endcode
+
+<b>Python:</b>
+@code
+me = ME(alpha, A)  # alpha and A can be Python lists or numpy arrays
+@endcode
+
+<b>Parameters:</b>
+<table>
+<tr><th>Name</th><th>Type</th><th>Description</th></tr>
+<tr><td>alpha</td><td>Vector</td><td>Initial probability vector (possibly non-normalized)</td></tr>
+<tr><td>A</td><td>Matrix</td><td>Matrix parameter with negative eigenvalues</td></tr>
+</table>
+
+<b>Validation:</b> The constructor performs strict validation using BuTools CheckMERepresentation:
+- Verifies \f$\alpha\f$ and \f$A\f$ have compatible dimensions
+- Checks all eigenvalues of \f$A\f$ have negative real parts
+- Ensures the dominant eigenvalue is real
+
+@subsubsection me_factory_methods Factory Methods
+
+<b>ME.fromExp(rate)</b> - Create ME from exponential distribution
+
+<b>Syntax:</b>
+@code
+me = ME.fromExp(rate)  % MATLAB
+ME me = ME.fromExp(rate);  // Java
+me = ME.from_exp(rate)  # Python
+@endcode
+
+<b>ME.fromErlang(k, rate)</b> - Create ME from Erlang-k distribution
+
+<b>Syntax:</b>
+@code
+me = ME.fromErlang(k, rate)  % MATLAB
+ME me = ME.fromErlang(k, rate);  // Java
+me = ME.from_erlang(k, rate)  # Python
+@endcode
+
+<b>ME.fromHyperExp(p, rates)</b> - Create ME from hyper-exponential distribution
+
+<b>Syntax:</b>
+@code
+me = ME.fromHyperExp(p, rates)  % MATLAB
+ME me = ME.fromHyperExp(p, rates);  // Java
+me = ME.from_hyper_exp(p, rates)  # Python
+@endcode
+
+<b>ME.fitMoments(moments)</b> - Fit ME to match given moments
+
+<b>Syntax:</b>
+@code
+me = ME.fitMoments([m1, m2, m3])  % MATLAB
+ME me = ME.fitMoments(new double[]{m1, m2, m3});  // Java
+me = ME.fit_moments([m1, m2, m3])  # Python
+@endcode
+
+<b>Description:</b> Uses BuTools MEFromMoments algorithm to fit an ME distribution
+matching the specified factorial moments.
+
+@subsection me_methods Instance Methods
+
+<b>getMean()</b> - Compute mean of the distribution
+
+<b>Syntax:</b>
+@code
+mean = me.getMean()  % MATLAB
+double mean = me.getMean();  // Java
+mean = me.get_mean()  # Python
+@endcode
+
+<b>getVar()</b> - Compute variance of the distribution
+
+<b>Syntax:</b>
+@code
+var = me.getVar()  % MATLAB
+double var = me.getVar();  // Java
+var = me.get_var()  # Python
+@endcode
+
+<b>getSCV()</b> - Compute squared coefficient of variation
+
+<b>Syntax:</b>
+@code
+scv = me.getSCV()  % MATLAB
+double scv = me.getSCV();  // Java
+scv = me.get_scv()  # Python
+@endcode
+
+<b>evalCDF(t)</b> - Evaluate cumulative distribution function at time t
+
+<b>Syntax:</b>
+@code
+F = me.evalCDF(t)  % MATLAB
+double F = me.evalCDF(t);  // Java
+F = me.eval_cdf(t)  # Python
+@endcode
+
+<b>getAlpha()</b> - Get initial vector
+
+<b>Syntax:</b>
+@code
+alpha = me.getAlpha()  % MATLAB - returns Matrix
+Matrix alpha = me.getAlpha();  // Java
+alpha = me.get_alpha()  # Python - returns numpy array
+@endcode
+
+<b>getA()</b> - Get matrix parameter
+
+<b>Syntax:</b>
+@code
+A = me.getA()  % MATLAB - returns Matrix
+Matrix A = me.getA();  // Java
+A = me.get_a()  # Python - returns numpy array
+@endcode
+
+<b>getNumberOfPhases()</b> - Get number of phases
+
+<b>Syntax:</b>
+@code
+n = me.getNumberOfPhases()  % MATLAB
+int n = me.getNumberOfPhases();  // Java
+n = me.get_number_of_phases()  # Python
+@endcode
+
+@subsection me_sampling Sampling
+
+<b>me_sample(ME, n)</b> - Generate random samples
+
+<b>Syntax:</b>
+@code
+samples = me_sample(ME, n)  % MATLAB
+double[] samples = me_sample(alpha, A, n, random);  // Java (API function)
+samples = me.sample(n)  # Python
+@endcode
+
+<b>Description:</b> Generates random samples using inverse CDF interpolation:
+1. Precomputes CDF on a grid of 1000 points from 0 to mean + 10σ
+2. For each sample, generates u ~ Uniform(0,1)
+3. Uses binary search + linear interpolation to find \f$F^{-1}(u)\f$
+
+This method ensures accurate sampling even for non-normalized \f$\alpha\f$ vectors.
+
+@subsection me_solver_support Solver Support
+
+<b>MAM Solver:</b> Full support via Markovian base class. ME distributions are automatically
+converted to process representation {D0, D1} and analyzed using matrix analytic methods.
+
+<b>LDES Solver:</b> Full support via me_sample function with inverse CDF interpolation.
+
+<b>Other Solvers:</b> ME distributions can be used anywhere PH distributions are supported,
+as they provide compatible process representations.
+
+---
+
+@section rap_overview Rational Arrival Process (RAP)
+
+The Rational Arrival Process is a generalization of the Markovian Arrival Process (MAP).
+It is parameterized by two matrices \f$H_0\f$ and \f$H_1\f$, where \f$H_0 + H_1\f$ forms
+a generator matrix.
+
+<b>Mathematical Definition:</b>
+
+RAP is defined by:
+- \f$H_0\f$: Transition rate matrix for hidden (non-arrival) events
+- \f$H_1\f$: Transition rate matrix for visible (arrival) events
+- \f$Q = H_0 + H_1\f$ must be a valid generator matrix (rows sum to 0)
+
+<b>Properties:</b>
+- All eigenvalues of \f$H_0\f$ must have negative real parts
+- The dominant eigenvalue of \f$H_0\f$ must be real
+- The marginal inter-arrival time distribution is an ME distribution
+- Can model correlated arrivals with lag-k autocorrelations
+
+<b>Process Representation:</b>
+
+RAP distributions are represented as:
+- \f$D_0 = H_0\f$
+- \f$D_1 = H_1\f$
+
+This is identical to MAP representation, enabling use of all MAP-based algorithms.
+
+@subsection rap_constructors Constructors
+
+@subsubsection rap_constructor_basic Basic Constructor
+
+<b>MATLAB:</b>
+@code
+rap = RAP(H0, H1)
+@endcode
+
+<b>Java:</b>
+@code
+RAP rap = new RAP(H0, H1);
+@endcode
+
+<b>Python:</b>
+@code
+rap = RAP(H0, H1)  # H0 and H1 can be Python lists or numpy arrays
+@endcode
+
+<b>Parameters:</b>
+<table>
+<tr><th>Name</th><th>Type</th><th>Description</th></tr>
+<tr><td>H0</td><td>Matrix</td><td>Hidden transition rate matrix</td></tr>
+<tr><td>H1</td><td>Matrix</td><td>Visible transition rate matrix (arrivals)</td></tr>
+</table>
+
+<b>Validation:</b> The constructor performs strict validation using BuTools CheckRAPRepresentation:
+- Verifies \f$H_0\f$ and \f$H_1\f$ are square and compatible
+- Checks \f$H_0 + H_1\f$ is a valid generator (row sums = 0)
+- Verifies all eigenvalues of \f$H_0\f$ have negative real parts
+- Ensures the dominant eigenvalue of \f$H_0\f$ is real
+
+@subsubsection rap_factory_methods Factory Methods
+
+<b>RAP.fromPoisson(rate)</b> - Create RAP from Poisson process
+
+<b>Syntax:</b>
+@code
+rap = RAP.fromPoisson(rate)  % MATLAB
+RAP rap = RAP.fromPoisson(rate);  // Java
+rap = RAP.from_poisson(rate)  # Python
+@endcode
+
+<b>Description:</b> Creates a 1-phase RAP equivalent to a Poisson process with the given rate.
+
+<b>RAP.fromErlang(k, rate)</b> - Create RAP from Erlang renewal process
+
+<b>Syntax:</b>
+@code
+rap = RAP.fromErlang(k, rate)  % MATLAB
+RAP rap = RAP.fromErlang(k, rate);  // Java
+rap = RAP.from_erlang(k, rate)  # Python
+@endcode
+
+<b>Description:</b> Creates a k-phase RAP representing an Erlang-k renewal process.
+
+<b>RAP.fromMAP(map)</b> - Create RAP from MAP
+
+<b>Syntax:</b>
+@code
+rap = RAP.fromMAP(map)  % MATLAB
+RAP rap = RAP.fromMAP(map);  // Java
+rap = RAP.from_map(map)  # Python
+@endcode
+
+<b>Description:</b> Converts a MAP to a RAP. Every MAP is a valid RAP, so this is a
+direct conversion that preserves all properties.
+
+@subsection rap_methods Instance Methods
+
+<b>getMean()</b> - Compute mean inter-arrival time
+
+<b>Syntax:</b>
+@code
+mean = rap.getMean()  % MATLAB
+double mean = rap.getMean();  // Java
+mean = rap.get_mean()  # Python
+@endcode
+
+<b>getVar()</b> - Compute variance of inter-arrival time
+
+<b>Syntax:</b>
+@code
+var = rap.getVar()  % MATLAB
+double var = rap.getVar();  // Java
+var = rap.get_var()  # Python
+@endcode
+
+<b>getSCV()</b> - Compute squared coefficient of variation
+
+<b>Syntax:</b>
+@code
+scv = rap.getSCV()  % MATLAB
+double scv = rap.getSCV();  // Java
+scv = rap.get_scv()  # Python
+@endcode
+
+<b>getRate()</b> - Compute arrival rate (1/mean)
+
+<b>Syntax:</b>
+@code
+rate = rap.getRate()  % MATLAB
+double rate = rap.getRate();  // Java
+rate = rap.get_rate()  # Python
+@endcode
+
+<b>getH0()</b> - Get hidden transition matrix
+
+<b>Syntax:</b>
+@code
+H0 = rap.getH0()  % MATLAB - returns Matrix
+Matrix H0 = rap.getH0();  // Java
+H0 = rap.get_h0()  # Python - returns numpy array
+@endcode
+
+<b>getH1()</b> - Get visible transition matrix
+
+<b>Syntax:</b>
+@code
+H1 = rap.getH1()  % MATLAB - returns Matrix
+Matrix H1 = rap.getH1();  // Java
+H1 = rap.get_h1()  # Python - returns numpy array
+@endcode
+
+<b>getNumberOfPhases()</b> - Get number of phases
+
+<b>Syntax:</b>
+@code
+n = rap.getNumberOfPhases()  % MATLAB
+int n = rap.getNumberOfPhases();  // Java
+n = rap.get_number_of_phases()  # Python
+@endcode
+
+@subsection rap_sampling Sampling
+
+<b>rap_sample(RAP, n)</b> - Generate correlated arrival samples
+
+<b>Syntax:</b>
+@code
+samples = rap_sample(RAP, n)  % MATLAB
+samples = rap.sample(n)  # Python
+@endcode
+
+<b>Description:</b> Generates correlated inter-arrival time samples preserving the
+lag-k autocorrelations of the RAP. Uses the marginal ME distribution for inverse CDF
+interpolation.
+
+@subsection rap_solver_support Solver Support
+
+<b>MAM Solver:</b> Full support via Markovian base class. RAP processes are analyzed using
+matrix analytic methods compatible with MAP algorithms.
+
+<b>LDES Solver:</b> Full support via rap_sample function with correlated sampling.
+
+<b>Other Solvers:</b> RAP can be used anywhere MAP is supported, as they provide identical
+process representations.
+
+---
+
+@section me_rap_validation Validation Functions
+
+@subsection check_me_rep CheckMERepresentation
+
+<b>checkMERepresentation(alpha, A)</b> - Validate ME representation
+
+<b>Syntax:</b>
+@code
+valid = CheckMERepresentation(alpha, A)  % MATLAB
+boolean valid = checkMERepresentation(alpha, A);  // Java
+@endcode
+
+<b>Returns:</b> true if (alpha, A) forms a valid ME representation, false otherwise.
+
+<b>Validation Criteria:</b>
+- \f$\alpha\f$ and \f$A\f$ have compatible dimensions
+- \f$A\f$ is square
+- All eigenvalues of \f$A\f$ have negative real parts
+- The dominant eigenvalue (closest to 0) is real
+- Numerical stability checks
+
+@subsection check_rap_rep CheckRAPRepresentation
+
+<b>checkRAPRepresentation(H0, H1)</b> - Validate RAP representation
+
+<b>Syntax:</b>
+@code
+valid = CheckRAPRepresentation(H0, H1)  % MATLAB
+boolean valid = checkRAPRepresentation(H0, H1);  // Java
+@endcode
+
+<b>Returns:</b> true if (H0, H1) forms a valid RAP representation, false otherwise.
+
+<b>Validation Criteria:</b>
+- \f$H_0\f$ and \f$H_1\f$ are square matrices of the same size
+- \f$H_0 + H_1\f$ is a valid generator matrix (row sums = 0)
+- All eigenvalues of \f$H_0\f$ have negative real parts
+- The dominant eigenvalue of \f$H_0\f$ is real
+- Numerical stability checks
+
+---
+
+@section me_rap_examples Usage in Queueing Models
+
+@subsection example_map_me MAP/ME/1 Queue
+
+An open queueing system with MAP arrivals and ME service times:
+
+<b>MATLAB:</b>
+@code
+model = Network('MAP/ME/1');
+source = Source(model, 'Source');
+queue = Queue(model, 'Queue', SchedStrategy.FCFS);
+sink = Sink(model, 'Sink');
+jobClass = OpenClass(model, 'Class1', 0);
+
+% MAP arrivals
+D0 = [-2, 1; 0.5, -1.5];
+D1 = [0.5, 0.5; 0.5, 0.5];
+source.setArrival(jobClass, MAP(D0, D1));
+
+% ME service (Erlang-2)
+queue.setService(jobClass, ME.fromErlang(2, 2.0));
+
+% Solve with MAM
+solver = SolverMAM(model);
+avgTable = solver.getAvgTable();
+@endcode
+
+<b>Java:</b>
+@code
+Network model = new Network("MAP/ME/1");
+Source source = new Source(model, "Source");
+Queue queue = new Queue(model, "Queue", SchedStrategy.FCFS);
+Sink sink = new Sink(model, "Sink");
+OpenClass jobClass = new OpenClass(model, "Class1", 0);
+
+// MAP arrivals
+Matrix D0 = new Matrix(new double[][]{{-2, 1}, {0.5, -1.5}});
+Matrix D1 = new Matrix(new double[][]{{0.5, 0.5}, {0.5, 0.5}});
+source.setArrival(jobClass, new MAP(D0, D1));
+
+// ME service (Erlang-2)
+queue.setService(jobClass, ME.fromErlang(2, 2.0));
+
+// Solve with MAM
+SolverMAM solver = new SolverMAM(model);
+NetworkAvgTable avgTable = solver.getAvgTable();
+@endcode
+
+<b>Python:</b>
+@code
+model = Network("MAP/ME/1")
+source = Source(model, "Source")
+queue = Queue(model, "Queue", SchedStrategy.FCFS)
+sink = Sink(model, "Sink")
+job_class = OpenClass(model, "Class1", 0)
+
+# MAP arrivals (using Python lists)
+D0 = [[-2, 1], [0.5, -1.5]]
+D1 = [[0.5, 0.5], [0.5, 0.5]]
+source.set_arrival(job_class, MAP(D0, D1))
+
+# ME service (Erlang-2)
+queue.set_service(job_class, ME.from_erlang(2, 2.0))
+
+# Solve with MAM
+solver = SolverMAM(model)
+avg_table = solver.get_avg_table()
+@endcode
+
+@subsection example_rap_ph RAP/PH/1 Queue
+
+An open queueing system with RAP arrivals and PH service times:
+
+<b>MATLAB:</b>
+@code
+model = Network('RAP/PH/1');
+source = Source(model, 'Source');
+queue = Queue(model, 'Queue', SchedStrategy.FCFS);
+jobClass = OpenClass(model, 'Class1', 0);
+
+% RAP arrivals (Erlang-2)
+source.setArrival(jobClass, RAP.fromErlang(2, 1.0));
+
+% PH service
+alpha = [1, 0];
+A = [-2, 2; 0, -2];
+queue.setService(jobClass, PH(alpha, A));
+@endcode
+
+---
+
+@section me_rap_references References
+
+<b>BuTools:</b> \cite BuchholzKF14 - Input Modeling with Phase-Type Distributions and Markov
+Models: Theory and Applications.
+
+<b>Matrix Exponential Distributions:</b> \cite BladtN17 - Matrix-Exponential Distributions
+in Applied Probability.
+
+<b>Rational Arrival Processes:</b> \cite AsmussenB99 - Point processes with finite-dimensional
+conditional probabilities.
+
+*/

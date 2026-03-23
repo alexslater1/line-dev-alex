@@ -1,0 +1,194 @@
+[
+  {
+    "directory": "/home/gcasale/Dropbox/code/line-dev.git/matlab/src/api/pfqn/codegen/mex/pfqn_comomrm",
+    "command": "/usr/bin/gcc -fexceptions -fPIC -fno-omit-frame-pointer -pthread -fwrapv -D_GNU_SOURCE -DMATLAB_MEX_FILE  -O2 -DNDEBUG -fno-predictive-commoning -std=c99 -I \".\" -I \"/home/gcasale/Dropbox/code/line-dev.git/matlab/src/api/pfqn\" -I \"./interface\" -I \"/usr/local/MATLAB/R2025a/extern/include\" -I \".\" -DMODEL=pfqn_comomrm_mex -msse2 -fno-predictive-commoning -Wno-stringop-overflow -Wno-maybe-uninitialized -c -fopenmp -DOMPLIBNAME=\"/usr/local/MATLAB/R2025a/sys/os/glnxa64/libiomp5.so\"  pfqn_comomrm_data.c -o build/glnxa64/pfqn_comomrm_data.o",
+    "file": "pfqn_comomrm_data.c",
+    "output": "build/glnxa64/pfqn_comomrm_data.o"
+  },
+  {
+    "directory": "/home/gcasale/Dropbox/code/line-dev.git/matlab/src/api/pfqn/codegen/mex/pfqn_comomrm",
+    "command": "/usr/bin/gcc -fexceptions -fPIC -fno-omit-frame-pointer -pthread -fwrapv -D_GNU_SOURCE -DMATLAB_MEX_FILE  -O2 -DNDEBUG -fno-predictive-commoning -std=c99 -I \".\" -I \"/home/gcasale/Dropbox/code/line-dev.git/matlab/src/api/pfqn\" -I \"./interface\" -I \"/usr/local/MATLAB/R2025a/extern/include\" -I \".\" -DMODEL=pfqn_comomrm_mex -msse2 -fno-predictive-commoning -Wno-stringop-overflow -Wno-maybe-uninitialized -c -fopenmp -DOMPLIBNAME=\"/usr/local/MATLAB/R2025a/sys/os/glnxa64/libiomp5.so\"  rt_nonfinite.c -o build/glnxa64/rt_nonfinite.o",
+    "file": "rt_nonfinite.c",
+    "output": "build/glnxa64/rt_nonfinite.o"
+  },
+  {
+    "directory": "/home/gcasale/Dropbox/code/line-dev.git/matlab/src/api/pfqn/codegen/mex/pfqn_comomrm",
+    "command": "/usr/bin/gcc -fexceptions -fPIC -fno-omit-frame-pointer -pthread -fwrapv -D_GNU_SOURCE -DMATLAB_MEX_FILE  -O2 -DNDEBUG -fno-predictive-commoning -std=c99 -I \".\" -I \"/home/gcasale/Dropbox/code/line-dev.git/matlab/src/api/pfqn\" -I \"./interface\" -I \"/usr/local/MATLAB/R2025a/extern/include\" -I \".\" -DMODEL=pfqn_comomrm_mex -msse2 -fno-predictive-commoning -Wno-stringop-overflow -Wno-maybe-uninitialized -c -fopenmp -DOMPLIBNAME=\"/usr/local/MATLAB/R2025a/sys/os/glnxa64/libiomp5.so\"  pfqn_comomrm_initialize.c -o build/glnxa64/pfqn_comomrm_initialize.o",
+    "file": "pfqn_comomrm_initialize.c",
+    "output": "build/glnxa64/pfqn_comomrm_initialize.o"
+  },
+  {
+    "directory": "/home/gcasale/Dropbox/code/line-dev.git/matlab/src/api/pfqn/codegen/mex/pfqn_comomrm",
+    "command": "/usr/bin/gcc -fexceptions -fPIC -fno-omit-frame-pointer -pthread -fwrapv -D_GNU_SOURCE -DMATLAB_MEX_FILE  -O2 -DNDEBUG -fno-predictive-commoning -std=c99 -I \".\" -I \"/home/gcasale/Dropbox/code/line-dev.git/matlab/src/api/pfqn\" -I \"./interface\" -I \"/usr/local/MATLAB/R2025a/extern/include\" -I \".\" -DMODEL=pfqn_comomrm_mex -msse2 -fno-predictive-commoning -Wno-stringop-overflow -Wno-maybe-uninitialized -c -fopenmp -DOMPLIBNAME=\"/usr/local/MATLAB/R2025a/sys/os/glnxa64/libiomp5.so\"  pfqn_comomrm_terminate.c -o build/glnxa64/pfqn_comomrm_terminate.o",
+    "file": "pfqn_comomrm_terminate.c",
+    "output": "build/glnxa64/pfqn_comomrm_terminate.o"
+  },
+  {
+    "directory": "/home/gcasale/Dropbox/code/line-dev.git/matlab/src/api/pfqn/codegen/mex/pfqn_comomrm",
+    "command": "/usr/bin/gcc -fexceptions -fPIC -fno-omit-frame-pointer -pthread -fwrapv -D_GNU_SOURCE -DMATLAB_MEX_FILE  -O2 -DNDEBUG -fno-predictive-commoning -std=c99 -I \".\" -I \"/home/gcasale/Dropbox/code/line-dev.git/matlab/src/api/pfqn\" -I \"./interface\" -I \"/usr/local/MATLAB/R2025a/extern/include\" -I \".\" -DMODEL=pfqn_comomrm_mex -msse2 -fno-predictive-commoning -Wno-stringop-overflow -Wno-maybe-uninitialized -c -fopenmp -DOMPLIBNAME=\"/usr/local/MATLAB/R2025a/sys/os/glnxa64/libiomp5.so\"  pfqn_comomrm.c -o build/glnxa64/pfqn_comomrm.o",
+    "file": "pfqn_comomrm.c",
+    "output": "build/glnxa64/pfqn_comomrm.o"
+  },
+  {
+    "directory": "/home/gcasale/Dropbox/code/line-dev.git/matlab/src/api/pfqn/codegen/mex/pfqn_comomrm",
+    "command": "/usr/bin/gcc -fexceptions -fPIC -fno-omit-frame-pointer -pthread -fwrapv -D_GNU_SOURCE -DMATLAB_MEX_FILE  -O2 -DNDEBUG -fno-predictive-commoning -std=c99 -I \".\" -I \"/home/gcasale/Dropbox/code/line-dev.git/matlab/src/api/pfqn\" -I \"./interface\" -I \"/usr/local/MATLAB/R2025a/extern/include\" -I \".\" -DMODEL=pfqn_comomrm_mex -msse2 -fno-predictive-commoning -Wno-stringop-overflow -Wno-maybe-uninitialized -c -fopenmp -DOMPLIBNAME=\"/usr/local/MATLAB/R2025a/sys/os/glnxa64/libiomp5.so\"  error.c -o build/glnxa64/error.o",
+    "file": "error.c",
+    "output": "build/glnxa64/error.o"
+  },
+  {
+    "directory": "/home/gcasale/Dropbox/code/line-dev.git/matlab/src/api/pfqn/codegen/mex/pfqn_comomrm",
+    "command": "/usr/bin/gcc -fexceptions -fPIC -fno-omit-frame-pointer -pthread -fwrapv -D_GNU_SOURCE -DMATLAB_MEX_FILE  -O2 -DNDEBUG -fno-predictive-commoning -std=c99 -I \".\" -I \"/home/gcasale/Dropbox/code/line-dev.git/matlab/src/api/pfqn\" -I \"./interface\" -I \"/usr/local/MATLAB/R2025a/extern/include\" -I \".\" -DMODEL=pfqn_comomrm_mex -msse2 -fno-predictive-commoning -Wno-stringop-overflow -Wno-maybe-uninitialized -c -fopenmp -DOMPLIBNAME=\"/usr/local/MATLAB/R2025a/sys/os/glnxa64/libiomp5.so\"  sumMatrixIncludeNaN.c -o build/glnxa64/sumMatrixIncludeNaN.o",
+    "file": "sumMatrixIncludeNaN.c",
+    "output": "build/glnxa64/sumMatrixIncludeNaN.o"
+  },
+  {
+    "directory": "/home/gcasale/Dropbox/code/line-dev.git/matlab/src/api/pfqn/codegen/mex/pfqn_comomrm",
+    "command": "/usr/bin/gcc -fexceptions -fPIC -fno-omit-frame-pointer -pthread -fwrapv -D_GNU_SOURCE -DMATLAB_MEX_FILE  -O2 -DNDEBUG -fno-predictive-commoning -std=c99 -I \".\" -I \"/home/gcasale/Dropbox/code/line-dev.git/matlab/src/api/pfqn\" -I \"./interface\" -I \"/usr/local/MATLAB/R2025a/extern/include\" -I \".\" -DMODEL=pfqn_comomrm_mex -msse2 -fno-predictive-commoning -Wno-stringop-overflow -Wno-maybe-uninitialized -c -fopenmp -DOMPLIBNAME=\"/usr/local/MATLAB/R2025a/sys/os/glnxa64/libiomp5.so\"  sum.c -o build/glnxa64/sum.o",
+    "file": "sum.c",
+    "output": "build/glnxa64/sum.o"
+  },
+  {
+    "directory": "/home/gcasale/Dropbox/code/line-dev.git/matlab/src/api/pfqn/codegen/mex/pfqn_comomrm",
+    "command": "/usr/bin/gcc -fexceptions -fPIC -fno-omit-frame-pointer -pthread -fwrapv -D_GNU_SOURCE -DMATLAB_MEX_FILE  -O2 -DNDEBUG -fno-predictive-commoning -std=c99 -I \".\" -I \"/home/gcasale/Dropbox/code/line-dev.git/matlab/src/api/pfqn\" -I \"./interface\" -I \"/usr/local/MATLAB/R2025a/extern/include\" -I \".\" -DMODEL=pfqn_comomrm_mex -msse2 -fno-predictive-commoning -Wno-stringop-overflow -Wno-maybe-uninitialized -c -fopenmp -DOMPLIBNAME=\"/usr/local/MATLAB/R2025a/sys/os/glnxa64/libiomp5.so\"  find.c -o build/glnxa64/find.o",
+    "file": "find.c",
+    "output": "build/glnxa64/find.o"
+  },
+  {
+    "directory": "/home/gcasale/Dropbox/code/line-dev.git/matlab/src/api/pfqn/codegen/mex/pfqn_comomrm",
+    "command": "/usr/bin/gcc -fexceptions -fPIC -fno-omit-frame-pointer -pthread -fwrapv -D_GNU_SOURCE -DMATLAB_MEX_FILE  -O2 -DNDEBUG -fno-predictive-commoning -std=c99 -I \".\" -I \"/home/gcasale/Dropbox/code/line-dev.git/matlab/src/api/pfqn\" -I \"./interface\" -I \"/usr/local/MATLAB/R2025a/extern/include\" -I \".\" -DMODEL=pfqn_comomrm_mex -msse2 -fno-predictive-commoning -Wno-stringop-overflow -Wno-maybe-uninitialized -c -fopenmp -DOMPLIBNAME=\"/usr/local/MATLAB/R2025a/sys/os/glnxa64/libiomp5.so\"  indexShapeCheck.c -o build/glnxa64/indexShapeCheck.o",
+    "file": "indexShapeCheck.c",
+    "output": "build/glnxa64/indexShapeCheck.o"
+  },
+  {
+    "directory": "/home/gcasale/Dropbox/code/line-dev.git/matlab/src/api/pfqn/codegen/mex/pfqn_comomrm",
+    "command": "/usr/bin/gcc -fexceptions -fPIC -fno-omit-frame-pointer -pthread -fwrapv -D_GNU_SOURCE -DMATLAB_MEX_FILE  -O2 -DNDEBUG -fno-predictive-commoning -std=c99 -I \".\" -I \"/home/gcasale/Dropbox/code/line-dev.git/matlab/src/api/pfqn\" -I \"./interface\" -I \"/usr/local/MATLAB/R2025a/extern/include\" -I \".\" -DMODEL=pfqn_comomrm_mex -msse2 -fno-predictive-commoning -Wno-stringop-overflow -Wno-maybe-uninitialized -c -fopenmp -DOMPLIBNAME=\"/usr/local/MATLAB/R2025a/sys/os/glnxa64/libiomp5.so\"  warning.c -o build/glnxa64/warning.o",
+    "file": "warning.c",
+    "output": "build/glnxa64/warning.o"
+  },
+  {
+    "directory": "/home/gcasale/Dropbox/code/line-dev.git/matlab/src/api/pfqn/codegen/mex/pfqn_comomrm",
+    "command": "/usr/bin/gcc -fexceptions -fPIC -fno-omit-frame-pointer -pthread -fwrapv -D_GNU_SOURCE -DMATLAB_MEX_FILE  -O2 -DNDEBUG -fno-predictive-commoning -std=c99 -I \".\" -I \"/home/gcasale/Dropbox/code/line-dev.git/matlab/src/api/pfqn\" -I \"./interface\" -I \"/usr/local/MATLAB/R2025a/extern/include\" -I \".\" -DMODEL=pfqn_comomrm_mex -msse2 -fno-predictive-commoning -Wno-stringop-overflow -Wno-maybe-uninitialized -c -fopenmp -DOMPLIBNAME=\"/usr/local/MATLAB/R2025a/sys/os/glnxa64/libiomp5.so\"  repmat.c -o build/glnxa64/repmat.o",
+    "file": "repmat.c",
+    "output": "build/glnxa64/repmat.o"
+  },
+  {
+    "directory": "/home/gcasale/Dropbox/code/line-dev.git/matlab/src/api/pfqn/codegen/mex/pfqn_comomrm",
+    "command": "/usr/bin/gcc -fexceptions -fPIC -fno-omit-frame-pointer -pthread -fwrapv -D_GNU_SOURCE -DMATLAB_MEX_FILE  -O2 -DNDEBUG -fno-predictive-commoning -std=c99 -I \".\" -I \"/home/gcasale/Dropbox/code/line-dev.git/matlab/src/api/pfqn\" -I \"./interface\" -I \"/usr/local/MATLAB/R2025a/extern/include\" -I \".\" -DMODEL=pfqn_comomrm_mex -msse2 -fno-predictive-commoning -Wno-stringop-overflow -Wno-maybe-uninitialized -c -fopenmp -DOMPLIBNAME=\"/usr/local/MATLAB/R2025a/sys/os/glnxa64/libiomp5.so\"  eml_setop.c -o build/glnxa64/eml_setop.o",
+    "file": "eml_setop.c",
+    "output": "build/glnxa64/eml_setop.o"
+  },
+  {
+    "directory": "/home/gcasale/Dropbox/code/line-dev.git/matlab/src/api/pfqn/codegen/mex/pfqn_comomrm",
+    "command": "/usr/bin/gcc -fexceptions -fPIC -fno-omit-frame-pointer -pthread -fwrapv -D_GNU_SOURCE -DMATLAB_MEX_FILE  -O2 -DNDEBUG -fno-predictive-commoning -std=c99 -I \".\" -I \"/home/gcasale/Dropbox/code/line-dev.git/matlab/src/api/pfqn\" -I \"./interface\" -I \"/usr/local/MATLAB/R2025a/extern/include\" -I \".\" -DMODEL=pfqn_comomrm_mex -msse2 -fno-predictive-commoning -Wno-stringop-overflow -Wno-maybe-uninitialized -c -fopenmp -DOMPLIBNAME=\"/usr/local/MATLAB/R2025a/sys/os/glnxa64/libiomp5.so\"  issorted.c -o build/glnxa64/issorted.o",
+    "file": "issorted.c",
+    "output": "build/glnxa64/issorted.o"
+  },
+  {
+    "directory": "/home/gcasale/Dropbox/code/line-dev.git/matlab/src/api/pfqn/codegen/mex/pfqn_comomrm",
+    "command": "/usr/bin/gcc -fexceptions -fPIC -fno-omit-frame-pointer -pthread -fwrapv -D_GNU_SOURCE -DMATLAB_MEX_FILE  -O2 -DNDEBUG -fno-predictive-commoning -std=c99 -I \".\" -I \"/home/gcasale/Dropbox/code/line-dev.git/matlab/src/api/pfqn\" -I \"./interface\" -I \"/usr/local/MATLAB/R2025a/extern/include\" -I \".\" -DMODEL=pfqn_comomrm_mex -msse2 -fno-predictive-commoning -Wno-stringop-overflow -Wno-maybe-uninitialized -c -fopenmp -DOMPLIBNAME=\"/usr/local/MATLAB/R2025a/sys/os/glnxa64/libiomp5.so\"  eye.c -o build/glnxa64/eye.o",
+    "file": "eye.c",
+    "output": "build/glnxa64/eye.o"
+  },
+  {
+    "directory": "/home/gcasale/Dropbox/code/line-dev.git/matlab/src/api/pfqn/codegen/mex/pfqn_comomrm",
+    "command": "/usr/bin/gcc -fexceptions -fPIC -fno-omit-frame-pointer -pthread -fwrapv -D_GNU_SOURCE -DMATLAB_MEX_FILE  -O2 -DNDEBUG -fno-predictive-commoning -std=c99 -I \".\" -I \"/home/gcasale/Dropbox/code/line-dev.git/matlab/src/api/pfqn\" -I \"./interface\" -I \"/usr/local/MATLAB/R2025a/extern/include\" -I \".\" -DMODEL=pfqn_comomrm_mex -msse2 -fno-predictive-commoning -Wno-stringop-overflow -Wno-maybe-uninitialized -c -fopenmp -DOMPLIBNAME=\"/usr/local/MATLAB/R2025a/sys/os/glnxa64/libiomp5.so\"  mtimes.c -o build/glnxa64/mtimes.o",
+    "file": "mtimes.c",
+    "output": "build/glnxa64/mtimes.o"
+  },
+  {
+    "directory": "/home/gcasale/Dropbox/code/line-dev.git/matlab/src/api/pfqn/codegen/mex/pfqn_comomrm",
+    "command": "/usr/bin/gcc -fexceptions -fPIC -fno-omit-frame-pointer -pthread -fwrapv -D_GNU_SOURCE -DMATLAB_MEX_FILE  -O2 -DNDEBUG -fno-predictive-commoning -std=c99 -I \".\" -I \"/home/gcasale/Dropbox/code/line-dev.git/matlab/src/api/pfqn\" -I \"./interface\" -I \"/usr/local/MATLAB/R2025a/extern/include\" -I \".\" -DMODEL=pfqn_comomrm_mex -msse2 -fno-predictive-commoning -Wno-stringop-overflow -Wno-maybe-uninitialized -c -fopenmp -DOMPLIBNAME=\"/usr/local/MATLAB/R2025a/sys/os/glnxa64/libiomp5.so\"  abs.c -o build/glnxa64/abs.o",
+    "file": "abs.c",
+    "output": "build/glnxa64/abs.o"
+  },
+  {
+    "directory": "/home/gcasale/Dropbox/code/line-dev.git/matlab/src/api/pfqn/codegen/mex/pfqn_comomrm",
+    "command": "/usr/bin/gcc -fexceptions -fPIC -fno-omit-frame-pointer -pthread -fwrapv -D_GNU_SOURCE -DMATLAB_MEX_FILE  -O2 -DNDEBUG -fno-predictive-commoning -std=c99 -I \".\" -I \"/home/gcasale/Dropbox/code/line-dev.git/matlab/src/api/pfqn\" -I \"./interface\" -I \"/usr/local/MATLAB/R2025a/extern/include\" -I \".\" -DMODEL=pfqn_comomrm_mex -msse2 -fno-predictive-commoning -Wno-stringop-overflow -Wno-maybe-uninitialized -c -fopenmp -DOMPLIBNAME=\"/usr/local/MATLAB/R2025a/sys/os/glnxa64/libiomp5.so\"  interface/_coder_pfqn_comomrm_api.c -o build/glnxa64/_coder_pfqn_comomrm_api.o",
+    "file": "interface/_coder_pfqn_comomrm_api.c",
+    "output": "build/glnxa64/_coder_pfqn_comomrm_api.o"
+  },
+  {
+    "directory": "/home/gcasale/Dropbox/code/line-dev.git/matlab/src/api/pfqn/codegen/mex/pfqn_comomrm",
+    "command": "/usr/bin/gcc -fexceptions -fPIC -fno-omit-frame-pointer -pthread -fwrapv -D_GNU_SOURCE -DMATLAB_MEX_FILE  -O2 -DNDEBUG -fno-predictive-commoning -std=c99 -I \".\" -I \"/home/gcasale/Dropbox/code/line-dev.git/matlab/src/api/pfqn\" -I \"./interface\" -I \"/usr/local/MATLAB/R2025a/extern/include\" -I \".\" -DMODEL=pfqn_comomrm_mex -msse2 -fno-predictive-commoning -Wno-stringop-overflow -Wno-maybe-uninitialized -c -fopenmp -DOMPLIBNAME=\"/usr/local/MATLAB/R2025a/sys/os/glnxa64/libiomp5.so\"  interface/_coder_pfqn_comomrm_mex.c -o build/glnxa64/_coder_pfqn_comomrm_mex.o",
+    "file": "interface/_coder_pfqn_comomrm_mex.c",
+    "output": "build/glnxa64/_coder_pfqn_comomrm_mex.o"
+  },
+  {
+    "directory": "/home/gcasale/Dropbox/code/line-dev.git/matlab/src/api/pfqn/codegen/mex/pfqn_comomrm",
+    "command": "/usr/bin/gcc -fexceptions -fPIC -fno-omit-frame-pointer -pthread -fwrapv -D_GNU_SOURCE -DMATLAB_MEX_FILE  -O2 -DNDEBUG -fno-predictive-commoning -std=c99 -I \".\" -I \"/home/gcasale/Dropbox/code/line-dev.git/matlab/src/api/pfqn\" -I \"./interface\" -I \"/usr/local/MATLAB/R2025a/extern/include\" -I \".\" -DMODEL=pfqn_comomrm_mex -msse2 -fno-predictive-commoning -Wno-stringop-overflow -Wno-maybe-uninitialized -c -fopenmp -DOMPLIBNAME=\"/usr/local/MATLAB/R2025a/sys/os/glnxa64/libiomp5.so\"  eml_int_forloop_overflow_check.c -o build/glnxa64/eml_int_forloop_overflow_check.o",
+    "file": "eml_int_forloop_overflow_check.c",
+    "output": "build/glnxa64/eml_int_forloop_overflow_check.o"
+  },
+  {
+    "directory": "/home/gcasale/Dropbox/code/line-dev.git/matlab/src/api/pfqn/codegen/mex/pfqn_comomrm",
+    "command": "/usr/bin/gcc -fexceptions -fPIC -fno-omit-frame-pointer -pthread -fwrapv -D_GNU_SOURCE -DMATLAB_MEX_FILE  -O2 -DNDEBUG -fno-predictive-commoning -std=c99 -I \".\" -I \"/home/gcasale/Dropbox/code/line-dev.git/matlab/src/api/pfqn\" -I \"./interface\" -I \"/usr/local/MATLAB/R2025a/extern/include\" -I \".\" -DMODEL=pfqn_comomrm_mex -msse2 -fno-predictive-commoning -Wno-stringop-overflow -Wno-maybe-uninitialized -c -fopenmp -DOMPLIBNAME=\"/usr/local/MATLAB/R2025a/sys/os/glnxa64/libiomp5.so\"  pfqn_nc_sanitize.c -o build/glnxa64/pfqn_nc_sanitize.o",
+    "file": "pfqn_nc_sanitize.c",
+    "output": "build/glnxa64/pfqn_nc_sanitize.o"
+  },
+  {
+    "directory": "/home/gcasale/Dropbox/code/line-dev.git/matlab/src/api/pfqn/codegen/mex/pfqn_comomrm",
+    "command": "/usr/bin/gcc -fexceptions -fPIC -fno-omit-frame-pointer -pthread -fwrapv -D_GNU_SOURCE -DMATLAB_MEX_FILE  -O2 -DNDEBUG -fno-predictive-commoning -std=c99 -I \".\" -I \"/home/gcasale/Dropbox/code/line-dev.git/matlab/src/api/pfqn\" -I \"./interface\" -I \"/usr/local/MATLAB/R2025a/extern/include\" -I \".\" -DMODEL=pfqn_comomrm_mex -msse2 -fno-predictive-commoning -Wno-stringop-overflow -Wno-maybe-uninitialized -c -fopenmp -DOMPLIBNAME=\"/usr/local/MATLAB/R2025a/sys/os/glnxa64/libiomp5.so\"  nullAssignment.c -o build/glnxa64/nullAssignment.o",
+    "file": "nullAssignment.c",
+    "output": "build/glnxa64/nullAssignment.o"
+  },
+  {
+    "directory": "/home/gcasale/Dropbox/code/line-dev.git/matlab/src/api/pfqn/codegen/mex/pfqn_comomrm",
+    "command": "/usr/bin/gcc -fexceptions -fPIC -fno-omit-frame-pointer -pthread -fwrapv -D_GNU_SOURCE -DMATLAB_MEX_FILE  -O2 -DNDEBUG -fno-predictive-commoning -std=c99 -I \".\" -I \"/home/gcasale/Dropbox/code/line-dev.git/matlab/src/api/pfqn\" -I \"./interface\" -I \"/usr/local/MATLAB/R2025a/extern/include\" -I \".\" -DMODEL=pfqn_comomrm_mex -msse2 -fno-predictive-commoning -Wno-stringop-overflow -Wno-maybe-uninitialized -c -fopenmp -DOMPLIBNAME=\"/usr/local/MATLAB/R2025a/sys/os/glnxa64/libiomp5.so\"  log.c -o build/glnxa64/log.o",
+    "file": "log.c",
+    "output": "build/glnxa64/log.o"
+  },
+  {
+    "directory": "/home/gcasale/Dropbox/code/line-dev.git/matlab/src/api/pfqn/codegen/mex/pfqn_comomrm",
+    "command": "/usr/bin/gcc -fexceptions -fPIC -fno-omit-frame-pointer -pthread -fwrapv -D_GNU_SOURCE -DMATLAB_MEX_FILE  -O2 -DNDEBUG -fno-predictive-commoning -std=c99 -I \".\" -I \"/home/gcasale/Dropbox/code/line-dev.git/matlab/src/api/pfqn\" -I \"./interface\" -I \"/usr/local/MATLAB/R2025a/extern/include\" -I \".\" -DMODEL=pfqn_comomrm_mex -msse2 -fno-predictive-commoning -Wno-stringop-overflow -Wno-maybe-uninitialized -c -fopenmp -DOMPLIBNAME=\"/usr/local/MATLAB/R2025a/sys/os/glnxa64/libiomp5.so\"  sort.c -o build/glnxa64/sort.o",
+    "file": "sort.c",
+    "output": "build/glnxa64/sort.o"
+  },
+  {
+    "directory": "/home/gcasale/Dropbox/code/line-dev.git/matlab/src/api/pfqn/codegen/mex/pfqn_comomrm",
+    "command": "/usr/bin/gcc -fexceptions -fPIC -fno-omit-frame-pointer -pthread -fwrapv -D_GNU_SOURCE -DMATLAB_MEX_FILE  -O2 -DNDEBUG -fno-predictive-commoning -std=c99 -I \".\" -I \"/home/gcasale/Dropbox/code/line-dev.git/matlab/src/api/pfqn\" -I \"./interface\" -I \"/usr/local/MATLAB/R2025a/extern/include\" -I \".\" -DMODEL=pfqn_comomrm_mex -msse2 -fno-predictive-commoning -Wno-stringop-overflow -Wno-maybe-uninitialized -c -fopenmp -DOMPLIBNAME=\"/usr/local/MATLAB/R2025a/sys/os/glnxa64/libiomp5.so\"  sortIdx.c -o build/glnxa64/sortIdx.o",
+    "file": "sortIdx.c",
+    "output": "build/glnxa64/sortIdx.o"
+  },
+  {
+    "directory": "/home/gcasale/Dropbox/code/line-dev.git/matlab/src/api/pfqn/codegen/mex/pfqn_comomrm",
+    "command": "/usr/bin/gcc -fexceptions -fPIC -fno-omit-frame-pointer -pthread -fwrapv -D_GNU_SOURCE -DMATLAB_MEX_FILE  -O2 -DNDEBUG -fno-predictive-commoning -std=c99 -I \".\" -I \"/home/gcasale/Dropbox/code/line-dev.git/matlab/src/api/pfqn\" -I \"./interface\" -I \"/usr/local/MATLAB/R2025a/extern/include\" -I \".\" -DMODEL=pfqn_comomrm_mex -msse2 -fno-predictive-commoning -Wno-stringop-overflow -Wno-maybe-uninitialized -c -fopenmp -DOMPLIBNAME=\"/usr/local/MATLAB/R2025a/sys/os/glnxa64/libiomp5.so\"  gammaln.c -o build/glnxa64/gammaln.o",
+    "file": "gammaln.c",
+    "output": "build/glnxa64/gammaln.o"
+  },
+  {
+    "directory": "/home/gcasale/Dropbox/code/line-dev.git/matlab/src/api/pfqn/codegen/mex/pfqn_comomrm",
+    "command": "/usr/bin/gcc -fexceptions -fPIC -fno-omit-frame-pointer -pthread -fwrapv -D_GNU_SOURCE -DMATLAB_MEX_FILE  -O2 -DNDEBUG -fno-predictive-commoning -std=c99 -I \".\" -I \"/home/gcasale/Dropbox/code/line-dev.git/matlab/src/api/pfqn\" -I \"./interface\" -I \"/usr/local/MATLAB/R2025a/extern/include\" -I \".\" -DMODEL=pfqn_comomrm_mex -msse2 -fno-predictive-commoning -Wno-stringop-overflow -Wno-maybe-uninitialized -c -fopenmp -DOMPLIBNAME=\"/usr/local/MATLAB/R2025a/sys/os/glnxa64/libiomp5.so\"  applyScalarFunctionInPlace.c -o build/glnxa64/applyScalarFunctionInPlace.o",
+    "file": "applyScalarFunctionInPlace.c",
+    "output": "build/glnxa64/applyScalarFunctionInPlace.o"
+  },
+  {
+    "directory": "/home/gcasale/Dropbox/code/line-dev.git/matlab/src/api/pfqn/codegen/mex/pfqn_comomrm",
+    "command": "/usr/bin/gcc -fexceptions -fPIC -fno-omit-frame-pointer -pthread -fwrapv -D_GNU_SOURCE -DMATLAB_MEX_FILE  -O2 -DNDEBUG -fno-predictive-commoning -std=c99 -I \".\" -I \"/home/gcasale/Dropbox/code/line-dev.git/matlab/src/api/pfqn\" -I \"./interface\" -I \"/usr/local/MATLAB/R2025a/extern/include\" -I \".\" -DMODEL=pfqn_comomrm_mex -msse2 -fno-predictive-commoning -Wno-stringop-overflow -Wno-maybe-uninitialized -c -fopenmp -DOMPLIBNAME=\"/usr/local/MATLAB/R2025a/sys/os/glnxa64/libiomp5.so\"  exp.c -o build/glnxa64/exp.o",
+    "file": "exp.c",
+    "output": "build/glnxa64/exp.o"
+  },
+  {
+    "directory": "/home/gcasale/Dropbox/code/line-dev.git/matlab/src/api/pfqn/codegen/mex/pfqn_comomrm",
+    "command": "/usr/bin/gcc -fexceptions -fPIC -fno-omit-frame-pointer -pthread -fwrapv -D_GNU_SOURCE -DMATLAB_MEX_FILE  -O2 -DNDEBUG -fno-predictive-commoning -std=c99 -I \".\" -I \"/home/gcasale/Dropbox/code/line-dev.git/matlab/src/api/pfqn\" -I \"./interface\" -I \"/usr/local/MATLAB/R2025a/extern/include\" -I \".\" -DMODEL=pfqn_comomrm_mex -msse2 -fno-predictive-commoning -Wno-stringop-overflow -Wno-maybe-uninitialized -c -fopenmp -DOMPLIBNAME=\"/usr/local/MATLAB/R2025a/sys/os/glnxa64/libiomp5.so\"  div.c -o build/glnxa64/div.o",
+    "file": "div.c",
+    "output": "build/glnxa64/div.o"
+  },
+  {
+    "directory": "/home/gcasale/Dropbox/code/line-dev.git/matlab/src/api/pfqn/codegen/mex/pfqn_comomrm",
+    "command": "/usr/bin/gcc -fexceptions -fPIC -fno-omit-frame-pointer -pthread -fwrapv -D_GNU_SOURCE -DMATLAB_MEX_FILE  -O2 -DNDEBUG -fno-predictive-commoning -std=c99 -I \".\" -I \"/home/gcasale/Dropbox/code/line-dev.git/matlab/src/api/pfqn\" -I \"./interface\" -I \"/usr/local/MATLAB/R2025a/extern/include\" -I \".\" -DMODEL=pfqn_comomrm_mex -msse2 -fno-predictive-commoning -Wno-stringop-overflow -Wno-maybe-uninitialized -c -fopenmp -DOMPLIBNAME=\"/usr/local/MATLAB/R2025a/sys/os/glnxa64/libiomp5.so\"  pfqn_comomrm_emxutil.c -o build/glnxa64/pfqn_comomrm_emxutil.o",
+    "file": "pfqn_comomrm_emxutil.c",
+    "output": "build/glnxa64/pfqn_comomrm_emxutil.o"
+  },
+  {
+    "directory": "/home/gcasale/Dropbox/code/line-dev.git/matlab/src/api/pfqn/codegen/mex/pfqn_comomrm",
+    "command": "/usr/bin/gcc -fexceptions -fPIC -fno-omit-frame-pointer -pthread -fwrapv -D_GNU_SOURCE -DMATLAB_MEX_FILE  -O2 -DNDEBUG -fno-predictive-commoning -std=c99 -I \".\" -I \"/home/gcasale/Dropbox/code/line-dev.git/matlab/src/api/pfqn\" -I \"./interface\" -I \"/usr/local/MATLAB/R2025a/extern/include\" -I \".\" -DMODEL=pfqn_comomrm_mex -msse2 -fno-predictive-commoning -Wno-stringop-overflow -Wno-maybe-uninitialized -c -fopenmp -DOMPLIBNAME=\"/usr/local/MATLAB/R2025a/sys/os/glnxa64/libiomp5.so\"  interface/_coder_pfqn_comomrm_info.c -o build/glnxa64/_coder_pfqn_comomrm_info.o",
+    "file": "interface/_coder_pfqn_comomrm_info.c",
+    "output": "build/glnxa64/_coder_pfqn_comomrm_info.o"
+  },
+  {
+    "directory": "/home/gcasale/Dropbox/code/line-dev.git/matlab/src/api/pfqn/codegen/mex/pfqn_comomrm",
+    "command": "/usr/bin/gcc -fexceptions -fPIC -fno-omit-frame-pointer -pthread -fwrapv -D_GNU_SOURCE -DMATLAB_MEX_FILE  -O2 -DNDEBUG -fno-predictive-commoning -std=c99 -I \".\" -I \"/home/gcasale/Dropbox/code/line-dev.git/matlab/src/api/pfqn\" -I \"./interface\" -I \"/usr/local/MATLAB/R2025a/extern/include\" -I \".\" -DMODEL=pfqn_comomrm_mex -msse2 -fno-predictive-commoning -Wno-stringop-overflow -Wno-maybe-uninitialized -c -fopenmp -DOMPLIBNAME=\"/usr/local/MATLAB/R2025a/sys/os/glnxa64/libiomp5.so\"  /usr/local/MATLAB/R2025a/extern/version/c_mexapi_version.c -o build/glnxa64/c_mexapi_version.o",
+    "file": "/usr/local/MATLAB/R2025a/extern/version/c_mexapi_version.c",
+    "output": "build/glnxa64/c_mexapi_version.o"
+  }
+]

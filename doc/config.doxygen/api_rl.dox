@@ -1,0 +1,49 @@
+/**
+@page api_rl Reinforcement Learning
+@brief RL utilities for queueing control
+
+The rl module provides reinforcement learning utilities for queueing control
+and optimization problems.
+
+@subsection spec_rl_functions Key Functions
+
+- @ref rl_env_general "rl_env_general" - rl_env_general
+- @ref rl_env "rl_env" - rl_env
+- @ref rl_td_agent_general "rl_td_agent_general" - rl_td_agent_general
+- @ref rl_td_agent "rl_td_agent" - rl_td_agent
+
+@anchor rl_env_general
+### rl_env_general
+<b>Description:</b> rl_env_general
+
+  @code
+  rl_env_general(...)
+  @endcode
+
+
+@anchor rl_env
+### rl_env
+<b>Description:</b> rl_env
+
+  @code
+  rl_env(...)
+  @endcode
+
+
+@anchor rl_td_agent_general
+### rl_td_agent_general
+<b>Description:</b> rl_td_agent_general
+
+  @code
+  rl_td_agent_general(...)
+  @endcode
+
+
+@anchor rl_td_agent
+### rl_td_agent
+<b>Description:</b> rl_td_agent
+
+  @code
+  rl_td_agent(...)
+  @endcode
+*/

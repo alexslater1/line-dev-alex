@@ -1,0 +1,283 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+<link rel="stylesheet" href="css/line-solver.css" />
+	<meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<meta name="description" content="LINE Solver - CTMC Solver Documentation" />
+	<meta name="keywords" content="LINE solver, CTMC, Continuous Time Markov Chain" />
+	<meta name="author" content="Giuliano Casale" />
+	<title>CTMC Solver - LINE Solver Documentation</title>
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" />
+	<script type="text/javascript" src="js/jquery-1.11.0.min.js"></script>
+	<script type="text/javascript" src="js/line-solver.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-matlab.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-java.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+	<script type="text/javascript">
+		$(document).ready(function(){
+
+			$('.sidebar-nav .expandable > a').click(function(e){
+				e.preventDefault();
+				var parent = $(this).parent();
+				parent.toggleClass('open');
+			});
+			// Auto-expand Solvers menu on solver pages
+			$('.sidebar-nav .expandable').addClass('open');
+
+			$('.language-tab').click(function(){
+				var lang = $(this).data('lang');
+				$(this).siblings().removeClass('active');
+				$(this).addClass('active');
+				$(this).closest('.example-section').find('.language-content').removeClass('active');
+				$(this).closest('.example-section').find('.language-content[data-lang="' + lang + '"]').addClass('active');
+			});
+
+			// Copy button functionality
+			$('.copy-button').click(function(){
+				var button = $(this);
+				var codeBlock = button.siblings('pre').find('code').length > 0
+					? button.siblings('pre').find('code').text()
+					: button.siblings('pre').text();
+
+				if (navigator.clipboard && navigator.clipboard.writeText) {
+					navigator.clipboard.writeText(codeBlock).then(function() {
+						button.text('Copied!').addClass('copied');
+						setTimeout(function(){
+							button.text('Copy').removeClass('copied');
+						}, 2000);
+					});
+				} else {
+					// Fallback for older browsers
+					var textArea = document.createElement("textarea");
+					textArea.value = codeBlock;
+					document.body.appendChild(textArea);
+					textArea.select();
+					document.execCommand('copy');
+					document.body.removeChild(textArea);
+					button.text('Copied!').addClass('copied');
+					setTimeout(function(){
+						button.text('Copy').removeClass('copied');
+					}, 2000);
+				}
+			});
+
+			// Apply syntax highlighting
+			Prism.highlightAll();
+		});
+	</script>
+</head>
+<body>
+<div id="wrap">
+
+<div id="header">
+	<p id="toplinks"><a href="index.html">Home</a> | <a href="index.html#solvers">Solvers</a></p>
+	
+	<h1><a href="index.html">LINE Solver</a></h1>
+	<p id="slogan">Queueing Theory Algorithms</p>
+</div>
+
+<div id="sidebar">
+<div id="sidebar-content">
+<h2>Navigate</h2>
+<ul class="sidebar-nav">
+<li><a href="index.html">Home</a></li>
+<li><a href="index.html#overview">Overview</a></li>
+<li><a href="index.html#papers">Documentation</a></li>
+<li><a href="tutorials.html">Tutorials</a></li>
+<!-- Re-enable when 3.0.4 is out: <li><a href="mcp.html">MCP Integration</a></li> -->
+<li><a href="index.html#solvers">Solvers</a></li>
+</ul>
+
+<h2>Support</h2>
+<ul class="sidebar-links">
+<li><a href="https://sourceforge.net/projects/line-solver/" target="_blank">Sourceforge site</a></li>
+<li><a href="https://github.com/imperial-qore/line-solver" target="_blank">Github repo</a></li>
+</ul>
+
+<h2>News</h2>
+<ul class="sidebar-news">
+<li><strong>2026</strong> - <a href="https://sourceforge.net/projects/line-solver/files/latest/download">LINE 3.0.4</a> is out!</li>
+<li><strong>2025</strong> - First release of LINE 3.0.0</li>
+<li><strong>2019</strong> - First release of LINE 2.0.0</li>
+<li><strong>2016</strong> - First release of LINE 1.0.0</li>
+</ul>
+</div>
+</div>
+
+<div id="content">
+	<h2>CTMC (Continuous Time Markov Chain)</h2>
+
+	<div class="solver-section">
+	<p class="solver-subtitle">The CTMC solver analyzes models by first generating the infinitesimal generator of the network and then solving the global balance equations for steady-state analysis. Transient analysis is carried out by numerically solving Kolmogorov's forward equations and value iteration for transient rewards. For models with infinite states, such as open networks, the cutoff option can be used to truncate the state space.</p>
+
+	<table class="algorithm-table">
+	<tr><th>Method</th><th>Algorithm</th><th>Reference</th></tr>
+	<tr><td><code>default</code></td><td>Steady-state solution via global balance</td><td><a class="ref-link" href="#ref-bolch2006">[1]</a></td></tr>
+	<tr><td><code>gpu</code></td><td>GPU-accelerated steady-state solution</td><td>&mdash;</td></tr>
+	</table>
+	</div>
+
+	<div class="example-section">
+	<h3>Example</h3>
+	<p>This example demonstrates a closed queueing network with 3 jobs circulating between two queues. The CTMC solver generates the state space and solves the global balance equations to compute steady-state probabilities.</p>
+
+	<div class="language-tabs">
+		<button class="language-tab active" data-lang="matlab">MATLAB</button>
+		<button class="language-tab" data-lang="java">Java</button>
+		<button class="language-tab" data-lang="python">Python</button>
+	</div>
+
+	<div class="language-content active" data-lang="matlab">
+		<div class="code-block">
+		<button class="copy-button">Copy</button>
+		<pre><code class="language-matlab">% Create a closed queueing network (2 queues, 3 jobs)
+model = Network('Closed Network');
+
+% Create queues
+queue1 = Queue(model, 'Queue1', SchedStrategy.PS);
+queue2 = Queue(model, 'Queue2', SchedStrategy.FCFS);
+
+% Closed class with 3 jobs starting at Queue1
+jobclass = ClosedClass(model, 'Class1', 3, queue1);
+
+% Set service times
+queue1.setService(jobclass, Exp(1.0));
+queue2.setService(jobclass, Exp(2.0));
+
+% Set routing probabilities
+P = model.initRoutingMatrix();
+P.set(jobclass, jobclass, queue1, queue1, 0.4);
+P.set(jobclass, jobclass, queue1, queue2, 0.6);
+P.set(jobclass, jobclass, queue2, queue1, 1.0);
+model.link(P);
+
+% Solve with CTMC
+solver = CTMC(model);
+CTMC(model).avgTable()</code></pre>
+		</div>
+
+		<div class="output-block">
+			<h4>Output:</h4>
+<pre>CTMC analysis [method: default, lang: matlab] completed in 0.234s.
+
+ans =
+  2×8 table
+    Station    JobClass     QLen       Util       RespT     ResidT     ArvR       Tput
+    _______    ________    _______    _______    _______    ______    _______    _______
+    Queue1      Class1      2.6041    0.98095     2.6547    2.6547    0.98095    0.98095
+    Queue2      Class1     0.39591    0.29428    0.67266    0.4036    0.58857    0.58857</pre>
+		</div>
+	</div>
+
+	<div class="language-content" data-lang="java">
+		<div class="code-block">
+		<button class="copy-button">Copy</button>
+		<pre><code class="language-java">import jline.lang.*;
+import jline.lang.constant.SchedStrategy;
+import jline.lang.nodes.Queue;
+import jline.lang.processes.Exp;
+import jline.solvers.NetworkAvgTable;
+import jline.solvers.ctmc.CTMC;
+import java.util.List;
+
+public class CTMCExample {
+    public static void main(String[] args) {
+        // Create a closed queueing network (2 queues, 3 jobs)
+        Network model = new Network("Closed Network");
+
+        Queue queue1 = new Queue(model, "Queue1", SchedStrategy.PS);
+        Queue queue2 = new Queue(model, "Queue2", SchedStrategy.FCFS);
+
+        // Closed class with 3 jobs starting at Queue1
+        ClosedClass jobclass = new ClosedClass(model, "Class1", 3, queue1);
+
+        queue1.setService(jobclass, Exp.fitRate(1.0));
+        queue2.setService(jobclass, Exp.fitRate(2.0));
+
+        // Set routing probabilities
+        RoutingMatrix P = new RoutingMatrix(model,
+            List.of(jobclass), List.of(queue1, queue2));
+        P.addConnection(jobclass, jobclass, queue1, queue1, 0.4);
+        P.addConnection(jobclass, jobclass, queue1, queue2, 0.6);
+        P.addConnection(jobclass, jobclass, queue2, queue1, 1.0);
+        model.link(P);
+
+        // Solve with CTMC
+        CTMC solver = new CTMC(model);
+        NetworkAvgTable avgTable = solver.avgTable;
+        System.out.println(avgTable);
+    }
+}</code></pre>
+		</div>
+
+		<div class="output-block">
+			<h4>Output:</h4>
+<pre>CTMC analysis [method: default, lang: java] completed.
+
+Station    JobClass     QLen       Util       RespT     ResidT     ArvR       Tput
+Queue1     Class1       2.6041     0.98095    2.6547    2.6547     0.98095    0.98095
+Queue2     Class1       0.39591    0.29428    0.67266   0.4036     0.58857    0.58857</pre>
+		</div>
+	</div>
+
+	<div class="language-content" data-lang="python">
+		<div class="code-block">
+		<button class="copy-button">Copy</button>
+		<pre><code class="language-python">from line_solver import *
+
+# Create a closed queueing network (2 queues, 3 jobs)
+model = Network('Closed Network')
+
+queue1 = Queue(model, 'Queue1', SchedStrategy.PS)
+queue2 = Queue(model, 'Queue2', SchedStrategy.FCFS)
+
+# Closed class with 3 jobs starting at Queue1
+jobclass = ClosedClass(model, 'Class1', 3, queue1)
+
+queue1.setService(jobclass, Exp(1.0))
+queue2.setService(jobclass, Exp(2.0))
+
+# Set routing probabilities
+P = model.initRoutingMatrix()
+P.set(jobclass, jobclass, queue1, queue1, 0.4)
+P.set(jobclass, jobclass, queue1, queue2, 0.6)
+P.set(jobclass, jobclass, queue2, queue1, 1.0)
+model.link(P)
+
+# Solve with CTMC
+solver = CTMC(model)
+print(solver.avg_table)</code></pre>
+		</div>
+
+		<div class="output-block">
+			<h4>Output:</h4>
+<pre>CTMC analysis [method: default, lang: python] completed.
+
+  Station  JobClass    QLen      Util      RespT    ResidT    ArvR      Tput
+0  Queue1    Class1     2.6041    0.98095   2.6547   2.6547    0.98095   0.98095
+1  Queue2    Class1     0.39591   0.29428   0.67266  0.4036    0.58857   0.58857</pre>
+		</div>
+	</div>
+	</div>
+
+	<div class="references">
+	<h3>References</h3>
+	<ol>
+	<li id="ref-bolch2006">Bolch, G., Greiner, S., de Meer, H., &amp; Trivedi, K. S. (2006). <em>Queueing Networks and Markov Chains: Modeling and Performance Evaluation with Computer Science Applications</em> (2nd ed.). Wiley-Interscience.</li>
+	</ol>
+	</div>
+
+	<div class="back-link">
+		<a href="index.html#solvers">&larr; Back to Solvers</a>
+	</div>
+</div>
+
+<div id="footer">
+	<p>&copy; 2025 <a href="https://www.imperial.ac.uk/">Imperial College London</a></p>
+</div>
+
+</div>
+</body>
+</html>

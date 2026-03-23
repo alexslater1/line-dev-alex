@@ -1,0 +1,81 @@
+/**
+@page api_npfqn Non-Product-Form Networks
+@brief Approximations for non-BCMP queueing networks
+
+The npfqn module provides approximation methods for non-product-form queueing
+networks that do not satisfy BCMP conditions.
+
+@subsection spec_npfqn_functions Key Functions
+
+- @ref npfqn_nonexp_approx "npfqn_nonexp_approx" - handler for non-exponential service and arrival processes
+- @ref npfqn_traffic_merge_cs "npfqn_traffic_merge_cs" - Given a cell array of n MMAPs with arrivals of R classes, produces a new
+- @ref npfqn_traffic_merge "npfqn_traffic_merge" - Given a cell array of n MMAPs with arrivals of R classes, produces a new
+- @ref npfqn_traffic_split_cs "npfqn_traffic_split_cs" - Given a MMAP, produces a new array after split and class switching
+
+@anchor npfqn_nonexp_approx
+### npfqn_nonexp_approx
+  <b>Description:</b> handler for non-exponential service and arrival processes
+
+  <b>Syntax:</b>
+  @code
+  [ST, gamma, nservers, rho, scva, scvs, eta] = npfqn_nonexp_approx(method, sn, ST, V, SCV, T, U, gamma, nservers)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>method</td><td>Solution method or algorithm name</td></tr>
+  <tr><td>sn</td><td>Stochastic network structure</td></tr>
+  <tr><td>ST</td><td>Service time matrix</td></tr>
+  <tr><td>V</td><td>Visit ratios</td></tr>
+  <tr><td>SCV</td><td>Squared coefficient of variation</td></tr>
+  <tr><td>T</td><td>Service time or transition matrix</td></tr>
+  <tr><td>U</td><td>Utilization values</td></tr>
+  <tr><td>gamma</td><td>Item popularity probabilities</td></tr>
+  <tr><td>nservers</td><td>Number of servers</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>ST</td><td>Service time values</td></tr>
+  <tr><td>gamma</td><td>Item popularity or rate parameters</td></tr>
+  <tr><td>nservers</td><td>Number of servers</td></tr>
+  <tr><td>rho</td><td>Traffic intensity or utilization</td></tr>
+  <tr><td>scva</td><td>SCV of interarrival times</td></tr>
+  <tr><td>scvs</td><td>SCV of service times</td></tr>
+  <tr><td>eta</td><td>Adjustment factors</td></tr>
+  </table>
+
+
+@anchor npfqn_traffic_merge_cs
+### npfqn_traffic_merge_cs
+  <b>Description:</b> Given a cell array of n MMAPs with arrivals of R classes, produces a new
+
+  <b>Syntax:</b>
+  @code
+  npfqn_traffic_merge_cs(...)
+  @endcode
+
+
+@anchor npfqn_traffic_merge
+### npfqn_traffic_merge
+  <b>Description:</b> Given a cell array of n MMAPs with arrivals of R classes, produces a new
+
+  <b>Syntax:</b>
+  @code
+  npfqn_traffic_merge(...)
+  @endcode
+
+
+@anchor npfqn_traffic_split_cs
+### npfqn_traffic_split_cs
+  <b>Description:</b> Given a MMAP, produces a new array after split and class switching
+
+  <b>Syntax:</b>
+  @code
+  npfqn_traffic_split_cs(...)
+  @endcode
+
+
+*/

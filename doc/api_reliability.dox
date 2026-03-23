@@ -1,0 +1,366 @@
+/**
+@page api_reliability Reliability Metrics and Node Failure/Repair
+@brief Node breakdown/repair modeling and reliability metrics computation in random environments
+
+This module provides support for modeling node failures and repairs in queueing networks
+and computing standard reliability metrics such as MTTF, MTTR, MTBF, and availability.
+
+@section reliability_overview Overview
+
+The `Env` (Environment) class in LINE supports modeling random environments where nodes
+can fail (break down) and be repaired. This allows analysis of systems with unreliable
+resources, such as:
+- Manufacturing systems with machine failures
+- Computing systems with server crashes
+- Communication networks with link failures
+- Service systems with operator unavailability
+
+The reliability modeling framework provides:
+- **Node breakdown**: Transition from operational (UP) to failed (DOWN) state
+- **Node repair**: Transition from failed (DOWN) back to operational (UP) state
+- **Custom reset policies**: Control queue behavior during state transitions
+- **Reliability metrics**: MTTF, MTTR, MTBF, and steady-state availability
+
+@section reliability_concepts Key Concepts
+
+@subsection reliability_stages Environment Stages
+
+An environment consists of stages representing different operational states:
+- **UP stage**: Node is operational with normal service rate
+- **DOWN_nodename stages**: Node is failed with degraded/zero service rate
+
+Transitions between stages model random breakdowns and repairs.
+
+@subsection reliability_metrics Standard Metrics
+
+<table>
+<tr><th>Metric</th><th>Name</th><th>Definition</th></tr>
+<tr><td>MTTF</td><td>Mean Time To Failure</td><td>Expected time until breakdown from UP state</td></tr>
+<tr><td>MTTR</td><td>Mean Time To Repair</td><td>Expected time to restore from DOWN state</td></tr>
+<tr><td>MTBF</td><td>Mean Time Between Failures</td><td>MTTF + MTTR</td></tr>
+<tr><td>Availability</td><td>Steady-State Availability</td><td>Fraction of time system is operational (P(UP))</td></tr>
+</table>
+
+For systems with multiple failure modes (competing risks):
+- MTTF uses combined failure rate: λ_total = Σ λ_i
+- MTTR is weighted average based on steady-state probabilities of DOWN states
+
+@section reliability_usage Usage
+
+@subsection reliability_matlab MATLAB
+
+<b>Basic Node Failure/Repair:</b>
+@code
+% Create base network
+model = Network('ReliabilityExample');
+source = Source(model, 'Source');
+queue = Queue(model, 'Server', SchedStrategy.FCFS);
+sink = Sink(model, 'Sink');
+
+oclass = OpenClass(model, 'Jobs', 0);
+source.setArrival(oclass, Exp(0.5));
+queue.setService(oclass, Exp(2.0));  % Normal service rate
+
+model.link(Network.serialRouting(source, queue, sink));
+
+% Create environment with breakdown and repair
+env = Env('ServerEnvironment');
+
+% Add failure and repair for 'Server' node
+% Breakdown rate: λ = 0.1 (MTTF = 10)
+% Repair rate: μ = 1.0 (MTTR = 1)
+% Service during failure: rate = 0.5 (degraded, or use Disabled())
+env.addNodeFailureRepair(model, 'Server', Exp(0.1), Exp(1.0), Exp(0.5));
+
+% Solve the environment
+solver = SolverCTMC(env);
+solver.run();
+
+% Get reliability metrics
+RT = env.getReliabilityTable();
+disp(RT);
+@endcode
+
+<b>Separate Breakdown and Repair:</b>
+@code
+% Create environment
+env = Env('CustomEnvironment');
+
+% Add breakdown only
+env.addNodeBreakdown(model, 'Server', Exp(0.1), Disabled());
+
+% Add repair separately
+env.addNodeRepair('Server', Exp(1.0));
+@endcode
+
+<b>Multiple Failure Modes:</b>
+@code
+% Add different types of failures for same node
+env.addNodeBreakdown(model, 'Server', Exp(0.1), Exp(0.5));  % Soft failure
+env.addNodeBreakdown(model, 'Server', Exp(0.05), Disabled());  % Hard failure
+env.addNodeRepair('Server', Exp(1.0));  % Common repair
+@endcode
+
+@subsection reliability_java Java/Kotlin
+
+<b>Basic Node Failure/Repair:</b>
+@code
+// Create base network
+Network model = new Network("ReliabilityExample");
+Source source = new Source(model, "Source");
+Queue queue = new Queue(model, "Server", SchedStrategy.FCFS);
+Sink sink = new Sink(model, "Sink");
+
+OpenClass oclass = new OpenClass(model, "Jobs", 0);
+source.setArrival(oclass, new Exp(0.5));
+queue.setService(oclass, new Exp(2.0));  // Normal service rate
+
+model.link(Network.serialRouting(source, queue, sink));
+
+// Create environment with breakdown and repair
+Env env = new Env("ServerEnvironment");
+
+// Add failure and repair for 'Server' node
+// Breakdown rate: λ = 0.1 (MTTF = 10)
+// Repair rate: μ = 1.0 (MTTR = 1)
+// Service during failure: rate = 0.5 (degraded)
+env.addNodeFailureRepair(model, "Server", new Exp(0.1), new Exp(1.0), new Exp(0.5));
+
+// Solve the environment
+SolverCTMC solver = new SolverCTMC(env);
+solver.run();
+
+// Get reliability metrics
+Map<String, Double> metrics = env.getReliabilityTable();
+System.out.println("MTTF: " + metrics.get("MTTF"));
+System.out.println("MTTR: " + metrics.get("MTTR"));
+System.out.println("MTBF: " + metrics.get("MTBF"));
+System.out.println("Availability: " + metrics.get("Availability"));
+@endcode
+
+<b>Separate Breakdown and Repair:</b>
+@code
+// Create environment
+Env env = new Env("CustomEnvironment");
+
+// Add breakdown only
+env.addNodeBreakdown(model, "Server", new Exp(0.1), new Disabled());
+
+// Add repair separately
+env.addNodeRepair("Server", new Exp(1.0));
+@endcode
+
+@subsection reliability_python Python
+
+<b>Basic Node Failure/Repair:</b>
+@code
+from line_solver import *
+
+# Create base network
+model = Network('ReliabilityExample')
+source = Source(model, 'Source')
+queue = Queue(model, 'Server', SchedStrategy.FCFS)
+sink = Sink(model, 'Sink')
+
+oclass = OpenClass(model, 'Jobs', 0)
+source.setArrival(oclass, Exp(0.5))
+queue.setService(oclass, Exp(2.0))  # Normal service rate
+
+model.link(Network.serialRouting(source, queue, sink))
+
+# Create environment with breakdown and repair
+env = Env('ServerEnvironment')
+
+# Add failure and repair for 'Server' node
+# Breakdown rate: λ = 0.1 (MTTF = 10)
+# Repair rate: μ = 1.0 (MTTR = 1)
+# Service during failure: rate = 0.5 (degraded)
+env.addNodeFailureRepair(model, 'Server', Exp(0.1), Exp(1.0), Exp(0.5))
+
+# Solve the environment
+solver = SolverCTMC(env)
+solver.run()
+
+# Get reliability metrics
+RT = env.getReliabilityTable()
+print(RT)
+@endcode
+
+@section reliability_api API Reference
+
+@subsection reliability_env_methods Env Class Methods
+
+<b>addNodeFailureRepair(baseModel, nodeName, breakdownDist, repairDist, downServiceDist)</b>
+
+Convenience method to add both breakdown and repair for a node.
+
+<b>Syntax:</b>
+@code
+env.addNodeFailureRepair(model, nodeName, breakdownDist, repairDist, downServiceDist)
+@endcode
+
+<b>Parameters:</b>
+<table>
+<tr><th>Name</th><th>Type</th><th>Description</th></tr>
+<tr><td>baseModel</td><td>Network</td><td>Base network model containing the node</td></tr>
+<tr><td>nodeName</td><td>String</td><td>Name of the node that can fail and be repaired</td></tr>
+<tr><td>breakdownDist</td><td>Markovian</td><td>Distribution for time until breakdown (UP→DOWN)</td></tr>
+<tr><td>repairDist</td><td>Markovian</td><td>Distribution for repair time (DOWN→UP)</td></tr>
+<tr><td>downServiceDist</td><td>Markovian</td><td>Service distribution when node is DOWN (use Disabled() for no service)</td></tr>
+</table>
+
+<b>addNodeBreakdown(baseModel, nodeName, breakdownDist, downServiceDist)</b>
+
+Adds a breakdown transition for a node.
+
+<b>Syntax:</b>
+@code
+env.addNodeBreakdown(model, nodeName, breakdownDist, downServiceDist)
+@endcode
+
+<b>Parameters:</b>
+<table>
+<tr><th>Name</th><th>Type</th><th>Description</th></tr>
+<tr><td>baseModel</td><td>Network</td><td>Base network model</td></tr>
+<tr><td>nodeName</td><td>String</td><td>Name of the node that can break down</td></tr>
+<tr><td>breakdownDist</td><td>Markovian</td><td>Distribution for time until breakdown</td></tr>
+<tr><td>downServiceDist</td><td>Markovian</td><td>Service distribution when DOWN</td></tr>
+</table>
+
+<b>addNodeRepair(nodeName, repairDist)</b>
+
+Adds a repair transition for a previously added breakdown.
+
+<b>Syntax:</b>
+@code
+env.addNodeRepair(nodeName, repairDist)
+@endcode
+
+<b>Parameters:</b>
+<table>
+<tr><th>Name</th><th>Type</th><th>Description</th></tr>
+<tr><td>nodeName</td><td>String</td><td>Name of the node to repair</td></tr>
+<tr><td>repairDist</td><td>Markovian</td><td>Distribution for repair time</td></tr>
+</table>
+
+<b>getReliabilityTable()</b>
+
+Computes and returns reliability metrics.
+
+<b>Aliases:</b> \c relT, \c getRelT, \c relTable, \c getRelTable
+
+<b>Syntax:</b>
+@code
+RT = env.getReliabilityTable()  % MATLAB - returns table
+RT = env.relT()                 % MATLAB - short alias
+Map<String, Double> metrics = env.getReliabilityTable();  // Java
+Map<String, Double> metrics = env.relT();                 // Java - short alias
+RT = env.getReliabilityTable()  # Python - returns table/dict
+@endcode
+
+<b>Returns:</b>
+<table>
+<tr><th>Key</th><th>Description</th></tr>
+<tr><td>"MTTF"</td><td>Mean Time To Failure</td></tr>
+<tr><td>"MTTR"</td><td>Mean Time To Repair</td></tr>
+<tr><td>"MTBF"</td><td>Mean Time Between Failures (MTTF + MTTR)</td></tr>
+<tr><td>"Availability"</td><td>Steady-state availability (fraction of time in UP state)</td></tr>
+</table>
+
+@section reliability_advanced Advanced Features
+
+@subsection reliability_reset Custom Reset Policies
+
+By default, queue lengths are preserved during state transitions. Custom reset policies
+can be specified:
+
+@code
+% MATLAB: Reset queue to empty on breakdown
+resetToEmpty = @(input) input * 0;
+env.addNodeBreakdown(model, 'Server', Exp(0.1), Disabled(), resetToEmpty);
+
+// Java: Reset queue to empty
+env.addNodeBreakdown(model, "Server", new Exp(0.1), new Disabled(),
+    input -> input.mult(0));
+@endcode
+
+@subsection reliability_competing_risks Multiple Failure Modes
+
+When a node has multiple failure modes, the total failure rate follows competing risks:
+
+@code
+% Example: Hardware (λ=0.1) and software (λ=0.05) failures
+env.addNodeBreakdown(model, 'Server', Exp(0.1), Disabled());  % Hardware
+env.addNodeBreakdown(model, 'Server', Exp(0.05), Exp(0.1));  % Software (degraded)
+env.addNodeRepair('Server', Exp(1.0));  % Common repair
+
+% Total failure rate: λ_total = 0.1 + 0.05 = 0.15
+% MTTF = 1/0.15 = 6.67
+@endcode
+
+The `getReliabilityTable()` method automatically handles:
+- Combined failure rates
+- Weighted MTTR based on DOWN state probabilities
+- Correct availability calculation
+
+@section reliability_formulas Mathematical Formulas
+
+@subsection reliability_single_mode Single Failure Mode
+
+For a system with one failure mode:
+\f[
+\text{MTTF} = \frac{1}{\lambda}
+\f]
+\f[
+\text{MTTR} = \frac{1}{\mu}
+\f]
+\f[
+\text{MTBF} = \text{MTTF} + \text{MTTR} = \frac{1}{\lambda} + \frac{1}{\mu}
+\f]
+\f[
+\text{Availability} = \frac{\text{MTTF}}{\text{MTBF}} = \frac{\mu}{\lambda + \mu}
+\f]
+
+where λ is the breakdown rate and μ is the repair rate.
+
+@subsection reliability_multiple_modes Multiple Failure Modes (Competing Risks)
+
+For n independent failure modes with rates λ₁, λ₂, ..., λₙ:
+\f[
+\lambda_{\text{total}} = \sum_{i=1}^{n} \lambda_i
+\f]
+\f[
+\text{MTTF} = \frac{1}{\lambda_{\text{total}}}
+\f]
+
+MTTR is computed as weighted average:
+\f[
+\text{MTTR} = \sum_{i=1}^{n} p_i \cdot \frac{1}{\mu_i}
+\f]
+
+where p_i is the normalized steady-state probability of DOWN state i.
+
+@section reliability_examples Examples
+
+<b>Example Files:</b>
+- `matlab/test/test_reliability_metrics.m` - Comprehensive validation tests
+- `matlab/examples/randomEnv/renv_node_breakdown_example.m` - Basic usage example
+- `jar/src/main/kotlin/jline/lang/Env.java` - Java implementation and Javadoc
+
+@section reliability_solver_support Solver Support
+
+Reliability analysis requires solving the underlying Markov chain:
+- **Primary solver:** SolverCTMC (Continuous-Time Markov Chain)
+- **Alternative:** SolverSSA (State-Space Analysis) for larger models
+
+The environment must be solved before calling `getReliabilityTable()`.
+
+@section reliability_references References
+
+- Trivedi, K. S. (2016). Probability and Statistics with Reliability, Queueing, and Computer Science Applications (2nd ed.). Wiley.
+- Barlow, R. E., & Proschan, F. (1996). Mathematical Theory of Reliability. SIAM.
+- Ross, S. M. (2014). Introduction to Probability Models (11th ed.). Academic Press.
+
+@see Env class documentation for complete API
+@see @ref api_random_environments for random environment modeling
+*/

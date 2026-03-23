@@ -1,0 +1,17 @@
+# ninja log v5
+0	62	1773301122900318025	build/glnxa64/rt_nonfinite.o	c572a9e7de1656cb
+6	115	1773301122957317147	build/glnxa64/_coder_pfqn_xzabaup_info.o	6798764becd40b53
+2	116	1773301122958317132	build/glnxa64/_coder_pfqn_xzabaup_mex.o	69e6f14164a922f
+7	131	1773301122973316902	build/glnxa64/c_mexapi_version.o	3decd6a2a7d0f59
+6	144	1773301122981210647	build/glnxa64/pfqn_xzabaup_mexutil.o	9832b58efa3f113f
+1	149	1773301122989316655	build/glnxa64/pfqn_xzabaup_initialize.o	160f833b9495a44b
+0	167	1773301123009316347	build/glnxa64/pfqn_xzabaup_data.o	54068d5a1d88282a
+5	181	1773301123024465647	build/glnxa64/warning.o	83957bca58452e4c
+1	196	1773301123038315901	build/glnxa64/pfqn_xzabaup_terminate.o	c3714d2f1b91c505
+0	213	1773301123057275381	build/glnxa64/_coder_pfqn_xzabaup_api.o	ad1485d192aa508e
+5	214	1773301123057315609	build/glnxa64/pfqn_xzabaup_emxutil.o	2c7d74ab6102d891
+4	223	1773301123066315471	build/glnxa64/eml_int_forloop_overflow_check.o	57c209c02a3929e
+2	235	1773301123078315286	build/glnxa64/mrdivide_helper.o	9c96a9d587149139
+1	268	1773301123110314795	build/glnxa64/pfqn_xzabaup.o	2d5f4f6378483bf9
+2	284	1773301123126314549	build/glnxa64/sumMatrixIncludeNaN.o	4d8312fe4dd22dc7
+285	398	1773301123239719833	pfqn_xzabaup_mex.mexa64	c9355978b90029e7

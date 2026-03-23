@@ -1,0 +1,30 @@
+# Build artifacts
+target/
+*.class
+*.jar
+!pom.xml
+
+# IDE files
+.idea/
+*.iml
+.vscode/
+.settings/
+.project
+.classpath
+
+# Git
+.git/
+.gitignore
+
+# Documentation
+*.md
+docs/
+
+# Test files
+src/test/
+
+# Temporary files
+*.log
+*.tmp
+*.swp
+*~

@@ -1,0 +1,246 @@
+%\documentclass[11pt,usenames,dvipsnames,svgnames,table]{article}
+\documentclass[11pt, openany]{book}
+%\usepackage{arydshln}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[titletoc,title]{appendix}
+\usepackage{etoolbox,ifthen}
+%\usepackage[letterpaper]{geometry}
+\usepackage{amsmath,comment,times}
+\usepackage{environ}
+
+\usepackage[dvipsnames]{xcolor}
+\usepackage{tabularx} 
+\usepackage[top=2in, bottom=1.5in, left=1in, right=1in]{geometry}
+\usepackage{graphicx,listings}
+\usepackage[autolinebreaks]{mcode}
+\usepackage{fancyhdr}
+\usepackage{xspace}
+\newcommand{\bs}{\boldsymbol}
+\usepackage{url}
+\usepackage{cite}
+\usepackage{csquotes}
+\usepackage{relsize}
+\usepackage{longtable}
+\usepackage{tabularx}
+\usepackage{array}
+\newcolumntype{L}[1]{>{\footnotesize\raggedright\let\newline\\\arraybackslash\hspace{0pt}}p{#1}}
+\newcolumntype{T}[1]{>{\ttfamily\footnotesize\raggedright\let\newline\\\arraybackslash\hspace{0pt}}p{#1}}
+\newcolumntype{D}[1]{>{\footnotesize\raggedright\let\newline\\\arraybackslash\hspace{0pt}}p{#1}}
+\usepackage{makeidx}
+\makeindex
+\usepackage[hidelinks]{hyperref}
+\urlstyle{sf}
+\hypersetup{
+    colorlinks,
+    linkcolor={blue},
+    citecolor={blue},
+    urlcolor={blue}
+}
+\renewcommand*{\UrlFont}{\sffamily\smaller\relax}
+\renewcommand*{\texttt}[1]{{\ttfamily\small #1}}
+\newcommand{\squishlist}{
+ \begin{list}{$\bullet$}
+  { \setlength{\itemsep}{0pt}
+     \setlength{\parsep}{3pt}
+     \setlength{\topsep}{3pt}
+     \setlength{\partopsep}{0pt}
+     \setlength{\leftmargin}{1.5em}
+     \setlength{\labelwidth}{1em}
+     \setlength{\labelsep}{0.5em} } }
+
+\newcommand{\squishend}{
+  \end{list}  }
+\newcommand\setItemnumber[1]{\setcounter{enumi}{\numexpr#1-1\relax}}
+%\fancyhf{}
+\fancyfoot[R]{\footnotesize{Last revision: \today{}}}
+\fancyfoot[C]{\footnotesize{\thepage}}
+\renewcommand{\footrulewidth}{0.4pt}
+
+\usepackage{tikz}
+\def\checkmark{\tikz\fill[scale=0.4](0,.35) -- (.25,0) -- (1,.7) -- (.25,.15) -- cycle;}
+\usetikzlibrary{arrows,calc,fit,patterns,plotmarks,shapes.geometric,shapes.misc,shapes.symbols,shapes.arrows,shapes.callouts,shapes.multipart,shapes.gates.logic.US,shapes.gates.logic.IEC,er,automata,backgrounds,chains,topaths,trees,petri,mindmap,matrix,calendar,folding,fadings,through,positioning,scopes,decorations.fractals,decorations.shapes,decorations.text,decorations.pathmorphing,decorations.pathreplacing,decorations.footprints,decorations.markings,shadows}
+
+% Enhanced visualization packages
+\usepackage{tcolorbox}
+\usepackage{mdframed}
+\usepackage{framed}
+\usepackage{fancybox}
+\usepackage{float}
+
+% Enhanced figure styling
+\tcbuselibrary{most}
+\usepackage{adjustbox}
+\tikzset{
+mystyle/.style={
+  circle,
+  inner sep=0pt,
+  text width=1.2cm,
+  align=center,
+  draw=black,
+  fill=white
+  }
+}
+
+% Kotlin language definition for listings
+\lstdefinelanguage{kotlin}{
+  comment=[l]{//},
+  commentstyle={\color{gray}\ttfamily},
+  emph={filter, first, firstOrNull, forEach, lazy, map, mapNotNull, println},
+  emphstyle={\color{OrangeRed}},
+  identifierstyle=\color{black},
+  keywords={!in, !is, abstract, actual, annotation, as, as?, break, by, catch, class, companion, const, constructor, continue, crossinline, data, delegate, do, dynamic, else, enum, expect, external, false, field, file, final, finally, for, fun, get, if, import, in, infix, init, inline, inner, interface, internal, is, lateinit, noinline, null, object, open, operator, out, override, package, param, private, property, protected, public, receiver, reified, return, return@, sealed, set, setparam, super, suspend, tailrec, this, throw, true, try, typealias, typeof, val, var, vararg, when, where, while},
+  keywordstyle={\color{NavyBlue}\bfseries},
+  escapeinside={//(`}{`)},
+  morecomment=[s]{/*}{*/},
+  morestring=[b]",
+  morestring=[s]{"""*}{*"""},
+  ndkeywords={@Composable, @Preview, @Deprecated, @JvmField, @JvmName, @JvmOverloads, @JvmStatic, @JvmSynthetic, Array, Byte, Double, Float, Int, Integer, Iterable, Long, Runnable, Short, String, Any, Unit, Nothing},
+  ndkeywordstyle={\color{BurntOrange}\bfseries},
+  sensitive=true,
+  stringstyle={\color{ForestGreen}\ttfamily},
+}
+
+% Enhanced figure environment with shadow and border
+\newcommand{\enhancedfigure}[4][1.0]{%
+  \begin{figure}[H]
+    \centering
+    \begin{tcolorbox}[
+      enhanced,
+      drop shadow,
+      colframe=gray!50,
+      colback=white,
+      arc=3pt,
+      boxrule=0.5pt,
+      left=2mm,
+      right=2mm,
+      top=2mm,
+      bottom=2mm
+    ]
+      \adjustbox{max width=#1\textwidth}{#2}
+    \end{tcolorbox}
+    \caption{#3}
+    \label{#4}
+  \end{figure}
+}
+
+% Enhanced code block styling
+\newtcolorbox{codebox}[1][]{
+  enhanced,
+  colframe=blue!30,
+  colback=blue!5,
+  arc=2pt,
+  boxrule=0.5pt,
+  drop shadow,
+  left=3mm,
+  right=3mm,
+  top=2mm,
+  bottom=2mm,
+  #1
+}
+
+% Information box for important notes
+\newtcolorbox{infobox}[1][]{
+  enhanced,
+  colframe=green!50,
+  colback=green!10,
+  arc=3pt,
+  boxrule=0.8pt,
+  drop shadow,
+  left=3mm,
+  right=3mm,
+  top=2mm,
+  bottom=2mm,
+  fonttitle=\bfseries,
+  title=Information,
+  #1
+}
+
+% Warning box for critical information
+\newtcolorbox{warningbox}[1][]{
+  enhanced,
+  colframe=orange!70,
+  colback=orange!10,
+  arc=3pt,
+  boxrule=0.8pt,
+  drop shadow,
+  left=3mm,
+  right=3mm,
+  top=2mm,
+  bottom=2mm,
+  fonttitle=\bfseries,
+  title=Warning,
+  #1
+}
+
+\newcommand{\RED}[1]{\textcolor{red}{#1}}
+\newcommand{\MAGENTA}[1]{\textcolor{magenta}{#1}}
+\newcommand{\ORANGE}[1]{\textcolor{orange}{#1}}
+% SPECIFY HERE THE \textsc{Line} VERSION
+\newtheorem{remark}{Remark}
+
+\title{~\\~\\~\\~\\~\\~\\\textsc{Line}: Queueing Analysis Algorithms\\~\\~\\User manual for MATLAB}
+\date{~\\\vfill Last revision: \today}
+\author{}
+\begin{document}
+% Define a boolean variable for each language
+\newboolean{isJava}
+\newboolean{isPython}
+\newboolean{isMatlab}
+\newboolean{isKotlin}
+
+% Set the desired language to true
+\setboolean{isJava}{false}
+\setboolean{isPython}{false}
+\setboolean{isMatlab}{true}
+\setboolean{isKotlin}{false}
+
+\newcommand{\Java}[1]{\ifbool{isJava}{#1}{}}
+\newcommand{\Python}[1]{\ifbool{isPython}{#1}{}}
+\newcommand{\Matlab}[1]{\ifbool{isMatlab}{#1}{}}
+\newcommand{\Kotlin}[1]{\ifbool{isKotlin}{#1}{}}
+
+\newcommand{\ignore}[1]{}
+\excludecomment{JAVA}
+\newenvironment{MATLAB}{}{}
+\excludecomment{KOTLIN}
+\excludecomment{PYTHON}
+
+\maketitle
+ \tableofcontents
+
+\lstset{
+    language=matlab,
+    tabsize=3,
+    frame=single,
+    basicstyle=\ttfamily\footnotesize,
+    %caption=Test,
+    frame=single,
+    rulesepcolor=\color{gray},
+    xleftmargin=20pt,
+    framexleftmargin=15pt,
+    keywordstyle=\color{black},
+    commentstyle=\color{blue},
+    stringstyle=\color{red},
+    %numbers=left,
+    %numberstyle=\tiny,
+    %numbersep=5pt,
+    aboveskip=10pt,
+    breaklines=true,
+    showstringspaces=false,
+    keepspaces=true,
+    columns=flexible,
+    breakindent=0pt,
+    breakautoindent=false,
+    breakatwhitespace=true,
+    emph={environment,stage,envParameter,coxDistribution,coxParameter},
+    emphstyle={\color{blue}}}
+
+\clearpage
+\input{manual}
+\clearpage
+\bibliographystyle{plain}
+\bibliography{biblio}
+\input{appendix}
+\printindex
+\end{document}

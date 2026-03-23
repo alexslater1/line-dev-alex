@@ -1,0 +1,44 @@
+/**
+@page api_polling Polling Systems
+@brief Gated, exhaustive, and k-limited polling strategies
+
+The polling module implements algorithms for polling systems with various
+polling strategies (gated, exhaustive, k-limited).
+
+@subsection spec_polling_functions Key Functions
+
+- @ref polling_qsys_1limited "polling_qsys_1limited" - W=polling_qsys_1limited(arvMAPs,svcMAPs,switchMAPs)
+- @ref polling_qsys_exhaustive "polling_qsys_exhaustive" - W=polling_qsys_exhaustive(arvMAPs,svcMAPs,switchMAPs)
+- @ref polling_qsys_gated "polling_qsys_gated" - W=polling_qsys_gated(arvMAPs,svcMAPs,switchMAPs)
+
+@anchor polling_qsys_1limited
+### polling_qsys_1limited
+  <b>Description:</b> W=polling_qsys_1limited(arvMAPs,svcMAPs,switchMAPs)
+
+  <b>Syntax:</b>
+  @code
+  polling_qsys_1limited(...)
+  @endcode
+
+
+@anchor polling_qsys_exhaustive
+### polling_qsys_exhaustive
+  <b>Description:</b> W=polling_qsys_exhaustive(arvMAPs,svcMAPs,switchMAPs)
+
+  <b>Syntax:</b>
+  @code
+  polling_qsys_exhaustive(...)
+  @endcode
+
+
+@anchor polling_qsys_gated
+### polling_qsys_gated
+  <b>Description:</b> W=polling_qsys_gated(arvMAPs,svcMAPs,switchMAPs)
+
+  <b>Syntax:</b>
+  @code
+  polling_qsys_gated(...)
+  @endcode
+
+
+*/

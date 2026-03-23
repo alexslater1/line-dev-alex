@@ -1,0 +1,334 @@
+\chapter{API Reference - jline.api Package}
+\label{ch:api-reference}
+
+This chapter provides comprehensive documentation for the \texttt{jline.api} package, which contains high-level algorithmic implementations organized by computational area. The API layer provides specialized algorithms for various performance modeling and analysis tasks.
+
+\section{Package Overview}
+
+The \texttt{jline.api} package is organized into the following packages:
+
+\begin{itemize}
+\item \textbf{CACHE} - Caching algorithms and cache performance analysis
+\item \textbf{FJ} - Fork-Join queueing utilities
+\item \textbf{LOSSN} - Loss network algorithms
+\item \textbf{LSN} - Load-dependent stochastic network algorithms
+\item \textbf{MAM} - Matrix Analytic Methods for stochastic processes
+\item \textbf{MAPQN} - Markovian Arrival Process Queueing Networks
+\item \textbf{MC} - Markov Chain algorithms (CTMC/DTMC)
+\item \textbf{MEASURES} - Information theory and probability distance measures
+\item \textbf{NPFQN} - Non-Product-Form Queueing Networks
+\item \textbf{PFQN} - Product-Form Queueing Networks
+\item \textbf{POLLING} - Polling system algorithms
+\item \textbf{QSYS} - Single queue system analysis
+%\item \textbf{RL} - Reinforcement Learning algorithms % Moved to line-apps.git
+\item \textbf{SN} - Stochastic Network utility functions
+\item \textbf{TRACE} - Trace analysis and fitting algorithms
+\item \textbf{WKFLOW} - Workflow analysis algorithms
+\end{itemize}
+
+\section{Cache Analysis (jline.api.cache)}
+
+This package provides algorithms for analyzing cache performance, replacement policies, and cache hierarchies.
+
+\subsection{Key Algorithms}
+\begin{itemize}
+\item \texttt{Cache\_miss\_*} - Cache miss probability calculations for various replacement policies
+\item \texttt{Cache\_prob\_*} - Cache hit/miss probability analysis
+\item \texttt{Cache\_ttl\_*} - Time-to-live cache analysis algorithms
+\item \texttt{Cache\_rayint} - Ray integration methods for cache analysis
+\item \texttt{Cache\_mva} - Mean value analysis for cache systems
+\end{itemize}
+
+\subsection{Example Usage}
+\begin{lstlisting}[language = java, basicstyle=\ttfamily\scriptsize]
+// Example: Calculate cache miss probability for LRU policy
+Matrix hitProb = Cache_miss_rayint.cache_miss_rayint(
+    arrival_rates, 
+    cache_capacity, 
+    item_popularities
+);
+\end{lstlisting}
+
+\section{Matrix Analytic Methods (jline.api.mam)}
+
+This package implements matrix analytic methods for analyzing stochastic processes, particularly Markovian arrival processes (MAPs) and phase-type distributions.
+
+\subsection{Key Algorithm Categories}
+
+\subsubsection{MAP Algorithms}
+\begin{itemize}
+\item \texttt{Map\_*} - Single MAP analysis (moments, distributions, transformations)
+\item \texttt{Mmap\_*} - Marked MAP analysis for multi-class arrivals
+\item \texttt{Mmpp\_*} - Markov Modulated Poisson Process algorithms
+\end{itemize}
+
+\subsubsection{Phase-Type Distributions}
+\begin{itemize}
+\item \texttt{Aph\_*} - Acyclic phase-type distribution fitting and analysis
+\item \texttt{Aph2\_*} - Order-2 acyclic phase-type specific algorithms
+\end{itemize}
+
+\subsubsection{Fitting Algorithms}
+\begin{itemize}
+\item \texttt{*\_fit\_*} - Various fitting algorithms for different arrival processes
+\item \texttt{*\_fit\_trace} - Trace-based fitting methods
+\item \texttt{*\_fit\_gamma} - Gamma distribution fitting
+\end{itemize}
+
+\subsection{Example Usage}
+\begin{lstlisting}[language = java, basicstyle=\ttfamily\scriptsize]
+// Example: Fit a MAP to trace data
+Matrix trace = loadTraceData();
+Matrix[] mapParams = Map2_fit.map2_fit(trace, options);
+Matrix D0 = mapParams[0]; // Background rates
+Matrix D1 = mapParams[1]; // Arrival rates
+\end{lstlisting}
+
+\section{Markov Chain Analysis (jline.api.mc)}
+
+This package provides algorithms for continuous-time (CTMC) and discrete-time (DTMC) Markov chain analysis.
+
+\subsection{CTMC Algorithms}
+\begin{itemize}
+\item \texttt{Ctmc\_solve} - Steady-state solution methods
+\item \texttt{Ctmc\_transient} - Transient analysis algorithms  
+\item \texttt{Ctmc\_randomization} - Uniformization methods
+\item \texttt{Ctmc\_stochcomp} - Stochastic complementation
+\item \texttt{Ctmc\_simulate} - Discrete-event simulation
+\end{itemize}
+
+\subsection{DTMC Algorithms}
+\begin{itemize}
+\item \texttt{Dtmc\_solve} - Eigenvalue-based solution methods
+\item \texttt{Dtmc\_simulate} - Markov chain simulation
+\item \texttt{Dtmc\_stochcomp} - State space reduction techniques
+\end{itemize}
+
+\subsection{Example Usage}
+\begin{lstlisting}[language = java, basicstyle=\ttfamily\scriptsize]
+// Example: Solve CTMC for steady-state probabilities
+Matrix infinitesimalGenerator = buildCTMC();
+Matrix steadyState = Ctmc_solve.ctmc_solve(infinitesimalGenerator);
+\end{lstlisting}
+
+\section{Product-Form Queueing Networks (jline.api.pfqn)}
+
+This package implements algorithms for product-form queueing networks, organized into three main solution approaches.
+
+\subsection{Mean Value Analysis (pfqn.mva)}
+\begin{itemize}
+\item \texttt{Pfqn\_mva} - Exact mean value analysis
+\item \texttt{Pfqn\_mvams} - Multi-server MVA
+\item \texttt{Pfqn\_mvamx} - Mixed network MVA
+\item \texttt{Pfqn\_linearizer*} - Various linearization approximations
+\end{itemize}
+
+\subsection{Normalizing Constant (pfqn.nc)}
+\begin{itemize}
+\item \texttt{Pfqn\_nc} - Convolution algorithm
+\item \texttt{Pfqn\_le} - Linear equation methods
+\item \texttt{Pfqn\_ca} - Conditional arrival methods
+\item \texttt{Pfqn\_mom} - Method of moments
+\end{itemize}
+
+\subsection{Load-Dependent Services (pfqn.ld)}
+\begin{itemize}
+\item \texttt{Pfqn\_gld} - General load-dependent services
+\item \texttt{Pfqn\_mvald} - MVA for load-dependent networks
+\item \texttt{Pfqn\_ncld} - Normalizing constant for load-dependent services
+\end{itemize}
+
+\section{Queueing System Analysis (jline.api.qsys)}
+
+This package provides algorithms for analyzing single queueing systems with various arrival and service processes.
+
+\subsection{Single Server Systems}
+\begin{itemize}
+\item \texttt{Qsys\_mm1} - M/M/1 queue analysis
+\item \texttt{Qsys\_mg1} - M/G/1 queue analysis  
+\item \texttt{Qsys\_gm1} - G/M/1 queue analysis
+\item \texttt{Qsys\_gg1} - G/G/1 queue approximations
+\end{itemize}
+
+\subsection{Multi-Server Systems}
+\begin{itemize}
+\item \texttt{Qsys\_mmk} - M/M/k queue analysis
+\item \texttt{Qsys\_gigk\_*} - G/G/k approximation methods
+\end{itemize}
+
+\subsection{Approximation Methods}
+\begin{itemize}
+\item \texttt{Qsys\_gig1\_approx\_*} - Various G/G/1 approximations (Allen-Cunneen, Gelenbe, Heyman, etc.)
+\item \texttt{Qsys\_gigk\_approx\_*} - Multi-server approximations (Cosmetatos, Kingman, Whitt)
+\end{itemize}
+
+\section{Stochastic Network Utilities (jline.api.sn)}
+
+This package provides utility functions for analyzing stochastic networks and determining model properties.
+
+\subsection{Network Property Detection}
+\begin{itemize}
+\item \texttt{SnHas*} - Functions to detect network features (multiclass, product-form, etc.)
+\item \texttt{SnIs*} - Functions to determine network type (open, closed, mixed)
+\end{itemize}
+
+\subsection{Performance Metrics}
+\begin{itemize}
+\item \texttt{SnGet*} - Functions to extract performance metrics from solutions
+\item \texttt{SnRefresh*} - Functions to update network parameters
+\end{itemize}
+
+\subsection{Result Tables}
+\begin{PYTHON}
+Solver output methods such as \texttt{avg\_table()} return an \texttt{IndexedTable} object, which wraps a pandas \texttt{DataFrame} with MATLAB-style formatting and multi-level indexing by station and class. \texttt{IndexedTable} supports standard DataFrame operations (column access, filtering, iteration) while providing consistent display formatting across solvers.
+\end{PYTHON}
+
+\section{Information Theory and Probability Distance Measures (jline.api.measures)}
+
+This package provides a comprehensive collection of statistical measures for comparing probability distributions and analyzing information content. The measures are widely used in model fitting, validation, and comparison tasks throughout \textsc{Line}.
+
+\subsection{Information-Theoretic Measures}
+
+The package implements standard information-theoretic quantities for discrete and continuous probability distributions. Shannon entropy (\texttt{Ms\_entropy}) quantifies the uncertainty in a probability distribution and serves as a foundation for other measures. Conditional entropy (\texttt{Ms\_condentropy}) measures the remaining uncertainty in one random variable given knowledge of another, while joint entropy (\texttt{Ms\_jointentropy}) quantifies the total uncertainty in multiple random variables considered together. Mutual information (\texttt{Ms\_mutinfo}) measures the amount of information shared between two random variables, representing the reduction in uncertainty about one variable when the other is observed.
+
+\subsection{Divergence Measures}
+
+Several algorithms compute divergence between probability distributions, quantifying how one distribution differs from another. The Kullback-Leibler divergence (\texttt{Ms\_kullbackleibler}) is an asymmetric measure of the information loss when one distribution is used to approximate another. The Jensen-Shannon divergence (\texttt{Ms\_jensenshannon}) provides a symmetric and bounded variant of KL divergence, useful for clustering and classification tasks. Additional divergence measures include relative entropy (\texttt{Ms\_relatentropy}) and various chi-squared divergences (\texttt{Ms\_pearsonchisquared}, \texttt{Ms\_neymanchisquared}, \texttt{Ms\_additivesymmetricchisquared}).
+
+\subsection{Statistical Distance Metrics}
+
+The package includes traditional statistical distance measures for comparing distributions. The Hellinger distance (\texttt{Ms\_hellinger}) provides a metric that is symmetric and bounded, making it suitable for optimization problems. The Bhattacharyya distance (\texttt{Ms\_bhattacharyya}) measures the similarity between two probability distributions and is closely related to the Hellinger distance. The Wasserstein distance (\texttt{Ms\_wasserstein}) measures the minimum cost of transforming one distribution into another and is particularly useful for comparing empirical distributions.
+
+\subsection{Geometric Distance Measures}
+
+Standard geometric distances are provided for vector-based distribution comparisons. Euclidean distance (\texttt{Ms\_euclidean}) computes the straight-line distance between distribution vectors, while Manhattan distance (\texttt{Ms\_manhattan}) sums the absolute differences. The Minkowski distance (\texttt{Ms\_minkowski}) generalizes both measures through a parameterizable norm. Other geometric measures include Lorentzian distance (\texttt{Ms\_lorentzian}) and various wave-based distances (\texttt{Ms\_wavehegdes}).
+
+\subsection{Similarity Measures}
+
+Several algorithms compute similarity rather than distance between distributions. Cosine similarity (\texttt{Ms\_cosine}) measures the angle between distribution vectors, independent of magnitude. Jaccard similarity (\texttt{Ms\_jaccard}) and Tanimoto similarity (\texttt{Ms\_tanimoto}) quantify overlap between sets or distributions. Additional similarity measures include Dice coefficient (\texttt{Ms\_sorensen}), Czekanowski similarity (\texttt{Ms\_czekanowski}), and various intersection-based measures (\texttt{Ms\_intersection}, \texttt{Ms\_harmonicmean}).
+
+\subsection{Goodness-of-Fit Statistics}
+
+The package provides statistical tests for distribution comparison and model validation. The Anderson-Darling statistic (\texttt{Ms\_anderson\_darling}) tests whether a sample comes from a specified distribution, with particular sensitivity to differences in the distribution tails. Additional goodness-of-fit measures support model selection and validation tasks across \textsc{Line} solvers.
+
+\section{Trace Analysis (jline.api.trace)}
+
+This package provides algorithms for analyzing and fitting empirical data traces.
+
+\subsection{Trace Statistics}
+\begin{itemize}
+\item \texttt{Mtrace\_*} - Multivariate trace analysis
+\item \texttt{Trace\_mean}, \texttt{Trace\_var} - Basic trace statistics
+\item \texttt{Mtrace\_moment} - Higher-order moment analysis
+\end{itemize}
+
+\subsection{Trace Manipulation}
+\begin{itemize}
+\item \texttt{Mtrace\_split}, \texttt{Mtrace\_merge} - Trace partitioning and combination
+\item \texttt{Mtrace\_bootstrap} - Bootstrap resampling methods
+\end{itemize}
+
+\section{Workflow Analysis (jline.api.wf)}
+
+This package provides algorithms for analyzing workflow patterns and business process models.
+
+\subsection{Pattern Detection}
+\begin{itemize}
+\item \texttt{Wf\_branch\_detector} - Branch pattern identification
+\item \texttt{Wf\_loop\_detector} - Loop pattern detection
+\item \texttt{Wf\_parallel\_detector} - Parallel execution detection
+\item \texttt{Wf\_sequence\_detector} - Sequential pattern analysis
+\end{itemize}
+
+\subsection{Workflow Management}
+\begin{itemize}
+\item \texttt{WorkflowManager} - Central workflow coordination
+\item \texttt{Wf\_analyzer} - Comprehensive workflow analysis
+\item \texttt{Wf\_pattern\_updater} - Dynamic pattern modification
+\end{itemize}
+
+\section{Fork-Join Utilities (jline.api.fj)}
+
+This package provides specialized utilities for analyzing fork-join queueing models, where arriving jobs are split into parallel tasks that must all complete before the job exits the system. Fork-join models are fundamental for analyzing parallel processing systems, MapReduce frameworks, and distributed computing architectures.
+
+The topology detection function \texttt{Fj\_isfj} validates whether a queueing network has the canonical fork-join structure consisting of a Source node, Fork node, multiple parallel Queue stations, Join node, and Sink node. This validation ensures that subsequent analysis algorithms can safely assume the required structural properties. The distribution conversion function \texttt{Fj\_dist2fj} transforms service time distributions from standard \textsc{Line} representations into the specialized format required by the FJ\_codes library, which computes response time percentiles for fork-join systems. Parameter extraction is handled by \texttt{Fj\_extract\_params}, which analyzes a fork-join network model and extracts the key parameters including arrival rates, service time distributions for each parallel queue, and the number of parallel branches. These utilities enable seamless integration between \textsc{Line} network models and specialized fork-join analysis algorithms that provide percentile-based performance predictions beyond mean value estimates.
+
+\section{Loss Networks (jline.api.lossn)}
+
+This package provides algorithms for analyzing loss networks, which are finite-capacity systems where arriving jobs that find insufficient resources are immediately rejected rather than queued. Loss networks are fundamental models for circuit-switched telecommunications systems, bandwidth allocation in communication networks, and admission control in cloud computing environments.
+
+The primary algorithm \texttt{Lossn\_erlangfp} implements an Erlang fixed-point approximation for multi-resource loss networks. This method computes blocking probabilities and utilization metrics for networks where each job class may require resources from multiple links simultaneously. The algorithm accepts arrival rates for each job class, resource capacity requirements specified as a matrix mapping links to classes, and available capacity at each link. It returns mean queue lengths per class, loss probabilities per class, and blocking probabilities per link. The fixed-point iteration approach provides efficient computation even for large-scale networks where exact solution methods become computationally prohibitive. This package enables capacity planning studies where system designers must dimension network resources to meet target blocking probability constraints under specified traffic loads.
+
+\section{Load-Dependent Stochastic Networks (jline.api.lsn)}
+
+This package provides algorithms for analyzing layered stochastic networks, which model hierarchical systems with multiple layers of service interactions. Layered stochastic networks extend traditional queueing network models by capturing inter-layer dependencies and resource contention across architectural tiers.
+
+The key function \texttt{LsnMaxMultiplicity} computes the maximum multiplicity values for tasks and processors in layered network models. Multiplicity represents the number of concurrent instances of a software task or hardware processor, and determining appropriate multiplicity values is critical for capacity planning in multi-tier service systems. The algorithm analyzes task interactions, processor allocations, and service demands to compute multiplicity bounds that ensure system stability and meet performance targets. This capability supports architectural design studies where engineers must determine appropriate parallelism levels and resource allocations to satisfy response time requirements while minimizing infrastructure costs. The layered network abstraction is particularly valuable for modeling modern cloud applications with microservice architectures, where services span multiple deployment tiers with complex calling patterns and resource sharing.
+
+\section{MAP Queueing Networks (jline.api.mapqn)}
+
+This package implements algorithms for computing performance bounds in queueing networks with Markovian Arrival Process (MAP) arrivals. MAP-based queueing networks extend classical product-form networks by supporting bursty and correlated arrival patterns that commonly arise in computer systems, communication networks, and transaction processing workloads. Since MAP queueing networks generally lack product-form solutions, this package focuses on efficient bounding techniques that provide rigorous upper and lower bounds on performance metrics.
+
+The package implements several complementary bounding approaches organized around linear reduction methods. The general linear reduction algorithm \texttt{Mapqn\_bnd\_lr} formulates the bounding problem as a linear program that maximizes or minimizes target performance metrics subject to flow balance and traffic constraints. Variants include \texttt{Mapqn\_bnd\_lr\_mva} which integrates mean value analysis approximations, and \texttt{Mapqn\_bnd\_lr\_pf} which exploits product-form subnetworks when present. Alternative formulations based on queue-response decomposition are provided by \texttt{Mapqn\_bnd\_qr}, \texttt{Mapqn\_bnd\_qr\_delay}, and \texttt{Mapqn\_bnd\_qr\_ld} for load-dependent services.
+
+Supporting infrastructure includes \texttt{Mapqn\_parameters} and \texttt{Mapqn\_parameters\_factory} for constructing and validating the parameter structures required by bounding algorithms, and \texttt{Mapqn\_lpmodel} which provides the linear programming framework used across multiple bound computation methods. Additional algorithms \texttt{Mapqn\_qr\_bounds\_bas} and \texttt{Mapqn\_qr\_bounds\_rsrd} implement specialized queue-response bounds using different decomposition strategies. These bounding techniques enable rapid performance prediction for MAP queueing networks where exact solution methods are computationally infeasible, supporting capacity planning and performance debugging in systems with realistic correlated workloads.
+
+The package also provides Quick Response Function (QRF) bounds via the \texttt{Qrf\_noblo\_*} family of functions. QRF bounds compute non-blocking approximations of throughput and response time in open MAP queueing networks, using interpolation between light-load and heavy-load regimes. Variants include \texttt{Qrf\_noblo\_mmi} for M/M/1-type interpolation and \texttt{Qrf\_noblo\_mmi\_ld} for load-dependent service rates.
+
+\section{Polling Systems (jline.api.polling)}
+
+This package provides exact analytical algorithms for computing mean waiting times in cyclic polling systems with switchover times. A polling system consists of a single server that visits $N$ queues in cyclic order, spending switchover time to move between queues. Three polling disciplines are supported, each differing in how many customers are served per visit:
+
+\begin{itemize}
+\item \textbf{Exhaustive} (\texttt{polling\_qsys\_exhaustive}): The server continues serving a queue until it becomes empty before moving to the next queue. This minimizes the mean waiting time but can lead to starvation of other queues under heavy load. Based on~\cite{Tak88}, eq.\ (15).
+\item \textbf{Gated} (\texttt{polling\_qsys\_gated}): The server serves all customers present at the beginning of a visit period; customers arriving during the visit wait for the next cycle. This provides more predictable service than exhaustive polling. Based on~\cite{Tak88}, eq.\ (20).
+\item \textbf{1-Limited} (\texttt{polling\_qsys\_1limited}): The server serves at most one customer per queue visit, regardless of queue length. This provides the fairest service distribution across queues but results in higher mean waiting times. Based on~\cite{BoxM86}.
+\end{itemize}
+
+All three functions accept arrays of Markovian Arrival Processes (MAPs) for arrivals, service times, and switchover times at each queue. Each MAP is specified as a pair of matrices $(D_0, D_1)$, where $D_0$ captures phase transitions without events and $D_1$ captures transitions with events. The functions return an array of mean waiting times, one per queue. The system must satisfy the stability condition $\sum_i \lambda_i b_i < 1$, where $\lambda_i$ and $b_i$ are the arrival rate and mean service time at queue $i$, respectively.
+
+These algorithms are automatically invoked by the MVA solver when a network contains queues configured with \texttt{PollingType.EXHAUSTIVE}, \texttt{PollingType.GATED}, or \texttt{PollingType.KLIMITED} scheduling, combined with switchover times specified via \texttt{setSwitchover}. Examples demonstrating polling systems are provided in the \texttt{examples/advanced/cyclicPolling/} directory.
+
+\section{Usage Guidelines}
+
+\subsection{Algorithm Selection}
+The API provides multiple algorithms for similar tasks. Selection criteria include:
+\begin{itemize}
+\item \textbf{Accuracy} - Exact vs. approximate methods
+\item \textbf{Computational Cost} - Time and memory complexity
+\item \textbf{Model Support} - Supported feature sets
+\item \textbf{Numerical Stability} - Robustness to edge cases
+\end{itemize}
+
+\subsection{Integration Patterns}
+\begin{itemize}
+\item \textbf{Direct API Calls} - Use algorithms directly for specialized analysis
+\item \textbf{Solver Integration} - Algorithms are automatically selected by solvers
+\item \textbf{Custom Workflows} - Combine multiple algorithms for complex analysis
+\end{itemize}
+
+\subsection{Error Handling}
+API functions follow consistent error handling patterns:
+\begin{itemize}
+\item Return null for invalid inputs
+\item Throw \texttt{RuntimeException} for computational failures  
+\item Provide fallback algorithms when primary methods fail
+\end{itemize}
+
+\section{Developer Notes}
+
+\subsection{Java 8 Compatibility}
+All API implementations maintain Java 8 compatibility:
+\begin{itemize}
+\item Use \texttt{Collectors.toList()} instead of \texttt{Stream.toList()}
+\item Avoid \texttt{var} keyword and factory methods
+\item Traditional control flow structures
+\end{itemize}
+
+\subsection{Performance Considerations}
+\begin{itemize}
+\item Matrix operations are optimized for large-scale problems
+\item Algorithms provide both exact and approximate variants
+\item Memory usage is optimized through sparse representations
+\item Parallel implementations available for computationally intensive methods
+\end{itemize}

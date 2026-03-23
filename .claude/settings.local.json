@@ -1,0 +1,30 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(matlab -batch:*)",
+      "Bash(timeout 120 matlab:*)",
+      "Bash(timeout 300 matlab:*)",
+      "Bash(find:*)",
+      "Bash(grep:*)",
+      "WebSearch",
+      "mcp__matlab__execute_matlab",
+      "Bash(tsp -r:*)",
+      "Bash(tsp -c:*)",
+      "Bash(javap:*)",
+      "Bash(tsp)",
+      "Bash(tsp /usr/bin/mvn test:*)",
+      "Bash(tsp -K:*)",
+      "Bash(tsp:*)",
+      "Bash(jar tf:*)",
+      "Bash(jar xf:*)"
+    ],
+    "deny": [],
+    "ask": [],
+    "defaultMode": "acceptEdits",
+    "additionalDirectories": [
+      "../line-test.git/",
+      "../jmt-thinned.git",
+      "/home/gcasale/Dropbox/code/line-crosstest.git/"
+    ]
+  }
+}

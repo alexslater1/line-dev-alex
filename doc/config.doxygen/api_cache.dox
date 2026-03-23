@@ -1,0 +1,412 @@
+/**
+@page api_cache Cache Algorithms
+@brief Cache replacement policies and performance analysis
+
+The cache module provides algorithms for analyzing cache systems with various
+replacement policies (LRU, FIFO, RR, etc.) and item popularity distributions.
+
+@subsection cache_algorithms_matlab_src_api_cache__list Function List
+
+- @ref cache_erec "cache_erec" - Recursive computation of the normalizing constant for cache models
+- @ref cache_gamma_lp "cache_gamma_lp" - Computes gamma parameters for cache models using linear programming
+- @ref cache_is "cache_is" - Normalizing constant estimation via importance sampling
+- @ref cache_miss_fpi "cache_miss_fpi" - Computes miss rates using fixed-point iteration
+- @ref cache_miss "cache_miss" - Cache miss rate computation
+- @ref cache_miss_is "cache_miss_is" - Computes miss rates using importance sampling
+- @ref cache_miss_spm "cache_miss_spm" - Computes miss rates using saddle-point method
+- @ref cache_mva "cache_mva" - Exact Mean Value Analysis for caches
+- @ref cache_mva_miss "cache_mva_miss" - Computes miss rates using Mean Value Analysis
+- @ref cache_prob_erec "cache_prob_erec" - Computes cache hit probabilities using recursive method
+- @ref cache_prob_fpi "cache_prob_fpi" - Computes cache hit probabilities using fixed-point iteration
+- @ref cache_prob_is "cache_prob_is" - Computes cache hit probabilities using importance sampling
+- @ref cache_prob_spm "cache_prob_spm" - Computes cache hit probabilities using saddle-point method
+- @ref cache_rrm_meanfield_ode "cache_rrm_meanfield_ode" - ODE function for RRM mean-field cache dynamics
+- @ref cache_spm "cache_spm" - Computes normalizing constant using saddle-point method
+- @ref cache_t_hlru "cache_t_hlru" - Computes characteristic times for hierarchical LRU cache levels
+- @ref cache_t_lrum "cache_t_lrum" - Computes characteristic times for LRU(m) cache levels
+- @ref cache_ttl_hlru "cache_ttl_hlru" - Computes steady-state probabilities for TTL-based hierarchical LRU cache
+- @ref cache_ttl_lrua "cache_ttl_lrua" - Computes steady-state probabilities for TTL-LRU cache with arrivals
+- @ref cache_ttl_lrum "cache_ttl_lrum" - Computes steady-state probabilities for TTL-based LRU(m) cache
+- @ref cache_xi_fp "cache_xi_fp" - Fixed-point iteration for computing cache performance metrics
+- @ref cache_xi_iter "cache_xi_iter" - Computes Lagrange multipliers using Gast-van Houdt fixed-point iteration
+
+@anchor cache_erec
+### cache_erec
+  <b>Description:</b> Recursive computation of the normalizing constant for cache models
+
+  <b>Syntax:</b>
+  @code
+  cache_erec(...)
+  @endcode
+
+@anchor cache_gamma_lp
+### cache_gamma_lp
+  <b>Description:</b> Computes gamma parameters for cache models using linear programming
+
+  <b>Syntax:</b>
+  @code
+  [gamma, u, n, h] = cache_gamma_lp(lambda, R)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>lambda</td><td>Arrival rate(s)</td></tr>
+  <tr><td>R</td><td>Number of classes or R matrix</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>gamma</td><td>Item popularity or rate parameters</td></tr>
+  <tr><td>u</td><td>Utilization or solution vector</td></tr>
+  <tr><td>n</td><td>Number of items, nodes, or states</td></tr>
+  <tr><td>h</td><td>Number of hierarchies or layers</td></tr>
+  </table>
+
+@anchor cache_is
+### cache_is
+  <b>Description:</b> Computes the normalizing constant for cache models using Monte Carlo importance sampling
+
+  <b>Syntax:</b>
+  @code
+  [E, lE] = cache_is(gamma, m, samples)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>gamma</td><td>Item popularity probabilities (n x h matrix)</td></tr>
+  <tr><td>m</td><td>Cache capacity vector (1 x h)</td></tr>
+  <tr><td>samples</td><td>Number of Monte Carlo samples (default: 100000)</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>E</td><td>Estimated normalizing constant</td></tr>
+  <tr><td>lE</td><td>Logarithm of normalizing constant</td></tr>
+  </table>
+
+@anchor cache_miss_fpi
+### cache_miss_fpi
+  <b>Description:</b> Computes miss rates using fixed-point iteration
+
+  <b>Syntax:</b>
+  @code
+  [M, MU, MI, pi0] = cache_miss_fpi(gamma, m, lambda)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>gamma</td><td>Item popularity probabilities</td></tr>
+  <tr><td>m</td><td>Cache capacity</td></tr>
+  <tr><td>lambda</td><td>Arrival rate(s)</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>M</td><td>Global miss rate</td></tr>
+  <tr><td>MU</td><td>Per-user miss rate</td></tr>
+  <tr><td>MI</td><td>Per-item miss rate</td></tr>
+  <tr><td>pi0</td><td>Per-item miss probability</td></tr>
+  </table>
+
+@anchor cache_miss
+### cache_miss
+  <b>Description:</b> Cache miss rate computation
+
+  <b>Syntax:</b>
+  @code
+  [M, MU, MI, pi0] = cache_miss(gamma, m, lambda)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>gamma</td><td>Item popularity probabilities</td></tr>
+  <tr><td>m</td><td>Cache capacity</td></tr>
+  <tr><td>lambda</td><td>Arrival rate(s)</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>M</td><td>Global miss rate</td></tr>
+  <tr><td>MU</td><td>Per-user miss rate</td></tr>
+  <tr><td>MI</td><td>Per-item miss rate</td></tr>
+  <tr><td>pi0</td><td>Per-item miss probability</td></tr>
+  </table>
+
+@anchor cache_miss_is
+### cache_miss_is
+  <b>Description:</b> Computes miss rates using Monte Carlo importance sampling
+
+  <b>Syntax:</b>
+  @code
+  [M, MU, MI, pi0, lE] = cache_miss_is(gamma, m, lambda, samples)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>gamma</td><td>Item popularity probabilities (n x h matrix)</td></tr>
+  <tr><td>m</td><td>Cache capacity vector (1 x h)</td></tr>
+  <tr><td>lambda</td><td>Arrival rate cell array (one matrix per user class)</td></tr>
+  <tr><td>samples</td><td>Number of Monte Carlo samples (default: 100000)</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>M</td><td>Global miss rate</td></tr>
+  <tr><td>MU</td><td>Per-user miss rate</td></tr>
+  <tr><td>MI</td><td>Per-item miss rate</td></tr>
+  <tr><td>pi0</td><td>Per-item miss probability</td></tr>
+  <tr><td>lE</td><td>Logarithm of normalizing constant</td></tr>
+  </table>
+
+@anchor cache_miss_spm
+### cache_miss_spm
+  <b>Description:</b> Computes miss rates using saddle-point method
+
+  <b>Syntax:</b>
+  @code
+  [M, MU, MI, pi0, lE] = cache_miss_spm(gamma, m, lambda)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>gamma</td><td>Item popularity probabilities</td></tr>
+  <tr><td>m</td><td>Cache capacity</td></tr>
+  <tr><td>lambda</td><td>Arrival rate(s)</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>M</td><td>Global miss rate</td></tr>
+  <tr><td>MU</td><td>Per-user miss rate</td></tr>
+  <tr><td>MI</td><td>Per-item miss rate</td></tr>
+  <tr><td>pi0</td><td>Per-item miss probability</td></tr>
+  <tr><td>lE</td><td>Logarithm of partition function</td></tr>
+  </table>
+
+@anchor cache_mva
+### cache_mva
+  <b>Description:</b> Exact Mean Value Analysis for caches
+
+  <b>Syntax:</b>
+  @code
+  [pi, pi0, pij, x, u, E] = cache_mva(gamma, m)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>gamma</td><td>Item popularity probabilities</td></tr>
+  <tr><td>m</td><td>Cache capacity</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>pi</td><td>Steady-state probability distribution</td></tr>
+  <tr><td>pi0</td><td>Per-item miss probability</td></tr>
+  <tr><td>pij</td><td>Pairwise probabilities</td></tr>
+  <tr><td>x</td><td>State vector or solution</td></tr>
+  <tr><td>u</td><td>Utilization or solution vector</td></tr>
+  <tr><td>E</td><td>Expected value or partition function</td></tr>
+  </table>
+
+@anchor cache_mva_miss
+### cache_mva_miss
+  <b>Description:</b> Computes miss rates using Mean Value Analysis
+
+  <b>Syntax:</b>
+  @code
+  [M, Mk] = cache_mva_miss(p, m, R)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>p</td><td>Probability vector or parameter</td></tr>
+  <tr><td>m</td><td>Cache capacity</td></tr>
+  <tr><td>R</td><td>Number of classes or R matrix</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>M</td><td>Global miss rate</td></tr>
+  <tr><td>Mk</td><td>k-th moment</td></tr>
+  </table>
+
+@anchor cache_prob_erec
+### cache_prob_erec
+  <b>Description:</b> Computes cache hit probabilities using recursive method
+
+  <b>Syntax:</b>
+  @code
+  cache_prob_erec(...)
+  @endcode
+
+@anchor cache_prob_fpi
+### cache_prob_fpi
+  <b>Description:</b> Computes cache hit probabilities using fixed-point iteration
+
+  <b>Syntax:</b>
+  @code
+  cache_prob_fpi(...)
+  @endcode
+
+@anchor cache_prob_is
+### cache_prob_is
+  <b>Description:</b> Computes cache hit probabilities using Monte Carlo importance sampling
+
+  <b>Syntax:</b>
+  @code
+  pij = cache_prob_is(gamma, m, samples)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>gamma</td><td>Item popularity probabilities (n x h matrix)</td></tr>
+  <tr><td>m</td><td>Cache capacity vector (1 x h)</td></tr>
+  <tr><td>samples</td><td>Number of Monte Carlo samples (default: 100000)</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>pij</td><td>Probability matrix (n x h+1): column 0 = miss prob, columns 1..h = hit prob at each level</td></tr>
+  </table>
+
+@anchor cache_prob_spm
+### cache_prob_spm
+  <b>Description:</b> Computes cache hit probabilities using saddle-point method
+
+  <b>Syntax:</b>
+  @code
+  cache_prob_spm(...)
+  @endcode
+
+@anchor cache_rrm_meanfield_ode
+### cache_rrm_meanfield_ode
+  <b>Description:</b> ODE function for RRM mean-field cache dynamics
+
+  <b>Syntax:</b>
+  @code
+  cache_rrm_meanfield_ode(...)
+  @endcode
+
+@anchor cache_spm
+### cache_spm
+  <b>Description:</b> Computes normalizing constant using saddle-point method
+
+  <b>Syntax:</b>
+  @code
+  [Z, lZ, xi] = cache_spm(gamma, m, xi0)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>gamma</td><td>Item popularity probabilities</td></tr>
+  <tr><td>m</td><td>Cache capacity</td></tr>
+  <tr><td>xi0</td><td>Initial guess for Lagrange multipliers</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>Z</td><td>Think times or partition function</td></tr>
+  <tr><td>lZ</td><td>Logarithm of partition function</td></tr>
+  <tr><td>xi</td><td>Lagrange multipliers</td></tr>
+  </table>
+
+@anchor cache_t_hlru
+### cache_t_hlru
+  <b>Description:</b> Computes characteristic times for hierarchical LRU cache levels
+
+  <b>Syntax:</b>
+  @code
+  cache_t_hlru(...)
+  @endcode
+
+@anchor cache_t_lrum
+### cache_t_lrum
+  <b>Description:</b> Computes characteristic times for LRU(m) cache levels
+
+  <b>Syntax:</b>
+  @code
+  cache_t_lrum(...)
+  @endcode
+
+@anchor cache_ttl_hlru
+### cache_ttl_hlru
+  <b>Description:</b> Computes steady-state probabilities for TTL-based hierarchical LRU cache
+
+  <b>Syntax:</b>
+  @code
+  cache_ttl_hlru(...)
+  @endcode
+
+@anchor cache_ttl_lrua
+### cache_ttl_lrua
+  <b>Description:</b> Computes steady-state probabilities for TTL-LRU cache with arrivals
+
+  <b>Syntax:</b>
+  @code
+  cache_ttl_lrua(...)
+  @endcode
+
+@anchor cache_ttl_lrum
+### cache_ttl_lrum
+  <b>Description:</b> Computes steady-state probabilities for TTL-based LRU(m) cache
+
+  <b>Syntax:</b>
+  @code
+  cache_ttl_lrum(...)
+  @endcode
+
+@anchor cache_xi_fp
+### cache_xi_fp
+  <b>Description:</b> Fixed-point iteration for computing cache performance metrics
+
+  <b>Syntax:</b>
+  @code
+  [xi, pi0, pij, it] = cache_xi_fp(gamma, m, xi)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>gamma</td><td>Item popularity probabilities</td></tr>
+  <tr><td>m</td><td>Cache capacity</td></tr>
+  <tr><td>xi</td><td>Lagrange multipliers</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>xi</td><td>Lagrange multipliers</td></tr>
+  <tr><td>pi0</td><td>Per-item miss probability</td></tr>
+  <tr><td>pij</td><td>Pairwise probabilities</td></tr>
+  <tr><td>it</td><td>Number of iterations performed</td></tr>
+  </table>
+
+@anchor cache_xi_iter
+### cache_xi_iter
+  <b>Description:</b> Computes Lagrange multipliers using Gast-van Houdt fixed-point iteration
+
+  <b>Syntax:</b>
+  @code
+  cache_xi_iter(...)
+  @endcode
+*/

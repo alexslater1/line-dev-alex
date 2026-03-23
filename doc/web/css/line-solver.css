@@ -1,0 +1,930 @@
+/* LINE Solver Documentation Styles */
+
+/* Full-width layout */
+body {
+	margin: 0;
+	padding: 0;
+	font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+	font-size: 14px;
+	line-height: 1.6;
+	color: #333;
+	background-color: #f5f5f5;
+}
+
+#wrap {
+	width: 100%;
+	max-width: 100%;
+	margin: 0;
+	padding: 0;
+	box-sizing: border-box;
+}
+
+/* Header Styles */
+#header {
+	width: 100%;
+	background: linear-gradient(135deg, #1d72b8 0%, #155a8a 100%);
+	color: #fff;
+	padding: 10px 40px;
+	box-sizing: border-box;
+}
+
+#header h1 {
+	margin: 0;
+	font-size: 2em;
+}
+
+#header h1 a {
+	color: #fff;
+	text-decoration: none;
+}
+
+#header #slogan {
+	margin: 5px 0 0 0;
+	font-size: 1.1em;
+	opacity: 0.9;
+}
+
+#header #toplinks {
+	float: right;
+	margin: 0;
+	font-size: 0.9em;
+}
+
+#header #toplinks a {
+	color: #fff;
+	text-decoration: none;
+}
+
+#header #toplinks a:hover {
+	text-decoration: underline;
+}
+
+/* Content Area */
+#content {
+	display: inline-block;
+	vertical-align: top;
+	width: calc(100% - 320px);
+	min-height: 500px;
+	padding: 30px 40px;
+	box-sizing: border-box;
+	background-color: #fff;
+}
+
+#content h2 {
+	color: #1d72b8;
+	border-bottom: 2px solid #1d72b8;
+	padding-bottom: 8px;
+	margin-top: 0;
+}
+
+#content a {
+	color: #1d72b8;
+	text-decoration: none;
+}
+
+#content a:hover {
+	text-decoration: underline;
+}
+
+/* Sidebar Styles */
+#sidebar {
+	display: inline-block;
+	vertical-align: top;
+	width: 280px;
+	padding: 30px 20px;
+	box-sizing: border-box;
+	background-color: #f9f9f9;
+	border-right: 1px solid #ddd;
+}
+
+#wrap > #sidebar {
+	float: left;
+}
+
+#wrap > #content {
+	float: right;
+}
+
+#sidebar h2 {
+	font-size: 1.1em;
+	color: #1d72b8;
+	margin-top: 20px;
+	margin-bottom: 10px;
+}
+
+#sidebar h2:first-child {
+	margin-top: 0;
+}
+
+#sidebar p {
+	margin: 0 0 8px 0;
+	line-height: 1.4;
+}
+
+#sidebar ul {
+	list-style: none;
+	padding: 0;
+	margin: 0;
+}
+
+#sidebar ul li {
+	margin: 8px 0;
+}
+
+#sidebar ul li a {
+	color: #333;
+	text-decoration: none;
+}
+
+#sidebar ul li a:hover {
+	color: #1d72b8;
+	text-decoration: underline;
+}
+
+#sidebar ul.sidebar-nav,
+#sidebar ul.sidebar-links,
+#sidebar ul.sidebar-news {
+	list-style: none;
+	padding: 0;
+	margin: 0 0 15px 0;
+}
+
+#sidebar ul.sidebar-nav li,
+#sidebar ul.sidebar-links li,
+#sidebar ul.sidebar-news li {
+	margin: 6px 0;
+	font-size: 0.95em;
+}
+
+#sidebar ul.sidebar-nav li a,
+#sidebar ul.sidebar-links li a {
+	display: block;
+	padding: 6px 0;
+	color: #444;
+	text-decoration: none;
+	border-bottom: 1px solid transparent;
+	transition: color 0.2s ease;
+}
+
+#sidebar ul.sidebar-nav li a:hover,
+#sidebar ul.sidebar-links li a:hover {
+	color: #1d72b8;
+}
+
+#sidebar ul.sidebar-nav li.active a {
+	color: #1d72b8;
+	font-weight: 600;
+}
+
+/* Expandable menu styles */
+.sidebar-nav .expandable > a {
+	position: relative;
+	cursor: pointer;
+}
+
+.sidebar-nav .expandable > a::after {
+	content: '\25B6';
+	position: absolute;
+	right: 0;
+	font-size: 0.6em;
+	color: #999;
+	transition: transform 0.2s ease;
+}
+
+.sidebar-nav .expandable.open > a::after {
+	transform: rotate(90deg);
+}
+
+.sidebar-nav .submenu {
+	display: none;
+	list-style: none;
+	padding: 0;
+	margin: 3px 0 3px 20px;
+}
+
+.sidebar-nav .expandable.open > .submenu {
+	display: block;
+}
+
+.sidebar-nav .submenu li {
+	margin: 2px 0;
+}
+
+.sidebar-nav .submenu li a {
+	padding: 2px 0 2px 1em;
+	font-size: 0.9em;
+	color: #666;
+}
+
+.sidebar-nav .submenu li a:hover {
+	color: #1d72b8;
+}
+
+.sidebar-nav .submenu li.active a {
+	color: #1d72b8;
+	font-weight: 600;
+}
+
+#sidebar ul.sidebar-news li a {
+	color: #1d72b8;
+	text-decoration: none;
+}
+
+#sidebar ul.sidebar-news li a:hover {
+	text-decoration: underline;
+}
+
+/* Footer Styles */
+#footer {
+	max-width: 1200px;
+	margin: 0 auto;
+	padding: 20px 40px;
+	font-size: 0.85em;
+	color: #666;
+	background-color: #fff;
+	border-top: 1px solid #ddd;
+	clear: both;
+}
+
+#footer a {
+	color: #1d72b8;
+}
+
+/* Page Content Styles (for index.html) */
+.page {
+	display: none;
+}
+
+.page h2 {
+	color: #1d72b8;
+	border-bottom: 2px solid #1d72b8;
+	padding-bottom: 8px;
+	margin-top: 0;
+}
+
+.page h3 {
+	color: #333;
+	margin-top: 25px;
+}
+
+.page h4 {
+	color: #555;
+	margin-top: 20px;
+}
+
+.page a {
+	color: #1d72b8;
+	text-decoration: none;
+}
+
+.page a:hover {
+	text-decoration: underline;
+}
+
+.page ul {
+	padding-left: 25px;
+}
+
+.page ul li {
+	margin: 8px 0;
+}
+
+/* Icons */
+.icon {
+	width: 16px;
+	height: 16px;
+	vertical-align: middle;
+	margin-right: 5px;
+}
+
+.icon-large {
+	width: 32px;
+	height: 32px;
+	vertical-align: middle;
+	margin-right: 10px;
+}
+
+/* Documentation List */
+.doc-list {
+	list-style: none;
+	padding: 0;
+	margin: 15px 0;
+}
+
+.doc-list li {
+	margin: 15px 0;
+	padding: 8px 0;
+}
+
+.doc-list li a {
+	display: inline-flex;
+	align-items: center;
+	font-size: 1.1em;
+	color: #1d72b8;
+	text-decoration: none;
+}
+
+.doc-list li a:hover {
+	color: #155a8a;
+	text-decoration: underline;
+}
+
+/* Download Button */
+.download-button, .page a.download-button {
+	display: inline-block;
+	padding: 10px 20px;
+	font-size: 14px;
+	font-weight: bold;
+	color: #fff !important;
+	background-color: #1d72b8;
+	text-decoration: none;
+	border-radius: 5px;
+	margin-top: 10px;
+	transition: background-color 0.3s ease;
+}
+
+.download-button .icon {
+	filter: brightness(0) invert(1);
+}
+
+.download-button:hover, .page a.download-button:hover {
+	background-color: #155a8a;
+	color: #fff !important;
+}
+
+/* Citation Box */
+.citation-box {
+	border: 2px solid #1d72b8;
+	background-color: #f8f9fa;
+	padding: 15px;
+	margin: 10px 0;
+	border-radius: 5px;
+}
+
+/* Solver Section */
+.solver-section {
+	margin-bottom: 30px;
+}
+
+.solver-name {
+	color: #1d72b8;
+	font-size: 1.4em;
+	margin-bottom: 10px;
+}
+
+.solver-subtitle {
+	color: #444;
+	margin-bottom: 20px;
+	line-height: 1.6;
+}
+
+/* Algorithm Table */
+.algorithm-table {
+	width: 100%;
+	border-collapse: collapse;
+	margin: 20px 0;
+	font-size: 0.95em;
+}
+
+.algorithm-table th {
+	background-color: #f0f0f0;
+	padding: 10px 12px;
+	text-align: left;
+	border: 1px solid #ddd;
+}
+
+.algorithm-table td {
+	padding: 8px 12px;
+	border: 1px solid #ddd;
+	vertical-align: top;
+	line-height: 1.4;
+}
+
+.algorithm-table td:nth-child(1) {
+	font-size: 1.1em;
+	font-weight: 500;
+}
+
+.algorithm-table td:nth-child(3) {
+	font-size: 0.9em;
+	color: #666;
+}
+
+.algorithm-table code {
+	background-color: #f5f5f5;
+	padding: 2px 6px;
+	font-size: 0.95em;
+	border-radius: 3px;
+}
+
+/* Reference Link */
+.ref-link {
+	color: #1d72b8;
+	text-decoration: none;
+	cursor: pointer;
+}
+
+.ref-link:hover {
+	color: #155a8a;
+	text-decoration: underline;
+}
+
+/* Use Case Box */
+.use-case {
+	background-color: #f8f9fa;
+	padding: 10px 15px;
+	border-left: 3px solid #1d72b8;
+	margin: 15px 0;
+}
+
+/* Solver Table Styles */
+.solver-table {
+	width: 100%;
+	border-collapse: collapse;
+	margin: 15px 0;
+}
+
+.solver-table th {
+	background-color: #1d72b8;
+	color: #fff;
+	padding: 10px 12px;
+	text-align: left;
+	border: 1px solid #155a8a;
+	font-weight: 600;
+}
+
+.solver-table td {
+	padding: 10px 12px;
+	border: 1px solid #ddd;
+	vertical-align: top;
+	line-height: 1.5;
+}
+
+.solver-table td:first-child {
+	width: 120px;
+	font-weight: 500;
+	white-space: nowrap;
+}
+
+.solver-table td a {
+	color: #1d72b8;
+	text-decoration: none;
+}
+
+.solver-table td a:hover {
+	text-decoration: underline;
+}
+
+.solver-table tr:nth-child(even) {
+	background-color: #f9f9f9;
+}
+
+.solver-table tr:hover {
+	background-color: #f0f4f8;
+}
+
+/* Example Section (for solver pages) */
+.example-section {
+	margin-top: 40px;
+	margin-bottom: 30px;
+}
+
+.example-section h3 {
+	color: #1d72b8;
+	border-bottom: 1px solid #ddd;
+	padding-bottom: 8px;
+}
+
+/* Language Tabs */
+.language-tabs {
+	display: flex;
+	gap: 10px;
+	margin-bottom: 15px;
+	border-bottom: 2px solid #ddd;
+}
+
+.language-tab {
+	padding: 10px 20px;
+	background-color: #f0f0f0;
+	border: none;
+	cursor: pointer;
+	font-size: 0.95em;
+	border-radius: 4px 4px 0 0;
+}
+
+.language-tab:hover {
+	background-color: #e0e0e0;
+}
+
+.language-tab.active {
+	background-color: #1d72b8;
+	color: #fff;
+}
+
+.language-content {
+	display: none;
+}
+
+.language-content.active {
+	display: block;
+}
+
+/* Code Block */
+.code-block {
+	position: relative;
+	background-color: #f8f8f8;
+	border: 1px solid #ddd;
+	padding: 15px;
+	border-radius: 4px;
+	margin-bottom: 15px;
+}
+
+.code-block pre {
+	margin: 0;
+	font-family: 'Courier New', monospace;
+	font-size: 0.9em;
+	line-height: 1.4;
+	overflow-x: auto;
+}
+
+/* Copy Button */
+.copy-button {
+	position: absolute;
+	top: 8px;
+	right: 8px;
+	padding: 6px 12px;
+	background-color: #1d72b8;
+	color: #fff;
+	border: none;
+	border-radius: 3px;
+	cursor: pointer;
+	font-size: 0.85em;
+	transition: background-color 0.2s ease;
+}
+
+.copy-button:hover {
+	background-color: #155a8a;
+}
+
+.copy-button.copied {
+	background-color: #28a745;
+}
+
+/* Output Block */
+.output-block {
+	background-color: #f0f7ff;
+	border: 1px solid #b3d9ff;
+	border-radius: 4px;
+	padding: 15px;
+	margin: 15px 0;
+	overflow-x: auto;
+}
+
+.output-block pre {
+	margin: 0;
+	font-family: 'Courier New', monospace;
+	font-size: 0.85em;
+	line-height: 1.4;
+	color: #333;
+}
+
+.output-block h4 {
+	margin-top: 0;
+	color: #1d72b8;
+	font-size: 0.95em;
+}
+
+/* Back Link */
+.back-link {
+	margin-top: 30px;
+	padding-top: 20px;
+	border-top: 1px solid #ddd;
+}
+
+.back-link a {
+	display: inline-block;
+	padding: 10px 20px;
+	background-color: #1d72b8;
+	color: #fff !important;
+	text-decoration: none;
+	border-radius: 4px;
+}
+
+.back-link a:hover {
+	background-color: #155a8a;
+	text-decoration: none;
+}
+
+/* References Section */
+.references {
+	margin-top: 40px;
+	padding-top: 20px;
+	border-top: 2px solid #ddd;
+}
+
+.references h3 {
+	color: #1d72b8;
+}
+
+.references ol {
+	font-size: 0.9em;
+	line-height: 1.7;
+}
+
+/* Hide LDES solver from display but keep in HTML source for indexing */
+#ldes, #ldes-wrapper {
+	display: none !important;
+}
+
+/* Tutorial Page Styles */
+.tutorial-section {
+	margin-bottom: 50px;
+	padding-bottom: 30px;
+	border-bottom: 1px solid #eee;
+}
+
+.tutorial-section:last-child {
+	border-bottom: none;
+}
+
+.tutorial-subtitle {
+	color: #444;
+	margin-bottom: 20px;
+	line-height: 1.6;
+}
+
+/* Tutorial Navigation */
+.tutorial-nav {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 15px 0;
+	margin: 20px 0;
+	border-top: 1px solid #eee;
+	border-bottom: 1px solid #eee;
+}
+
+.tutorial-nav .nav-prev,
+.tutorial-nav .nav-next {
+	margin-left: auto;
+	padding-left: 15px;
+}
+
+.toc {
+	background-color: #f9f9f9;
+	border: 1px solid #ddd;
+	border-radius: 4px;
+	padding: 20px;
+	margin-bottom: 30px;
+}
+
+.toc h3 {
+	margin-top: 0;
+	color: #1d72b8;
+}
+
+.toc ol {
+	margin: 0;
+	padding-left: 25px;
+}
+
+.toc li {
+	margin: 8px 0;
+}
+
+.toc a {
+	color: #333;
+}
+
+.toc a:hover {
+	color: #1d72b8;
+}
+
+.coming-soon {
+	background-color: #fff3cd;
+	border: 1px solid #ffc107;
+	border-radius: 4px;
+	padding: 15px;
+	margin: 10px 0;
+	color: #856404;
+}
+
+/* Interoperability Page Styles */
+.format-table {
+	width: 100%;
+	border-collapse: collapse;
+	margin: 20px 0;
+	font-size: 0.95em;
+}
+
+.format-table th {
+	background-color: #f0f0f0;
+	padding: 10px 12px;
+	text-align: left;
+	border: 1px solid #ddd;
+}
+
+.format-table td {
+	padding: 8px 12px;
+	border: 1px solid #ddd;
+	vertical-align: top;
+	line-height: 1.4;
+}
+
+.format-table td:nth-child(1) {
+	font-weight: 500;
+}
+
+.format-table code {
+	background-color: #f5f5f5;
+	padding: 2px 6px;
+	font-size: 0.95em;
+	border-radius: 3px;
+}
+
+/* Responsive Design - Tablet */
+@media (max-width: 900px) {
+	#content {
+		width: 100%;
+		display: block;
+	}
+
+	#sidebar {
+		width: 100%;
+		display: block;
+		border-right: none;
+		border-top: 1px solid #ddd;
+	}
+}
+
+/* Responsive Design - Mobile */
+@media (max-width: 600px) {
+	body {
+		font-size: 16px;
+	}
+
+	#header {
+		padding: 15px 15px;
+	}
+
+	#header h1 {
+		font-size: 1.5em;
+	}
+
+	#header #slogan {
+		font-size: 0.95em;
+	}
+
+	#header #toplinks {
+		display: none;
+	}
+
+	#header > div[style*="float: right"] {
+		display: none;
+	}
+
+	#wrap > #sidebar {
+		float: none;
+		order: 2;
+	}
+
+	#wrap > #content {
+		float: none;
+		order: 1;
+	}
+
+	#wrap {
+		display: flex;
+		flex-direction: column;
+	}
+
+	#content {
+		width: 100%;
+		padding: 20px 15px;
+		min-height: auto;
+	}
+
+	#sidebar {
+		width: 100%;
+		padding: 20px 15px;
+		border-right: none;
+		border-top: 1px solid #ddd;
+	}
+
+	.page h2 {
+		font-size: 1.4em;
+	}
+
+	.page h3 {
+		font-size: 1.15em;
+	}
+
+	.page h4 {
+		font-size: 1em;
+	}
+
+	.page ul {
+		padding-left: 18px;
+	}
+
+	.download-button, .page a.download-button {
+		display: block;
+		text-align: center;
+		padding: 12px 15px;
+		font-size: 15px;
+		font-weight: bold;
+	}
+
+	.doc-list li a {
+		font-size: 1em;
+	}
+
+	.icon-large {
+		width: 24px;
+		height: 24px;
+	}
+
+	/* Make tables scroll horizontally on mobile */
+	.algorithm-table {
+		display: block;
+		overflow-x: auto;
+		-webkit-overflow-scrolling: touch;
+		font-size: 0.85em;
+	}
+
+	.algorithm-table th,
+	.algorithm-table td {
+		padding: 6px 8px;
+		white-space: nowrap;
+	}
+
+	/* Solver table on mobile */
+	.solver-table {
+		font-size: 0.9em;
+	}
+
+	.solver-table th,
+	.solver-table td {
+		padding: 8px 10px;
+	}
+
+	.solver-table td:first-child {
+		width: 80px;
+		font-size: 0.95em;
+	}
+
+	.solver-name {
+		font-size: 1.1em;
+	}
+
+	.solver-subtitle {
+		font-size: 0.95em;
+	}
+
+	.citation-box {
+		padding: 12px;
+		font-size: 0.9em;
+	}
+
+	#sidebar h2 {
+		font-size: 1.05em;
+	}
+
+	#sidebar ul.sidebar-nav li,
+	#sidebar ul.sidebar-links li,
+	#sidebar ul.sidebar-news li {
+		font-size: 1em;
+		margin: 10px 0;
+	}
+
+	#sidebar ul.sidebar-nav li a,
+	#sidebar ul.sidebar-links li a {
+		padding: 10px 0;
+	}
+
+	.sidebar-nav .submenu li a {
+		font-size: 0.95em;
+		padding: 8px 0 8px 10px;
+	}
+
+	#footer {
+		font-size: 0.9em;
+	}
+
+	/* References list on mobile */
+	#references ol {
+		padding-left: 20px;
+		font-size: 0.85em;
+	}
+
+	/* Tap targets - ensure links are easy to tap */
+	a {
+		min-height: 44px;
+		display: inline-flex;
+		align-items: center;
+	}
+
+	#sidebar a, .page a, .doc-list a {
+		min-height: auto;
+	}
+}

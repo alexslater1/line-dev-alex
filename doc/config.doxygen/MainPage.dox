@@ -1,0 +1,88 @@
+/**
+ * @mainpage LINE Solver
+ *
+ * Welcome to the LINE Solver MATLAB API documentation.
+ *
+ * @section documentation_sec API Documentation
+ *
+ * - @ref api_core "Core Modules" - Networks, nodes, classes, distributions, solvers
+ * - @ref api_cache "Cache Algorithms" - Cache performance analysis
+ * - @ref api_lossn "Loss Networks" - Analysis of networks with blocking
+ * - @ref api_lsn "Layered Stochastic Networks" - Layered queueing network analysis
+ * - @ref api_mc "Markov Chain Utilities" - CTMC and DTMC analysis tools
+ * - @ref api_mam "Matrix-Analytic Methods" - QBD processes and matrix-analytic solutions
+ * - @ref api_npfqn "Non-Product-Form Networks" - Approximations for intractable queueing networks
+ * - @ref api_polling "Polling Systems" - Analysis of gated, exhaustive, and k-limited polling
+ * - @ref api_pfqn "Product-Form Queueing Networks" - MVA, convolution, and normalizing constant methods
+ * - @ref api_qsys "Queueing Systems" - Single-station queueing system analysis
+ * - @ref api_rl "Reinforcement Learning" - RL utilities for queueing control
+ * - @ref api_sn "Stochastic Network Utilities" - Network analysis and transformation utilities
+ * - @ref api_utilities "Utilities and Constants" - Helper functions, constants, and enumerations
+ *
+ * @section module_locations_sec Module Locations
+ *
+ * | Category | MATLAB Path | Description |
+ * |----------|-------------|-------------|
+ * | Cache API | matlab/src/api/cache/ | Cache analysis algorithms |
+ * | Constants | matlab/src/lang/constant/ | Enumerations and global constants |
+ * | Core | matlab/src/lang/ | Network, Node, and JobClass definitions |
+ * | Distributions | matlab/src/lang/processes/ | Exp, Erlang, PH, MAP, etc. |
+ * | Layered Networks | matlab/src/lang/layered/ | LayeredNetwork, Task, Activity |
+ * | LossN API | matlab/src/api/lossn/ | Loss network algorithms |
+ * | LSN API | matlab/src/api/lsn/ | Layered stochastic network utilities |
+ * | MAM API | matlab/src/api/mam/ | Matrix-analytic methods |
+ * | MC API | matlab/src/api/mc/ | Markov chain analysis |
+ * | Nodes | matlab/src/lang/nodes/ | Queue, Source, Sink, etc. |
+ * | NPFQN API | matlab/src/api/npfqn/ | Non-product-form network approximations |
+ * | PFQN API | matlab/src/api/pfqn/ | Product-form queueing network algorithms |
+ * | Polling API | matlab/src/api/polling/ | Polling system algorithms |
+ * | Qsys API | matlab/src/api/qsys/ | Single queueing system formulas |
+ * | RL API | matlab/src/api/rl/ | Reinforcement learning utilities |
+ * | SN API | matlab/src/api/sn/ | Stochastic network utilities |
+ * | Solvers | matlab/src/solvers/ | MVA, CTMC, Fluid, MAM, etc. |
+ *
+ * @section license_sec License
+ *
+ * <a href="../license.html">BSD-3 License</a>
+ *
+ * Copyright (c) 2012-2026, <a href="https://qore.doc.ic.ac.uk/">QORE Lab</a>, Imperial College London
+ * All rights reserved.
+ *
+ * @section links_sec External Links
+ *
+ * - <a href="http://line-solver.sourceforge.io/">Project Website</a>
+ */
+
+/* COMMENTED OUT SECTIONS - Non-API documentation
+ *
+ * @section features_sec Features
+ *
+ * <b>Network Types</b>
+ * - Open queueing networks (e.g., M/M/1, M/M/k, M/G/1)
+ * - Closed queueing networks with fixed populations
+ * - Mixed networks with both open and closed classes
+ * - Layered queueing networks (LQNs) for client-server systems
+ *
+ * <b>Solvers</b>
+ * - Mean Value Analysis (MVA)
+ * - Continuous-Time Markov Chain (CTMC)
+ * - Fluid/Mean-Field ODE Solver
+ * - Matrix-Analytic Methods (MAM)
+ * - Normalizing Constant Analyzer (NC)
+ * - Stochastic Simulation Algorithm (SSA)
+ * - Java Modelling Tools (JMT) simulation wrapper
+ *
+ * <b>Advanced Capabilities</b>
+ * - Fork-join parallel processing models
+ * - Cache modeling with replacement policies
+ * - Priority and polling scheduling
+ * - State-dependent routing
+ * - Load-dependent service
+ * - Random environment models
+ *
+ * Non-API documentation links:
+ * - @ref matlab_quickstart "Quick Start Guide" - Get started with LINE
+ * - @ref matlab_examples "Examples" - Sample models and use cases
+ * - @ref choosing_solver "Choosing a Solver" - Solver selection guide
+ * - @ref solver_reference "Solver Reference" - Detailed solver documentation
+ */

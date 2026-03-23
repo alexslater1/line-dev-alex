@@ -1,0 +1,279 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+<link rel="stylesheet" href="css/line-solver.css" />
+	<meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<meta name="description" content="LINE Solver - MVA Solver Documentation" />
+	<meta name="keywords" content="LINE solver, MVA, Mean Value Analysis" />
+	<meta name="author" content="Giuliano Casale" />
+	<title>MVA Solver - LINE Solver Documentation</title>
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" />
+	<script type="text/javascript" src="js/jquery-1.11.0.min.js"></script>
+	<script type="text/javascript" src="js/line-solver.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-matlab.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-java.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+	<script type="text/javascript">
+		$(document).ready(function(){
+
+			$('.sidebar-nav .expandable > a').click(function(e){
+				e.preventDefault();
+				var parent = $(this).parent();
+				parent.toggleClass('open');
+			});
+			// Auto-expand Solvers menu on solver pages
+			$('.sidebar-nav .expandable').addClass('open');
+
+			$('.language-tab').click(function(){
+				var lang = $(this).data('lang');
+				$(this).siblings().removeClass('active');
+				$(this).addClass('active');
+				$(this).closest('.example-section').find('.language-content').removeClass('active');
+				$(this).closest('.example-section').find('.language-content[data-lang="' + lang + '"]').addClass('active');
+			});
+
+			// Copy button functionality
+			$('.copy-button').click(function(){
+				var button = $(this);
+				var codeBlock = button.siblings('pre').find('code').length > 0
+					? button.siblings('pre').find('code').text()
+					: button.siblings('pre').text();
+
+				if (navigator.clipboard && navigator.clipboard.writeText) {
+					navigator.clipboard.writeText(codeBlock).then(function() {
+						button.text('Copied!').addClass('copied');
+						setTimeout(function(){
+							button.text('Copy').removeClass('copied');
+						}, 2000);
+					});
+				} else {
+					// Fallback for older browsers
+					var textArea = document.createElement("textarea");
+					textArea.value = codeBlock;
+					document.body.appendChild(textArea);
+					textArea.select();
+					document.execCommand('copy');
+					document.body.removeChild(textArea);
+					button.text('Copied!').addClass('copied');
+					setTimeout(function(){
+						button.text('Copy').removeClass('copied');
+					}, 2000);
+				}
+			});
+
+			// Apply syntax highlighting
+			Prism.highlightAll();
+		});
+	</script>
+</head>
+<body>
+<div id="wrap">
+
+<div id="header">
+	<p id="toplinks"><a href="index.html">Home</a> | <a href="index.html#solvers">Solvers</a></p>
+	
+	<h1><a href="index.html">LINE Solver</a></h1>
+	<p id="slogan">Queueing Theory Algorithms</p>
+</div>
+
+<div id="sidebar">
+<div id="sidebar-content">
+<h2>Navigate</h2>
+<ul class="sidebar-nav">
+<li><a href="index.html">Home</a></li>
+<li><a href="index.html#overview">Overview</a></li>
+<li><a href="index.html#papers">Documentation</a></li>
+<li><a href="tutorials.html">Tutorials</a></li>
+<!-- Re-enable when 3.0.4 is out: <li><a href="mcp.html">MCP Integration</a></li> -->
+<li><a href="index.html#solvers">Solvers</a></li>
+</ul>
+
+<h2>Support</h2>
+<ul class="sidebar-links">
+<li><a href="https://sourceforge.net/projects/line-solver/" target="_blank">Sourceforge site</a></li>
+<li><a href="https://github.com/imperial-qore/line-solver" target="_blank">Github repo</a></li>
+</ul>
+
+<h2>News</h2>
+<ul class="sidebar-news">
+<li><strong>2026</strong> - <a href="https://sourceforge.net/projects/line-solver/files/latest/download">LINE 3.0.4</a> is out!</li>
+<li><strong>2025</strong> - First release of LINE 3.0.0</li>
+<li><strong>2019</strong> - First release of LINE 2.0.0</li>
+<li><strong>2016</strong> - First release of LINE 1.0.0</li>
+</ul>
+</div>
+</div>
+
+<div id="content">
+	<h2>MVA (Mean Value Analysis)</h2>
+
+	<div class="solver-section">
+	<p class="solver-subtitle">The MVA solver implements both exact and approximate mean value analysis algorithms for product-form queueing networks. The default method uses Linearizer for approximate MVA, with support for extended queueing features including non-exponential service times, multi-servers, non-preemptive priorities, and fork-join networks.</p>
+
+	<table class="algorithm-table">
+	<tr><th>Method</th><th>Algorithm</th><th>Reference</th></tr>
+	<tr><td><code>default</code></td><td>Automatic method selection</td><td>&mdash;</td></tr>
+	<tr><td><code>exact</code></td><td>Exact mean value analysis</td><td><a class="ref-link" href="#ref-reiser1980">[1]</a></td></tr>
+	<tr><td><code>bs</code></td><td>Bard-Schweitzer approximate MVA</td><td><a class="ref-link" href="#ref-bolch2006">[3]</a></td></tr>
+	<tr><td><code>lin</code></td><td>Linearizer approximate MVA</td><td><a class="ref-link" href="#ref-chandy1982">[2]</a></td></tr>
+	<tr><td><code>gflin</code></td><td>Generalized Fritzson-Liskiewicz Linearizer</td><td>&mdash;</td></tr>
+	<tr><td><code>egflin</code></td><td>Extended generalized Fritzson-Liskiewicz Linearizer</td><td>&mdash;</td></tr>
+	<tr><td><code>qd</code></td><td>Queue-dependent approximate MVA</td><td><a class="ref-link" href="#ref-casale2015">[4]</a></td></tr>
+	<tr><td><code>qdlin</code></td><td>Queue-dependent Linearizer</td><td>&mdash;</td></tr>
+	<tr><td><code>qli</code></td><td>Queue-Linearizer iteration</td><td>&mdash;</td></tr>
+	<tr><td><code>fli</code></td><td>Fritzson-Liskiewicz iteration</td><td>&mdash;</td></tr>
+	<tr><td><code>schmidt</code></td><td>Schmidt approximation</td><td>&mdash;</td></tr>
+	<tr><td><code>schmidt-ext</code></td><td>Extended Schmidt approximation</td><td>&mdash;</td></tr>
+	<tr><td><code>ab</code></td><td>Asymptotic bounds approximation</td><td>&mdash;</td></tr>
+	<tr><td><code>qna</code></td><td>Queuing Network Analyzer</td><td>&mdash;</td></tr>
+	<tr><td><code>sqni</code></td><td>Single-server queue approximation iteration</td><td>&mdash;</td></tr>
+	<tr><td><code>aba.upper/aba.lower</code></td><td>Asymptotic bound analysis</td><td><a class="ref-link" href="#ref-bolch2006">[3]</a></td></tr>
+	<tr><td><code>bjb.upper/bjb.lower</code></td><td>Balanced job bounds</td><td><a class="ref-link" href="#ref-casale2008">[5]</a></td></tr>
+	<tr><td><code>gb.upper/gb.lower</code></td><td>Geometric square-root bounds</td><td><a class="ref-link" href="#ref-casale2008">[5]</a></td></tr>
+	<tr><td><code>pb.upper/pb.lower</code></td><td>Proportional bounds</td><td><a class="ref-link" href="#ref-casale2008">[5]</a></td></tr>
+	<tr><td><code>sb.upper/sb.lower</code></td><td>Simple bounds</td><td><a class="ref-link" href="#ref-harel1999">[6]</a></td></tr>
+	</table>
+	</div>
+
+	<div class="example-section">
+	<h3>Example</h3>
+	<p>This example demonstrates solving a simple M/M/1 queue using the MVA solver. The queue has an arrival rate of 0.9 jobs/sec and a service rate of 1.0 jobs/sec.</p>
+
+	<div class="language-tabs">
+		<button class="language-tab active" data-lang="matlab">MATLAB</button>
+		<button class="language-tab" data-lang="java">Java</button>
+		<button class="language-tab" data-lang="python">Python</button>
+	</div>
+
+	<div class="language-content active" data-lang="matlab">
+		<div class="code-block">
+		<button class="copy-button">Copy</button>
+		<pre><code class="language-matlab">% Create a simple M/M/1 queue
+model = Network('M/M/1 Example');
+source = Source(model, 'Source');
+queue = Queue(model, 'Queue1', SchedStrategy.FCFS);
+sink = Sink(model, 'Sink');
+
+jobclass = OpenClass(model, 'Class1');
+source.setArrival(jobclass, Exp(0.9));
+queue.setService(jobclass, Exp(1.0));
+
+model.link(Network.serialRouting(source, queue, sink));
+
+% Solve with MVA and display average performance metrics
+MVA(model).avgTable()</code></pre>
+		</div>
+
+		<div class="output-block">
+			<h4>Output:</h4>
+<pre>MVA analysis [method: default, lang: matlab] completed in 0.004175s.
+
+ans =
+  2×8 table
+    Station    JobClass    QLen    Util    RespT    ResidT    ArvR    Tput
+    _______    ________    ____    ____    _____    ______    ____    ____
+    Source      Class1      0        0       0         0        0     0.9
+    Queue1      Class1      9      0.9      10        10      0.9     0.9 </pre>
+		</div>
+	</div>
+
+	<div class="language-content" data-lang="java">
+		<div class="code-block">
+		<button class="copy-button">Copy</button>
+		<pre><code class="language-java">import jline.lang.*;
+import jline.lang.constant.SchedStrategy;
+import jline.lang.nodes.*;
+import jline.lang.processes.Exp;
+import jline.solvers.NetworkAvgTable;
+import jline.solvers.mva.MVA;
+
+public class MVAExample {
+    public static void main(String[] args) {
+        // Create a simple M/M/1 queue
+        Network model = new Network("M/M/1 Example");
+
+        Source source = new Source(model, "Source");
+        Queue queue = new Queue(model, "Queue1", SchedStrategy.FCFS);
+        Sink sink = new Sink(model, "Sink");
+
+        OpenClass jobclass = new OpenClass(model, "Class1");
+        source.setArrival(jobclass, Exp.fitRate(0.9));
+        queue.setService(jobclass, Exp.fitRate(1.0));
+
+        model.link(Network.serialRouting(source, queue, sink));
+
+        // Solve with MVA and display average performance metrics
+        System.out.println(new MVA(model).avgTable);
+    }
+}</code></pre>
+		</div>
+
+		<div class="output-block">
+			<h4>Output:</h4>
+<pre>MVA analysis [method: default, lang: java] completed.
+
+Station    JobClass    QLen    Util    RespT    ResidT    ArvR    Tput
+Source     Class1      0.0     0.0     0.0      0.0       0.0     0.9
+Queue1     Class1      9.0     0.9     10.0     10.0      0.9     0.9</pre>
+		</div>
+	</div>
+
+	<div class="language-content" data-lang="python">
+		<div class="code-block">
+		<button class="copy-button">Copy</button>
+		<pre><code class="language-python">from line_solver import *
+
+# Create a simple M/M/1 queue
+model = Network('M/M/1 Example')
+
+source = Source(model, 'Source')
+queue = Queue(model, 'Queue1', SchedStrategy.FCFS)
+sink = Sink(model, 'Sink')
+
+jobclass = OpenClass(model, 'Class1')
+source.setArrival(jobclass, Exp(0.9))
+queue.setService(jobclass, Exp(1.0))
+
+model.link(Network.serialRouting(source, queue, sink))
+
+# Solve with MVA and display average performance metrics
+print(MVA(model).avg_table)</code></pre>
+		</div>
+
+		<div class="output-block">
+			<h4>Output:</h4>
+<pre>MVA analysis [method: default, lang: python] completed.
+
+  Station  JobClass  QLen  Util  RespT  ResidT  ArvR  Tput
+0  Source    Class1   0.0   0.0    0.0     0.0   0.0   0.9
+1  Queue1    Class1   9.0   0.9   10.0    10.0   0.9   0.9</pre>
+		</div>
+	</div>
+	</div>
+
+	<div class="references">
+	<h3>References</h3>
+	<ol>
+	<li id="ref-reiser1980">Reiser, M., &amp; Lavenberg, S. S. (1980). Mean-value analysis of closed multichain queuing networks. <em>Journal of the ACM</em>, 27(2), 313-322.</li>
+	<li id="ref-chandy1982">Chandy, K. M., &amp; Neuse, D. (1982). Linearizer: a heuristic algorithm for queueing network models. <em>Communications of the ACM</em>, 25(2), 126-134.</li>
+	<li id="ref-bolch2006">Bolch, G., Greiner, S., de Meer, H., &amp; Trivedi, K. S. (2006). <em>Queueing Networks and Markov Chains</em> (2nd ed.). Wiley-Interscience.</li>
+	<li id="ref-casale2015">Casale, G., P&eacute;rez, J. F., &amp; Wang, W. (2015). Deconvolving system load from queue length snapshots. <em>ACM SIGMETRICS</em>, 159-171.</li>
+	<li id="ref-casale2008">Casale, G., Muntz, R. R., &amp; Serazzi, G. (2008). Geometric bounds on queueing systems. <em>IEEE Transactions on Computers</em>, 57(4), 508-521.</li>
+	<li id="ref-harel1999">Harel, A., Namn, S. M., &amp; Sturm, R. (1999). Performance and reliability of communication networks. Kluwer Academic Publishers.</li>
+	</ol>
+	</div>
+
+	<div class="back-link">
+		<a href="index.html#solvers">&larr; Back to Solvers</a>
+	</div>
+</div>
+
+<div id="footer">
+	<p>&copy; 2025 <a href="https://www.imperial.ac.uk/">Imperial College London</a></p>
+</div>
+
+</div>
+</body>
+</html>

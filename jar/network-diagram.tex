@@ -1,0 +1,149 @@
+\documentclass[tikz,border=10pt]{standalone}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,shapes.geometric,shapes.misc,calc,decorations.pathreplacing}
+
+\tikzset{
+    % Queue: Rectangle buffer
+    queue/.style={
+        rectangle,
+        draw=black,
+        minimum width=1.1cm,
+        minimum height=0.72cm,
+        fill=white
+    },
+    % Server circle
+    server/.style={
+        circle,
+        draw=black,
+        minimum size=0.6cm,
+        fill=white
+    },
+    % Delay: Vertical rectangle (infinite server)
+    delay/.style={
+        rectangle,
+        draw=black,
+        minimum width=0.8cm,
+        minimum height=1.5cm,
+        fill=green!10
+    },
+    % Source: Small circle (white)
+    source/.style={
+        circle,
+        draw=black,
+        minimum size=0.3cm,
+        fill=white
+    },
+    % Sink: Small circle (black)
+    sink/.style={
+        circle,
+        draw=black,
+        minimum size=0.3cm,
+        fill=black
+    },
+    % Fork: Diamond
+    fork/.style={
+        diamond,
+        draw=black,
+        minimum size=1cm,
+        fill=orange!20,
+        aspect=1.5
+    },
+    % Join: Diamond
+    joinnode/.style={
+        diamond,
+        draw=black,
+        minimum size=1cm,
+        fill=purple!20,
+        aspect=1.5
+    },
+    % Router: Hexagon
+    router/.style={
+        regular polygon,
+        regular polygon sides=6,
+        draw=black,
+        minimum size=1cm,
+        fill=cyan!10
+    },
+    % ClassSwitch: Trapezium
+    classswitch/.style={
+        trapezium,
+        draw=black,
+        trapezium left angle=70,
+        trapezium right angle=110,
+        minimum width=1.5cm,
+        minimum height=0.8cm,
+        fill=pink!20
+    },
+    % Cache: Stacked rectangle
+    cache/.style={
+        rectangle,
+        draw=black,
+        minimum width=1.5cm,
+        minimum height=1.2cm,
+        fill=gray!20
+    },
+    % Logger: Rectangle with lines
+    logger/.style={
+        rectangle,
+        draw=black,
+        minimum width=1.2cm,
+        minimum height=0.8cm,
+        fill=brown!10
+    },
+    % Place (Petri net): Circle
+    place/.style={
+        circle,
+        draw=black,
+        minimum size=0.8cm,
+        fill=white
+    },
+    % Transition (Petri net): Rectangle
+    transition/.style={
+        rectangle,
+        draw=black,
+        minimum width=0.2cm,
+        minimum height=1cm,
+        fill=black
+    },
+    % Connection arrow
+    conn/.style={
+        ->,
+        >=Stealth,
+        thick
+    },
+    % Probability label
+    problabel/.style={
+        font=\footnotesize,
+        midway,
+        above,
+        sloped
+    },
+    % Node name label
+    nodelabel/.style={
+        font=\small
+    }
+}
+
+\begin{document}
+\begin{tikzpicture}
+
+% Nodes
+\node[delay] (Client) at (0.00,0.00) {$\infty$};
+\node[nodelabel,above=2pt of Client] {Client};
+\node[cache] (Cache) at (4.00,0.00) {};
+\node[nodelabel,above=2pt of Cache] {Cache};
+\draw ([yshift=-0.3cm]Cache.north west) -- ([yshift=-0.3cm]Cache.north east);
+\draw ([yshift=0.3cm]Cache.south west) -- ([yshift=0.3cm]Cache.south east);
+\node[delay] (CacheDelay) at (8.00,0.00) {$\infty$};
+\node[nodelabel,above=2pt of CacheDelay] {CacheDelay};
+\node[classswitch] (CS_CacheDelay_to_Client) at (12.00,0.00) {};
+\node[nodelabel,above=2pt of CS_CacheDelay_to_Client] {CS\_CacheDelay\_to\_Client};
+
+% Connections
+\draw[conn] (Client.east) -- (Cache.west);
+\draw[conn] (Cache.east) -- (CacheDelay.west);
+\draw[conn] (CacheDelay.east) -- (CSCacheDelaytoClient.west);
+\draw[conn] (CSCacheDelaytoClient.east) -- (13.70,0.00) -- (13.70,-2.40) -- (-1.70,-2.40) -- (-1.70,0.00) -- (Client.west);
+
+\end{tikzpicture}
+\end{document}

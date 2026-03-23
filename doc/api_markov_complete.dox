@@ -1,0 +1,596 @@
+/**
+@page api_markov Markov Chain Modules
+@brief CTMC and DTMC analysis
+
+These modules provide tools for analyzing Markov chains and related stochastic processes.
+
+@section markov_mc Markov Chain Analysis
+
+The mc module provides general tools for analyzing both continuous-time and discrete-time
+Markov chains, including steady-state and transient analysis.
+
+@subsection markov_ctmc_steady CTMC Steady-State Analysis
+
+- @ref ctmc_solve.m "ctmc_solve" - Equilibrium distribution of the continuous-time Markov chain
+
+  <b>Syntax:</b>
+  @code
+  [p, Q, nConnComp, connComp] = ctmc_solve(Q, options)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>Q</td><td>Parameter description</td></tr>
+  <tr><td>options</td><td>Parameter description</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>p</td><td>Return value</td></tr>
+  <tr><td>Q</td><td>Return value</td></tr>
+  <tr><td>nConnComp</td><td>Return value</td></tr>
+  <tr><td>connComp</td><td>Return value</td></tr>
+  </table>
+
+  <b>Description:</b> Equilibrium distribution of the continuous-time Markov chain
+
+- @ref ctmc_relsolve.m "ctmc_relsolve" - Computes the equilibrium distribution relative to a reference state
+
+  <b>Syntax:</b>
+  @code
+  [p, Q, nConnComp, connComp] = ctmc_relsolve(Q, refstate, options)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>Q</td><td>Parameter description</td></tr>
+  <tr><td>refstate</td><td>Parameter description</td></tr>
+  <tr><td>options</td><td>Parameter description</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>p</td><td>Return value</td></tr>
+  <tr><td>Q</td><td>Return value</td></tr>
+  <tr><td>nConnComp</td><td>Return value</td></tr>
+  <tr><td>connComp</td><td>Return value</td></tr>
+  </table>
+
+  <b>Description:</b> Computes the equilibrium distribution relative to a reference state
+
+- @ref ctmc_timereverse.m "ctmc_timereverse" - Computes the time-reversed generator of a CTMC
+
+  <b>Syntax:</b>
+  @code
+  ctmc_timereverse(...)
+  @endcode
+
+  <b>Description:</b> Computes the time-reversed generator of a CTMC
+
+- @ref ctmc_solve_reducible.m "ctmc_solve_reducible" - 
+
+  <b>Syntax:</b>
+  @code
+  [pi, pis, pi0, scc, isrec] = ctmc_solve_reducible(Q, pi0, options)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>Q</td><td>Parameter description</td></tr>
+  <tr><td>pi0</td><td>Parameter description</td></tr>
+  <tr><td>options</td><td>Parameter description</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>pi</td><td>Return value</td></tr>
+  <tr><td>pis</td><td>Return value</td></tr>
+  <tr><td>pi0</td><td>Return value</td></tr>
+  <tr><td>scc</td><td>Return value</td></tr>
+  <tr><td>isrec</td><td>Return value</td></tr>
+  </table>
+
+
+- @ref ctmc_stochcomp.m "ctmc_stochcomp" - [S,Q11,Q12,Q21,Q22,T] = CTMC_STOCHCOMP(Q,I)
+
+  <b>Syntax:</b>
+  @code
+  [S, Q11, Q12, Q21, Q22, T] = ctmc_stochcomp(Q, I)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>Q</td><td>Parameter description</td></tr>
+  <tr><td>I</td><td>Parameter description</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>S</td><td>Return value</td></tr>
+  <tr><td>Q11</td><td>Return value</td></tr>
+  <tr><td>Q12</td><td>Return value</td></tr>
+  <tr><td>Q21</td><td>Return value</td></tr>
+  <tr><td>Q22</td><td>Return value</td></tr>
+  <tr><td>T</td><td>Return value</td></tr>
+  </table>
+
+  <b>Description:</b> [S,Q11,Q12,Q21,Q22,T] = CTMC_STOCHCOMP(Q,I)
+
+- @ref ctmc_takahashi.m "ctmc_takahashi" - CTMC_TAKAHASHI - Takahashi's aggregation-disaggregation method
+
+  <b>Syntax:</b>
+  @code
+  [p, p_1, pcourt, Qperm] = ctmc_takahashi(Q, MS, numSteps)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>Q</td><td>Parameter description</td></tr>
+  <tr><td>MS</td><td>Parameter description</td></tr>
+  <tr><td>numSteps</td><td>Parameter description</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>p</td><td>Return value</td></tr>
+  <tr><td>p_1</td><td>Return value</td></tr>
+  <tr><td>pcourt</td><td>Return value</td></tr>
+  <tr><td>Qperm</td><td>Return value</td></tr>
+  </table>
+
+  <b>Description:</b> CTMC_TAKAHASHI - Takahashi's aggregation-disaggregation method
+
+- @ref ctmc_courtois.m "ctmc_courtois" - CTMC_COURTOIS - Courtois decomposition
+
+  <b>Syntax:</b>
+  @code
+  [p, Qperm, Qdec, eps, epsMAX, P, B, C, q] = ctmc_courtois(Q, MS, q)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>Q</td><td>Parameter description</td></tr>
+  <tr><td>MS</td><td>Parameter description</td></tr>
+  <tr><td>q</td><td>Parameter description</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>p</td><td>Return value</td></tr>
+  <tr><td>Qperm</td><td>Return value</td></tr>
+  <tr><td>Qdec</td><td>Return value</td></tr>
+  <tr><td>eps</td><td>Return value</td></tr>
+  <tr><td>epsMAX</td><td>Return value</td></tr>
+  <tr><td>P</td><td>Return value</td></tr>
+  <tr><td>B</td><td>Return value</td></tr>
+  <tr><td>C</td><td>Return value</td></tr>
+  <tr><td>q</td><td>Return value</td></tr>
+  </table>
+
+  <b>Description:</b> CTMC_COURTOIS - Courtois decomposition
+
+- @ref ctmc_kms.m "ctmc_kms" - CTMC_KMS - Koury-McAllister-Stewart aggregation-disaggregation method
+
+  <b>Syntax:</b>
+  @code
+  [p, p_1, Qperm, eps, pcourt] = ctmc_kms(Q, MS, numSteps)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>Q</td><td>Parameter description</td></tr>
+  <tr><td>MS</td><td>Parameter description</td></tr>
+  <tr><td>numSteps</td><td>Parameter description</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>p</td><td>Return value</td></tr>
+  <tr><td>p_1</td><td>Return value</td></tr>
+  <tr><td>Qperm</td><td>Return value</td></tr>
+  <tr><td>eps</td><td>Return value</td></tr>
+  <tr><td>pcourt</td><td>Return value</td></tr>
+  </table>
+
+  <b>Description:</b> CTMC_KMS - Koury-McAllister-Stewart aggregation-disaggregation method
+
+
+@subsection markov_ctmc_transient CTMC Transient Analysis
+
+- @ref ctmc_transient.m "ctmc_transient" - [PI,T]=CTMC_TRANSIENT(Q,PI0,T0,T1)
+
+  <b>Syntax:</b>
+  @code
+  [pi, t] = ctmc_transient(Q, pi0, t0, t1)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>Q</td><td>Parameter description</td></tr>
+  <tr><td>pi0</td><td>Parameter description</td></tr>
+  <tr><td>t0</td><td>Parameter description</td></tr>
+  <tr><td>t1</td><td>Parameter description</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>pi</td><td>Return value</td></tr>
+  <tr><td>t</td><td>Return value</td></tr>
+  </table>
+
+  <b>Description:</b> [PI,T]=CTMC_TRANSIENT(Q,PI0,T0,T1)
+
+- @ref ctmc_uniformization.m "ctmc_uniformization" - [PI,KMAX]=CTMC_UNIFORMIZATION(PI0,Q,T,TOL,MAXITER)
+
+  <b>Syntax:</b>
+  @code
+  [pi, kmax] = ctmc_uniformization(pi0, Q, t, tol, maxiter)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>pi0</td><td>Parameter description</td></tr>
+  <tr><td>Q</td><td>Parameter description</td></tr>
+  <tr><td>t</td><td>Parameter description</td></tr>
+  <tr><td>tol</td><td>Parameter description</td></tr>
+  <tr><td>maxiter</td><td>Parameter description</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>pi</td><td>Return value</td></tr>
+  <tr><td>kmax</td><td>Return value</td></tr>
+  </table>
+
+  <b>Description:</b> [PI,KMAX]=CTMC_UNIFORMIZATION(PI0,Q,T,TOL,MAXITER)
+
+- @ref ctmc_randomization.m "ctmc_randomization" - Uniformization (randomization) of a continuous-time Markov chain
+
+  <b>Syntax:</b>
+  @code
+  [P, q] = ctmc_randomization(Q, q)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>Q</td><td>Parameter description</td></tr>
+  <tr><td>q</td><td>Parameter description</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>P</td><td>Return value</td></tr>
+  <tr><td>q</td><td>Return value</td></tr>
+  </table>
+
+  <b>Description:</b> Uniformization (randomization) of a continuous-time Markov chain
+
+- @ref ctmc_simulate.m "ctmc_simulate" - 
+
+  <b>Syntax:</b>
+  @code
+  [soujt, sts] = ctmc_simulate(Q, pi0, n)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>Q</td><td>Parameter description</td></tr>
+  <tr><td>pi0</td><td>Parameter description</td></tr>
+  <tr><td>n</td><td>Parameter description</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>soujt</td><td>Return value</td></tr>
+  <tr><td>sts</td><td>Return value</td></tr>
+  </table>
+
+
+
+@subsection markov_ctmc_construction CTMC State Space Construction
+
+- @ref ctmc_makeinfgen.m "ctmc_makeinfgen" - Q=CTMC_MAKEINFGEN(Q)
+
+  <b>Syntax:</b>
+  @code
+  ctmc_makeinfgen(...)
+  @endcode
+
+  <b>Description:</b> Q=CTMC_MAKEINFGEN(Q)
+
+- @ref ctmc_rand.m "ctmc_rand" - Q=CTMC_RAND(N)
+
+  <b>Syntax:</b>
+  @code
+  ctmc_rand(...)
+  @endcode
+
+  <b>Description:</b> Q=CTMC_RAND(N)
+
+- @ref ctmc_ssg.m "ctmc_ssg" - 
+
+  <b>Syntax:</b>
+  @code
+  [stateSpace, stateSpaceAggr, stateSpaceHashed, nodeStateSpace, sn] = ctmc_ssg(sn, options)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>sn</td><td>Parameter description</td></tr>
+  <tr><td>options</td><td>Parameter description</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>stateSpace</td><td>Return value</td></tr>
+  <tr><td>stateSpaceAggr</td><td>Return value</td></tr>
+  <tr><td>stateSpaceHashed</td><td>Return value</td></tr>
+  <tr><td>nodeStateSpace</td><td>Return value</td></tr>
+  <tr><td>sn</td><td>Return value</td></tr>
+  </table>
+
+
+- @ref ctmc_ssg_reachability.m "ctmc_ssg_reachability" - 
+
+  <b>Syntax:</b>
+  @code
+  [stateSpace, stateSpaceAggr, stateSpaceHashed, nodeStateSpace, sn] = ctmc_ssg_reachability(sn, options)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>sn</td><td>Parameter description</td></tr>
+  <tr><td>options</td><td>Parameter description</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>stateSpace</td><td>Return value</td></tr>
+  <tr><td>stateSpaceAggr</td><td>Return value</td></tr>
+  <tr><td>stateSpaceHashed</td><td>Return value</td></tr>
+  <tr><td>nodeStateSpace</td><td>Return value</td></tr>
+  <tr><td>sn</td><td>Return value</td></tr>
+  </table>
+
+
+- @ref ctmc_multi.m "ctmc_multi" - CTMC_Multigrid is the basic one step implementation of standard method of
+
+  <b>Syntax:</b>
+  @code
+  [p, p_1, pcourt, Qperm] = ctmc_multi(Q, MS, MSS)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>Q</td><td>Parameter description</td></tr>
+  <tr><td>MS</td><td>Parameter description</td></tr>
+  <tr><td>MSS</td><td>Parameter description</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>p</td><td>Return value</td></tr>
+  <tr><td>p_1</td><td>Return value</td></tr>
+  <tr><td>pcourt</td><td>Return value</td></tr>
+  <tr><td>Qperm</td><td>Return value</td></tr>
+  </table>
+
+  <b>Description:</b> CTMC_Multigrid is the basic one step implementation of standard method of
+
+
+@subsection markov_dtmc Discrete-Time Markov Chain (DTMC) Functions
+
+<b>Steady-State Analysis:</b>
+
+- @ref dtmc_solve.m "dtmc_solve" - Equilibrium distribution of the discrete-time Markov chain
+
+  <b>Syntax:</b>
+  @code
+  dtmc_solve(...)
+  @endcode
+
+  <b>Description:</b> Equilibrium distribution of the discrete-time Markov chain
+
+- @ref dtmc_timereverse.m "dtmc_timereverse" - Computes the time-reversed transition matrix of a DTMC
+
+  <b>Syntax:</b>
+  @code
+  dtmc_timereverse(...)
+  @endcode
+
+  <b>Description:</b> Computes the time-reversed transition matrix of a DTMC
+
+- @ref dtmc_stochcomp.m "dtmc_stochcomp" - Computes the stochastic complement of a DTMC partition
+
+  <b>Syntax:</b>
+  @code
+  [S, P11, P12, P21, P22] = dtmc_stochcomp(P, I)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>P</td><td>Parameter description</td></tr>
+  <tr><td>I</td><td>Parameter description</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>S</td><td>Return value</td></tr>
+  <tr><td>P11</td><td>Return value</td></tr>
+  <tr><td>P12</td><td>Return value</td></tr>
+  <tr><td>P21</td><td>Return value</td></tr>
+  <tr><td>P22</td><td>Return value</td></tr>
+  </table>
+
+  <b>Description:</b> Computes the stochastic complement of a DTMC partition
+
+- @ref dtmc_solve_reducible.m "dtmc_solve_reducible" - [PI,PIS,PI0,SCC,ISREC,PL,PIL] = DTMC_SOLVE_REDUCIBLE(P, PIN, OPTIONS)
+
+  <b>Syntax:</b>
+  @code
+  [pi, pis, pi0, scc, isrec, Pl, pil] = dtmc_solve_reducible(P, pin, options)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>P</td><td>Parameter description</td></tr>
+  <tr><td>pin</td><td>Parameter description</td></tr>
+  <tr><td>options</td><td>Parameter description</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>pi</td><td>Return value</td></tr>
+  <tr><td>pis</td><td>Return value</td></tr>
+  <tr><td>pi0</td><td>Return value</td></tr>
+  <tr><td>scc</td><td>Return value</td></tr>
+  <tr><td>isrec</td><td>Return value</td></tr>
+  <tr><td>Pl</td><td>Return value</td></tr>
+  <tr><td>pil</td><td>Return value</td></tr>
+  </table>
+
+  <b>Description:</b> [PI,PIS,PI0,SCC,ISREC,PL,PIL] = DTMC_SOLVE_REDUCIBLE(P, PIN, OPTIONS)
+
+- @ref dtmc_simulate.m "dtmc_simulate" - Simulates a trajectory of a discrete-time Markov chain
+
+  <b>Syntax:</b>
+  @code
+  sts = dtmc_simulate(P, pi0, n)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>P</td><td>Parameter description</td></tr>
+  <tr><td>pi0</td><td>Parameter description</td></tr>
+  <tr><td>n</td><td>Parameter description</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>sts</td><td>Return value</td></tr>
+  </table>
+
+  <b>Description:</b> Simulates a trajectory of a discrete-time Markov chain
+
+- @ref dtmc_rand.m "dtmc_rand" - Generates a random stochastic transition matrix
+
+  <b>Syntax:</b>
+  @code
+  dtmc_rand(...)
+  @endcode
+
+  <b>Description:</b> Generates a random stochastic transition matrix
+
+- @ref dtmc_makestochastic.m "dtmc_makestochastic" - Normalizes a matrix to be a valid stochastic matrix
+
+  <b>Syntax:</b>
+  @code
+  dtmc_makestochastic(...)
+  @endcode
+
+  <b>Description:</b> Normalizes a matrix to be a valid stochastic matrix
+
+- @ref dtmc_isfeasible.m "dtmc_isfeasible" - Checks feasibility of a stochastic matrix
+
+  <b>Syntax:</b>
+  @code
+  dtmc_isfeasible(...)
+  @endcode
+
+  <b>Description:</b> Checks feasibility of a stochastic matrix
+
+- @ref dtmc_uniformization.m "dtmc_uniformization" - Computes transient probabilities for a DTMC using uniformization
+
+  <b>Syntax:</b>
+  @code
+  [pi, kmax] = dtmc_uniformization(pi0, P, t, tol, maxiter)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>pi0</td><td>Parameter description</td></tr>
+  <tr><td>P</td><td>Parameter description</td></tr>
+  <tr><td>t</td><td>Parameter description</td></tr>
+  <tr><td>tol</td><td>Parameter description</td></tr>
+  <tr><td>maxiter</td><td>Parameter description</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>pi</td><td>Return value</td></tr>
+  <tr><td>kmax</td><td>Return value</td></tr>
+  </table>
+
+  <b>Description:</b> Computes transient probabilities for a DTMC using uniformization
+
+
+@subsection markov_utilities Utilities
+
+- @ref weaklyconncomp.m "weaklyconncomp" - Finds weakly connected components in a directed graph
+
+  <b>Syntax:</b>
+  @code
+  [S, C] = weaklyconncomp(G)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>G</td><td>Parameter description</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>S</td><td>Return value</td></tr>
+  <tr><td>C</td><td>Return value</td></tr>
+  </table>
+
+  <b>Description:</b> Finds weakly connected components in a directed graph
+
+- @ref options.m "options" - 
+
+  <b>Syntax:</b>
+  @code
+  options(...)
+  @endcode
+
+
+
+*/

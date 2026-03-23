@@ -1,0 +1,233 @@
+{
+  "examples": [
+
+    {
+      "_comment": "M/M/1 open queue (gallery_mm1)",
+      "format": "line-model",
+      "version": "1.0",
+      "model": {
+        "type": "Network",
+        "name": "M/M/1",
+        "nodes": [
+          { "name": "Source", "type": "Source",
+            "service": { "Class1": { "type": "Exp", "fit": { "method": "fitMean", "mean": 1.0 } } } },
+          { "name": "Queue", "type": "Queue", "scheduling": "FCFS",
+            "service": { "Class1": { "type": "Exp", "fit": { "method": "fitMean", "mean": 0.5 } } } },
+          { "name": "Sink", "type": "Sink" }
+        ],
+        "classes": [
+          { "name": "Class1", "type": "Open" }
+        ],
+        "routing": {
+          "type": "matrix",
+          "matrix": {
+            "Class1,Class1": {
+              "Source": { "Queue": 1.0 },
+              "Queue": { "Sink": 1.0 }
+            }
+          }
+        }
+      }
+    },
+
+    {
+      "_comment": "ClassSwitch with explicit matrix (cs_implicit)",
+      "format": "line-model",
+      "version": "1.0",
+      "model": {
+        "type": "Network",
+        "name": "cs_implicit",
+        "nodes": [
+          { "name": "Delay", "type": "Delay",
+            "service": {
+              "Class1": { "type": "Exp", "fit": { "method": "fitMean", "mean": 1.0 } },
+              "Class2": { "type": "Exp", "fit": { "method": "fitMean", "mean": 1.0 } }
+            } },
+          { "name": "Queue1", "type": "Queue", "scheduling": "FCFS",
+            "service": {
+              "Class1": { "type": "Exp", "fit": { "method": "fitMean", "mean": 0.5 } },
+              "Class2": { "type": "Exp", "fit": { "method": "fitMean", "mean": 0.5 } }
+            } },
+          { "name": "Queue2", "type": "Queue", "scheduling": "FCFS",
+            "service": {
+              "Class1": { "type": "Exp", "fit": { "method": "fitMean", "mean": 0.5 } },
+              "Class2": { "type": "Exp", "fit": { "method": "fitMean", "mean": 0.5 } }
+            } },
+          { "name": "CS1", "type": "ClassSwitch",
+            "classSwitchMatrix": {
+              "Class1": { "Class1": 0.3, "Class2": 0.7 },
+              "Class2": { "Class1": 1.0, "Class2": 0.0 }
+            } }
+        ],
+        "classes": [
+          { "name": "Class1", "type": "Closed", "population": 2, "refNode": "Delay" },
+          { "name": "Class2", "type": "Closed", "population": 1, "refNode": "Delay" }
+        ],
+        "routing": {
+          "type": "matrix",
+          "matrix": {
+            "Class1,Class1": {
+              "Delay": { "Queue1": 0.5, "Queue2": 0.5 },
+              "Queue1": { "CS1": 1.0 },
+              "Queue2": { "CS1": 1.0 }
+            },
+            "Class2,Class2": {
+              "CS1": { "Delay": 1.0 }
+            }
+          }
+        }
+      }
+    },
+
+    {
+      "_comment": "Prior distribution for posterior analysis (tut12_posterior_analysis)",
+      "format": "line-model",
+      "version": "1.0",
+      "model": {
+        "type": "Network",
+        "name": "posterior_analysis",
+        "nodes": [
+          { "name": "Source", "type": "Source",
+            "service": { "Class1": { "type": "Exp", "fit": { "method": "fitMean", "mean": 2.0 } } } },
+          { "name": "Queue", "type": "Queue", "scheduling": "FCFS",
+            "service": {
+              "Class1": {
+                "type": "Prior",
+                "prior": {
+                  "alternatives": [
+                    { "type": "Exp", "fit": { "method": "fitMean", "mean": 0.5 } },
+                    { "type": "Exp", "fit": { "method": "fitMean", "mean": 1.0 } },
+                    { "type": "Exp", "fit": { "method": "fitMean", "mean": 2.0 } }
+                  ],
+                  "probabilities": [0.25, 0.50, 0.25]
+                }
+              }
+            } },
+          { "name": "Sink", "type": "Sink" }
+        ],
+        "classes": [
+          { "name": "Class1", "type": "Open" }
+        ],
+        "routing": {
+          "type": "matrix",
+          "matrix": {
+            "Class1,Class1": {
+              "Source": { "Queue": 1.0 },
+              "Queue": { "Sink": 1.0 }
+            }
+          }
+        }
+      }
+    },
+
+    {
+      "_comment": "LQN with synchCall default mean (lqn_moment3 style)",
+      "format": "line-model",
+      "version": "1.0",
+      "model": {
+        "type": "LayeredNetwork",
+        "name": "lqn_twotasks",
+        "processors": [
+          { "name": "P1", "scheduling": "PS" },
+          { "name": "P2", "scheduling": "PS" }
+        ],
+        "tasks": [
+          { "name": "T1", "processor": "P1", "multiplicity": 100, "scheduling": "REF",
+            "thinkTime": { "type": "Erlang", "fit": { "method": "fitMeanAndOrder", "mean": 10, "order": 1 } } },
+          { "name": "T2", "processor": "P2", "multiplicity": 1, "scheduling": "INF" }
+        ],
+        "entries": [
+          { "name": "E1", "task": "T1" },
+          { "name": "E2", "task": "T2" },
+          { "name": "E3", "task": "T2" }
+        ],
+        "activities": [
+          { "name": "A1", "task": "T1",
+            "hostDemand": { "type": "Exp", "params": { "rate": 1.0 } },
+            "boundTo": "E1",
+            "synchCalls": [
+              { "entry": "E2" },
+              { "entry": "E3", "mean": 1 }
+            ] },
+          { "name": "A20", "task": "T2",
+            "hostDemand": { "type": "Exp", "params": { "rate": 1.0 } },
+            "boundTo": "E2" },
+          { "name": "A21", "task": "T2",
+            "hostDemand": { "type": "Exp", "params": { "rate": 1.0 } } },
+          { "name": "A22", "task": "T2",
+            "hostDemand": { "type": "Exp", "params": { "rate": 1.0 } },
+            "repliesTo": "E2" },
+          { "name": "A3", "task": "T2",
+            "hostDemand": { "type": "Exp", "params": { "rate": 1.0 } },
+            "boundTo": "E3",
+            "repliesTo": "E3" }
+        ],
+        "precedences": [
+          { "task": "T2", "type": "Serial", "activities": ["A20", "A21", "A22"] }
+        ]
+      }
+    },
+
+    {
+      "_comment": "Environment with node failures (renv_node_breakdown style)",
+      "format": "line-model",
+      "version": "1.0",
+      "model": {
+        "type": "Environment",
+        "name": "server_breakdown",
+        "stages": [
+          {
+            "name": "Up",
+            "model": {
+              "type": "Network",
+              "name": "base",
+              "nodes": [
+                { "name": "Delay", "type": "Delay",
+                  "service": { "Class1": { "type": "Exp", "fit": { "method": "fitMean", "mean": 5.0 } } } },
+                { "name": "Queue", "type": "Queue", "scheduling": "FCFS",
+                  "service": { "Class1": { "type": "Exp", "fit": { "method": "fitMean", "mean": 1.0 } } } }
+              ],
+              "classes": [
+                { "name": "Class1", "type": "Closed", "population": 3, "refNode": "Delay" }
+              ],
+              "routing": {
+                "type": "matrix",
+                "matrix": {
+                  "Class1,Class1": {
+                    "Delay": { "Queue": 1.0 },
+                    "Queue": { "Delay": 1.0 }
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "nodeFailures": [
+          {
+            "node": "Queue",
+            "breakdownRate": { "type": "Exp", "fit": { "method": "fitMean", "mean": 10.0 } },
+            "repairRate": { "type": "Exp", "fit": { "method": "fitMean", "mean": 1.0 } },
+            "downService": { "type": "Exp", "fit": { "method": "fitMean", "mean": 2.0 } },
+            "breakdownResetPolicy": "keep",
+            "repairResetPolicy": "keep"
+          }
+        ]
+      }
+    },
+
+    {
+      "_comment": "Import from external LQNX file (lqn_ofbiz style)",
+      "format": "line-model",
+      "version": "1.0",
+      "import": {
+        "format": "lqnx",
+        "path": "lqn_ofbiz.xml"
+      },
+      "model": {
+        "type": "LayeredNetwork",
+        "name": "placeholder"
+      }
+    }
+
+  ]
+}

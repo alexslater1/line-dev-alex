@@ -1,0 +1,250 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+<link rel="stylesheet" href="css/line-solver.css" />
+	<meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<meta name="description" content="LINE Solver - Tutorial 8: Optimizing Performance Metrics" />
+	<meta name="keywords" content="LINE solver, tutorials, queueing networks, optimization" />
+	<meta name="author" content="Giuliano Casale" />
+	<title>Tutorial 8: Optimizing Performance Metrics - LINE Solver Documentation</title>
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" />
+	<script type="text/javascript" src="js/jquery-1.11.0.min.js"></script>
+	<script type="text/javascript" src="js/line-solver.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-matlab.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-java.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-kotlin.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+	<script type="text/javascript">
+		$(document).ready(function(){
+
+			$('.sidebar-nav .expandable > a').click(function(e){
+				e.preventDefault();
+				var parent = $(this).parent();
+				parent.toggleClass('open');
+			});
+
+			$('.language-tab').click(function(){
+				var lang = $(this).data('lang');
+				var section = $(this).closest('.tutorial-section');
+				section.find('.language-tab').removeClass('active');
+				section.find('.language-tab[data-lang="' + lang + '"]').addClass('active');
+				section.find('.language-content').removeClass('active');
+				section.find('.language-content[data-lang="' + lang + '"]').addClass('active');
+			});
+
+			$('.copy-button').click(function(){
+				var button = $(this);
+				var codeBlock = button.siblings('pre').find('code').length > 0
+					? button.siblings('pre').find('code').text()
+					: button.siblings('pre').text();
+
+				if (navigator.clipboard && navigator.clipboard.writeText) {
+					navigator.clipboard.writeText(codeBlock).then(function() {
+						button.text('Copied!').addClass('copied');
+						setTimeout(function(){
+							button.text('Copy').removeClass('copied');
+						}, 2000);
+					});
+				} else {
+					var textArea = document.createElement("textarea");
+					textArea.value = codeBlock;
+					document.body.appendChild(textArea);
+					textArea.select();
+					document.execCommand('copy');
+					document.body.removeChild(textArea);
+					button.text('Copied!').addClass('copied');
+					setTimeout(function(){
+						button.text('Copy').removeClass('copied');
+					}, 2000);
+				}
+			});
+
+			Prism.highlightAll();
+		});
+	</script>
+</head>
+<body>
+<div id="wrap">
+
+<div id="header">
+	<p id="toplinks"><a href="index.html">Home</a> | <a href="tutorials.html">Tutorials</a> | <a href="index.html#solvers">Solvers</a></p>
+
+	<h1><a href="index.html">LINE Solver</a></h1>
+	<p id="slogan">Queueing Theory Algorithms</p>
+</div>
+
+<div id="sidebar">
+<div id="sidebar-content">
+<h2>Navigate</h2>
+<ul class="sidebar-nav">
+<li><a href="index.html">Home</a></li>
+<li><a href="index.html#overview">Overview</a></li>
+<li><a href="index.html#papers">Documentation</a></li>
+<li><a href="tutorials.html">Tutorials</a></li>
+<!-- Re-enable when 3.0.4 is out: <li><a href="mcp.html">MCP Integration</a></li> -->
+<li><a href="index.html#solvers">Solvers</a></li>
+</ul>
+
+<h2>Support</h2>
+<ul class="sidebar-links">
+<li><a href="https://sourceforge.net/projects/line-solver/" target="_blank">Sourceforge site</a></li>
+<li><a href="https://github.com/imperial-qore/line-solver" target="_blank">Github repo</a></li>
+</ul>
+
+<h2>News</h2>
+<ul class="sidebar-news">
+<li><strong>2026</strong> - <a href="https://sourceforge.net/projects/line-solver/files/latest/download">LINE 3.0.4</a> is out!</li>
+<li><strong>2025</strong> - First release of LINE 3.0.0</li>
+<li><strong>2019</strong> - First release of LINE 2.0.0</li>
+<li><strong>2016</strong> - First release of LINE 1.0.0</li>
+</ul>
+</div>
+</div>
+
+<div id="content">
+	<div class="tutorial-nav">
+		<a href="tutorials.html">&larr; Back to Tutorials</a>
+		<span class="nav-prev"><a href="tutorial-07.html">Prev: Tutorial 07</a></span>
+		<span class="nav-next"><a href="tutorial-09.html">Next: Tutorial 09</a></span>
+	</div>
+
+	<div id="tutorial-08" class="tutorial-section">
+	<h2>Tutorial 8: Optimizing Performance Metrics</h2>
+	<p class="tutorial-subtitle">This example shows how to optimize a performance metric using LINE. We find the optimal routing probabilities that minimize average response times for two parallel processor sharing queues in a closed network.</p>
+
+	<div class="network-diagram">
+		<img src="img/tut08_optimization_network.png" alt="Optimization Network Diagram" style="max-width: 264px; display: block; margin: 15px auto;">
+	</div>
+
+	<div class="example-section">
+	<div class="language-tabs">
+		<button class="language-tab" data-lang="matlab">MATLAB</button>
+		<button class="language-tab" data-lang="kotlin">Kotlin</button>
+		<button class="language-tab active" data-lang="python">Python</button>
+	</div>
+
+	<div class="language-content" data-lang="matlab">
+		<div class="code-block">
+		<button class="copy-button">Copy</button>
+		<pre><code class="language-matlab">model = Network('LoadBalCQN');
+% Block 1: nodes
+delay = Delay(model,'Think');
+queue1 = Queue(model, 'Queue1', SchedStrategy.PS);
+queue2 = Queue(model, 'Queue2', SchedStrategy.PS);
+% Block 2: classes
+cclass = ClosedClass(model, 'Job1', 16, delay);
+delay.setService(cclass, Exp(1));
+queue1.setService(cclass, Exp(0.75));
+queue2.setService(cclass, Exp(0.50));
+% Block 3: topology
+P = model.initRoutingMatrix;
+P{cclass}(queue1, delay) = 1.0;
+P{cclass}(queue2, delay) = 1.0;
+model.link(P);
+
+% Block 4: solution - optimization
+objFun = @(p) evalOptimization(p, model, P, cclass, delay, queue1, queue2);
+p_opt = fminbnd(objFun, 0, 1);
+
+function R = evalOptimization(p, model, P, cclass, delay, queue1, queue2)
+    P{cclass}(delay, queue1) = p;
+    P{cclass}(delay, queue2) = 1-p;
+    model.relink(P);
+    R = MVA(model,'exact','verbose',false).getAvgSysRespT;
+end</code></pre>
+		</div>
+	</div>
+
+	<div class="language-content" data-lang="kotlin">
+		<div class="code-block">
+		<button class="copy-button">Copy</button>
+		<pre><code class="language-kotlin">// Example 8: Optimizing performance metrics
+val model = Network("LoadBalCQN")
+
+// Block 1: nodes
+val delay = Delay(model, "Think")
+val queue1 = Queue(model, "Queue1", SchedStrategy.PS)
+val queue2 = Queue(model, "Queue2", SchedStrategy.PS)
+
+// Block 2: classes
+val cclass = ClosedClass(model, "Job1", 16, delay)
+delay.setService(cclass, Exp(1.0))
+queue1.setService(cclass, Exp(0.75))
+queue2.setService(cclass, Exp(0.50))
+
+// Block 3: topology
+val P = model.initRoutingMatrix()
+P.set(cclass, cclass, queue1, delay, 1.0)
+P.set(cclass, cclass, queue2, delay, 1.0)
+model.link(P)
+
+// Block 4: solution - optimization using external optimizer
+fun objFun(p: Double): Double {
+    P.set(cclass, cclass, delay, queue1, p)
+    P.set(cclass, cclass, delay, queue2, 1.0 - p)
+    model.relink(P)
+    return MVA(model, "method", "exact").avgSysRespT[0][0]
+}
+// Use Apache Commons Math or similar for optimization</code></pre>
+		</div>
+	</div>
+
+	<div class="language-content active" data-lang="python">
+		<div class="code-block">
+		<button class="copy-button">Copy</button>
+		<pre><code class="language-python">from line_solver import *
+from scipy import optimize
+
+model = Network('LoadBalCQN')
+# Block 1: nodes
+delay = Delay(model, 'Think')
+queue1 = Queue(model, 'Queue1', SchedStrategy.PS)
+queue2 = Queue(model, 'Queue2', SchedStrategy.PS)
+# Block 2: classes
+cclass = ClosedClass(model, 'Job1', 16, delay)
+delay.set_service(cclass, Exp(1))
+queue1.set_service(cclass, Exp(0.75))
+queue2.set_service(cclass, Exp(0.50))
+# Block 3: topology
+P = model.init_routing_matrix()
+P.set(cclass, cclass, queue1, delay, 1.0)
+P.set(cclass, cclass, queue2, delay, 1.0)
+model.link(P)
+
+def objFun(p):
+    P.set(cclass, cclass, delay, queue1, p)
+    P.set(cclass, cclass, delay, queue2, 1.0 - p)
+    model.relink(P)
+    R = MVA(model, method='exact', verbose=False).avg_sys_resp_t()
+    return R[0]
+
+p_opt = optimize.fminbound(objFun, 0, 1)
+print(f"Optimal routing probability: {p_opt}")</code></pre>
+		</div>
+	</div>
+	</div>
+
+	<div class="output-block">
+		<h4>Expected Output</h4>
+		<pre>Optimal routing probability: 0.6105</pre>
+	</div>
+	</div>
+
+	<div class="tutorial-nav">
+		<a href="tutorials.html">&larr; Back to Tutorials</a>
+		<span class="nav-prev"><a href="tutorial-07.html">Prev: Tutorial 07</a></span>
+		<span class="nav-next"><a href="tutorial-09.html">Next: Tutorial 09</a></span>
+	</div>
+
+	<div id="footer">
+		<p>&copy; 2016-2025 LINE Project. Released under BSD-3 license.
+		<a href="https://github.com/imperial-qore/line-solver">GitHub</a> |
+		<a href="https://sourceforge.net/projects/line-solver/">SourceForge</a></p>
+	</div>
+</div>
+
+</div>
+</body>
+</html>

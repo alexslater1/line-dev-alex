@@ -1,0 +1,1050 @@
+/**
+@page matlab_solver_reference Solver Reference
+
+This reference describes the main solver methods available in LINE. All solvers inherit from the `NetworkSolver` base class and share common methods for obtaining performance metrics. Each solver also provides specialized methods and algorithm options tailored to its solution approach.
+
+@section common_methods Common NetworkSolver Methods
+
+The following methods are available for <b>all</b> LINE solvers (AUTO, CTMC, FLUID, JMT, LN, LQNS, MAM, MVA, NC, SSA). These methods provide standard steady-state performance metrics.
+
+@note Not all solvers support all advanced methods (distributions, transient analysis, state probabilities). See solver-specific sections below for details.
+
+@subsection steady_state_avg Steady-State Average Metrics
+
+@subsubsection basic_metrics Basic Performance Metrics
+
+<b>getAvg()</b>
+
+Returns mean performance metrics (queue length, utilization, response time, throughput) for each station and class.
+
+<b>Parameters:</b> None
+
+<b>Returns:</b>
+
+Tuple of 5 matrices: `[QN, UN, RN, TN, AN]`
+- `QN` - Queue length matrix [num_stations x num_classes]
+- `UN` - Utilization matrix [num_stations x num_classes]
+- `RN` - Response time matrix [num_stations x num_classes]
+- `TN` - Throughput matrix [num_stations x num_classes]
+- `AN` - Arrival rate matrix [num_stations x num_classes]
+
+<b>Example:</b>
+@code{.m}
+solver = MVA(model);
+[QN, UN, RN, TN, AN] = solver.getAvg();
+
+% Access queue length at station 1, class 1
+qlen = QN(1, 1);
+@endcode
+
+<b>getAvgTable()</b>
+
+Returns the same metrics as `getAvg()` but formatted as a MATLAB table with station and class names for easier inspection.
+
+<b>Parameters:</b> None
+
+<b>Returns:</b>
+
+MATLAB table with columns: [Node, JobClass, QLen, Util, RespT, ResidT, ArvR, Tput]
+- Rows with all-zero metrics are filtered out
+- Each row represents a station-class combination
+
+<b>Example:</b>
+@code{.m}
+solver = MVA(model);
+T = solver.getAvgTable();
+disp(T);
+
+% Filter to specific station
+queue1_metrics = T(strcmp(T.Node, 'Queue1'), :);
+@endcode
+
+<b>getAvgNode() / getAvgNodeTable()</b>
+
+Returns metrics for each node (including sinks) and class.
+
+<b>Returns:</b> Table with same structure as `getAvgTable()`
+
+<b>getAvgChain() / getAvgChainTable()</b>
+
+Returns metrics aggregated by station and chain (instead of class).
+
+<b>Returns:</b> Table with columns: [Station, Chain, QLen, Util, RespT, ResidT, ArvR, Tput]
+
+<b>getAvgNodeChain() / getAvgNodeChainTable()</b>
+
+Returns metrics aggregated by node and chain.
+
+<b>Returns:</b> Table with columns: [Node, Chain, QLen, Util, RespT, ResidT, ArvR, Tput]
+
+<b>getAvgSys() / getAvgSysTable()</b>
+
+Returns system-level metrics (system response time and throughput) aggregated by chain.
+
+<b>getAvgSys() Returns:</b>
+List `[response_time, throughput]` with system-level performance values
+
+<b>getAvgSysTable() Returns:</b>
+Table with columns: [Chain, JobClasses, SysRespT, SysTput]
+
+@note System metrics are only defined by chain to avoid ambiguity when jobs switch classes within a chain.
+
+@subsubsection specialized_avg Specialized Average Methods
+
+<b>getAvgArvR()</b>
+
+Returns arrival rates for each station and class.
+
+<b>Returns:</b> Matrix [num_stations x num_classes]
+
+<b>getAvgQLen()</b>
+
+Returns average queue length for each station and class.
+
+<b>Returns:</b> Matrix [num_stations x num_classes]
+
+<b>getAvgRespT()</b>
+
+Returns average response time for each station and class.
+
+<b>Returns:</b> Matrix [num_stations x num_classes]
+
+<b>getAvgResidT()</b>
+
+Returns average residence time for each station and class.
+
+<b>Returns:</b> Matrix [num_stations x num_classes]
+
+<b>getAvgTput()</b>
+
+Returns average throughput for each station and class.
+
+<b>Returns:</b> Matrix [num_stations x num_classes]
+
+<b>getAvgUtil()</b>
+
+Returns average utilization for each station and class.
+
+<b>Returns:</b> Matrix [num_stations x num_classes]
+
+<b>getAvgSysRespT()</b>
+
+Returns system-level average response time.
+
+<b>Returns:</b> Vector of system response times (one per class)
+
+<b>getAvgSysTput()</b>
+
+Returns system-level average throughput.
+
+<b>Returns:</b> Vector of system throughputs (one per class)
+
+@subsubsection chain_metrics Chain-Based Metrics
+
+The following methods return metrics aggregated by routing chains instead of job classes:
+
+<b>getAvgQLenChain() / getAvgNodeQLenChain()</b>
+
+Returns queue length aggregated by chain.
+
+<b>getAvgRespTChain() / getAvgNodeRespTChain()</b>
+
+Returns response time aggregated by chain.
+
+<b>getAvgTputChain() / getAvgNodeTputChain()</b>
+
+Returns throughput aggregated by chain.
+
+<b>getAvgUtilChain() / getAvgNodeUtilChain()</b>
+
+Returns utilization aggregated by chain.
+
+@subsection state_prob_methods State Probability Methods
+
+<b>getProbAggr(node, state)</b>
+
+Returns marginal state probabilities for jobs of different classes at a given station.
+
+<b>Parameters:</b>
+- `node` - Network node (Queue, Delay, etc.) or node index (int)
+- `state` (optional) - State specification as vector. Default: empty (returns all states)
+
+<b>Returns:</b>
+- Scalar probability value (if result is scalar)
+- Matrix of probabilities (if multi-dimensional)
+- Empty if computation fails or is not supported
+
+<b>Example:</b>
+@code{.m}
+solver = CTMC(model);
+queue1 = model.nodes{1};
+
+% Get probability of specific state [2 jobs of class 1, 1 job of class 2]
+queue1.setState([2, 1]);
+prob = solver.getProbAggr(queue1);  % Returns scalar
+fprintf('Probability of state [2,1]: %f\n', prob);
+
+% Get all state probabilities (returns matrix)
+allProbs = solver.getProbAggr(queue1);
+@endcode
+
+<b>Supported by:</b> CTMC, FLUID, JMT, MAM, MVA
+
+<b>getProb(node, state)</b>
+
+Returns state probabilities at equilibrium at a given station, including phase information (full state space).
+
+<b>Parameters:</b>
+- `node` - Network node (Queue, Delay, etc.) or node index (int)
+- `state` (optional) - Complete state specification including phase. Default: empty
+
+<b>Returns:</b>
+- Scalar probability value (if result is scalar)
+- Array of probabilities (if multi-dimensional)
+- Empty if computation fails
+
+<b>Example:</b>
+@code{.m}
+solver = CTMC(model);
+queue1 = model.nodes{1};
+
+% Get probability for a specific state with phase information
+prob = solver.getProb(queue1, [1, 0, 2]);  % [class0_jobs, class1_jobs, phase]
+@endcode
+
+@note This method returns the full state space including phase information, whereas `getProbAggr()` aggregates over phases.
+
+<b>Supported by:</b> CTMC, SSA
+
+<b>getProbSys()</b>
+
+Returns joint probabilities for the entire system state (all stations).
+
+<b>Parameters:</b> None
+
+<b>Returns:</b>
+- Multi-dimensional array of joint state probabilities
+- Empty if computation fails
+
+<b>Supported by:</b> CTMC, SSA
+
+<b>getProbSysAggr()</b>
+
+Returns joint probabilities for jobs of different classes across all stations (aggregated over phases).
+
+<b>Parameters:</b> None
+
+<b>Returns:</b>
+- Struct containing:
+  - `probability` - Array of joint probabilities
+  - `logNormConst` - Log normalizing constant
+  - `isAggregated` - true (for this method)
+- Empty if computation fails
+
+<b>Supported by:</b> CTMC, JMT, NC
+
+<b>getProbNormConstAggr()</b>
+
+Returns the normalizing constant of state probabilities.
+
+<b>Parameters:</b> None
+
+<b>Returns:</b>
+- Scalar: The normalizing constant value
+- Empty if computation fails
+
+<b>Supported by:</b> JMT, MVA, NC
+
+@subsection distribution_methods Distribution Methods
+
+<b>getCdfRespT()</b>
+
+Returns the cumulative distribution function (CDF) of response times for each station and class at steady-state.
+
+<b>Parameters:</b> None
+
+<b>Returns:</b>
+
+Cell array with shape {num_stations x num_classes}
+- Each cell `{i, k}` contains either:
+  - Matrix [n_points x 2] where:
+    - Column 1: Time points (response time values)
+    - Column 2: CDF values (cumulative probability from 0 to 1)
+  - Empty if not available for that station-class pair
+
+<b>Example:</b>
+@code{.m}
+solver = FLD(model);
+cdfData = solver.getCdfRespT();
+
+% Access CDF for station 1, class 1
+if ~isempty(cdfData{1, 1})
+    timePoints = cdfData{1, 1}(:, 1);
+    cdfValues = cdfData{1, 1}(:, 2);
+
+    % Plot CCDF (complementary CDF)
+    semilogx(timePoints, 1 - cdfValues);
+end
+@endcode
+
+<b>Supported by:</b> CTMC, FLUID, JMT, MAM, SSA
+
+<b>getCdfPassT()</b>
+
+Returns the cumulative distribution function (CDF) of passage times between stations at steady-state.
+
+<b>Returns:</b> Cell array with same structure as `getCdfRespT()`
+
+<b>Supported by:</b> CTMC
+
+@subsection transient_methods Transient Analysis Methods
+
+@note Transient analysis requires specifying a `timespan` parameter when creating the solver. Example: `solver = JMT(model, 'timespan', [0, 100])`
+
+<b>getTranAvg()</b>
+
+Returns transient mean performance metrics (queue length, utilization, throughput) over time for every station and class.
+
+<b>Parameters:</b> None (uses timespan from solver options)
+
+<b>Returns:</b>
+
+The return structure varies by solver:
+
+<b>FLD/CTMC:</b> Struct with fields `QNt`, `UNt`, `TNt`
+- Each field is a cell array: {{station_0_classes}, {station_1_classes}, ...}
+- Each cell contains time series data
+
+<b>JMT:</b> Tuple `{QNclass_t, UNclass_t, TNclass_t}`
+- Each element has shape {num_stations x num_classes}
+- Each cell contains struct with fields:
+  - `handle` - tuple of (station_obj, class_obj)
+  - `t` - vector of time points
+  - `metric` - vector of metric values at each time point
+
+<b>Example:</b>
+@code{.m}
+% Fluid solver - returns struct
+solver = FLD(model, 'timespan', [0, 50]);
+result = solver.getTranAvg();
+
+QNt = result.QNt;  % Queue length over time
+UNt = result.UNt;  % Utilization over time
+TNt = result.TNt;  % Throughput over time
+
+% Access queue length time series for station 1, class 1
+qlenSeries = QNt{1}{1};  % matrix
+
+% JMT solver - returns cell arrays
+solverJmt = JMT(model, 'timespan', [0, 100]);
+[QN_t, UN_t, TN_t] = solverJmt.getTranAvg();
+
+% Access specific station-class time series
+if ~isempty(QN_t{1, 1})
+    timePoints = QN_t{1, 1}.t;
+    qlenValues = QN_t{1, 1}.metric;
+end
+@endcode
+
+<b>Supported by:</b> CTMC, FLUID, JMT
+
+<b>getTranCdfRespT()</b>
+
+Returns response time distribution in the transient regime.
+
+<b>Returns:</b> Cell array with shape {num_stations x num_classes}, same structure as `getCdfRespT()`
+
+<b>Supported by:</b> JMT
+
+<b>getTranCdfPassT()</b>
+
+Returns first passage time distributions in the transient regime.
+
+<b>Supported by:</b> FLUID
+
+<b>getTranProb(node)</b>
+
+Returns transient state probabilities for a specific node over time.
+
+<b>Parameters:</b>
+- `node` - Network node (Queue, Delay, etc.) or node index
+
+<b>Returns:</b> Struct containing transient probabilities or empty
+
+<b>Supported by:</b> CTMC
+
+<b>getTranProbAggr(node)</b>
+
+Returns transient marginal state probabilities aggregated by class for a specific node.
+
+<b>Supported by:</b> CTMC
+
+<b>getTranProbSys()</b>
+
+Returns transient joint system state probabilities over time.
+
+<b>Supported by:</b> CTMC
+
+<b>getTranProbSysAggr()</b>
+
+Returns transient joint probabilities aggregated by class for the entire system.
+
+<b>Supported by:</b> CTMC
+
+@subsection sample_methods Sample Path Methods
+
+@note Sample path methods generate discrete-event simulation traces showing the evolution of the system state over time. These are primarily used for validation, visualization, and detailed analysis of system dynamics.
+
+<b>sample(node, numSamples)</b>
+
+Returns a sample path of the state evolution at a given node, including detailed phase information.
+
+<b>Parameters:</b>
+- `node` - Network node (Queue, Delay, etc.) to sample
+- `numSamples` - Number of samples/events to generate (int)
+
+<b>Returns:</b>
+
+Struct containing:
+- `handle` - Unique identifier (string)
+- `t` - Array of time points
+- `state` - State information at each time point (includes phase details)
+- `event` - Cell array of events that occurred
+- `isAggregate` - false (not aggregated)
+- `nodeIndex` - Index of the sampled node
+- `numSamples` - Number of samples collected
+
+<b>Example:</b>
+@code{.m}
+solver = SSA(model, 'seed', 12345);
+queue1 = model.nodes{1};
+
+sampleResult = solver.sample(queue1, 1000);
+if ~isempty(sampleResult)
+    times = sampleResult.t;
+    states = sampleResult.state;
+    events = sampleResult.event;
+
+    % Plot sample path
+    stairs(times, states(:, 1));  % State of first class
+end
+@endcode
+
+<b>Supported by:</b> CTMC, SSA
+
+<b>sampleAggr(node, numSamples)</b>
+
+Returns a sample path with aggregated state (number of jobs per class, without phase information).
+
+<b>Returns:</b> Struct with same structure as `sample()`, but with `isAggregate = true`
+
+<b>Supported by:</b> CTMC, JMT, SSA
+
+<b>sampleSys(numEvents)</b>
+
+Returns sample paths for all nodes in the system with detailed phase information.
+
+<b>Parameters:</b>
+- `numEvents` - Number of events to simulate (int)
+
+<b>Supported by:</b> CTMC, SSA
+
+<b>sampleSysAggr(numEvents)</b>
+
+Returns sample paths for all nodes with aggregated state (job counts per class, no phase information).
+
+<b>Supported by:</b> CTMC, JMT, SSA
+
+@subsection solver_options Solver Options
+
+All solvers accept an `options` parameter or name-value pairs. Common options include:
+
+- `cache` (bool) - Cache solver results (default: true)
+- `cutoff` (int) - Maximum jobs per station/class (required for CTMC with open classes)
+- `force` (bool) - Bypass solver feasibility checks (default: false)
+- `iter_max` (int) - Maximum iterations for iterative solvers (default: 1000)
+- `iter_tol` (float) - Iteration convergence tolerance (default: 1e-6)
+- `keep` (bool) - Store intermediate files for debugging (default: false)
+- `method` (string) - Algorithm selection (solver-specific)
+- `samples` (int) - Number of samples for simulation-based solvers (default: 10000)
+- `seed` (int) - Random seed for stochastic solvers
+- `timespan` (vector) - Time range for transient analysis (e.g., [0, 100])
+- `tol` (float) - General numerical tolerance (default: 1e-4)
+- `verbose` (int) - Verbosity level (0=silent, 1=standard, 2=debug)
+
+@section individual_solvers Individual Solvers
+
+@subsection solver_auto AUTO Solver
+
+<b>Purpose:</b> Automatic solver selection based on model properties. The AUTO solver analyzes the model structure and dynamically selects the most appropriate solution method from available solvers (CTMC, NC, JMT, SSA, etc.).
+
+The AUTO solver prioritizes analytical solvers over simulation and uses heuristics based on scheduling strategies, number of jobs, chains, and classes to make its selection. If the optimal solver does not support a requested function, it selects from feasible solvers in order of expected execution time.
+
+<b>Typical Usage:</b>
+
+@code{.m}
+model = Network('mymodel');
+queue = Queue(model, 'Queue1', SchedStrategy.FCFS);
+jobClass = ClosedClass(model, 'Class1', 5, queue);
+queue.setService(jobClass, Exp(1.0));
+
+solver = AUTO(model);
+avgTable = solver.getAvgTable();
+disp(avgTable);
+@endcode
+
+<b>Available Methods:</b> All common NetworkSolver methods (the AUTO solver will delegate to an appropriate backend solver).
+
+<b>Configuration:</b> No solver-specific options. The AUTO solver accepts standard options which it passes to the selected backend solver.
+
+@subsection solver_ctmc CTMC Solver
+
+<b>Purpose:</b> Continuous-Time Markov Chain (CTMC) solver providing <b>exact solutions</b> via explicit generation of the underlying CTMC state space. This is the only method that guarantees exact results for all Markovian models, but it suffers from state-space explosion for larger models.
+
+The CTMC solver is recommended for small to medium models (heuristically limited to ~6000 states) where exact solutions are required and the model is fully Markovian.
+
+<b>Typical Usage:</b>
+
+@code{.m}
+% Steady-state analysis
+solver = CTMC(model);
+avgTable = solver.getAvgTable();
+
+% Transient analysis at time t=10
+solverTransient = CTMC(model, 'timespan', [0, 10]);
+qnT = solverTransient.getTranAvg();
+
+% State probabilities
+probAggr = solver.getProbAggr(queue1);
+probSys = solver.getProbSys();
+@endcode
+
+<b>Solver-Specific Methods:</b>
+
+- `getCdfRespT()` - Response time distribution at steady-state
+- `getTranCdfPassT()` - First passage time distribution in transient regime
+- `getTranCdfRespT()` - Response time distribution in transient regime
+- `getProb()` - State probabilities at equilibrium
+- `getProbAggr()` - Marginal state probabilities by class
+- `getProbSys()` - Joint system state probabilities
+- `getProbSysAggr()` - Joint probabilities by class
+- `getTranAvg()` - Transient performance metrics
+- `getTranProb()`, `getTranProbAggr()`, `getTranProbSys()`, `getTranProbSysAggr()` - Various transient probability methods
+- `sample()` - Sample path for a station (with phase information)
+- `sampleAggr()` - Sample path for a station (aggregated by class)
+- `sampleSys()` - Sample paths for all stations (with phase information)
+- `sampleSysAggr()` - Sample paths for all stations (aggregated by class)
+
+<b>Solution Methods</b> (`method` option):
+
+- `'default'` - Global balance solution (default)
+
+<b>Key Options:</b>
+
+- `cutoff` (int) - <b>Mandatory</b> for models with open classes. Maximum number of jobs per station and class.
+- `force` (bool) - Bypass state-space size checks (use with caution)
+- `timespan` (vector) - Temporal range for transient analysis (e.g., [0, 50])
+- `timestep` (float) - Fixed time interval for transient sampling (adaptive by default)
+
+<b>Example:</b>
+
+@code{.m}
+% CTMC with open classes requires cutoff
+solver = CTMC(model, 'cutoff', 10);
+
+% Transient analysis with specific timestep
+solver = CTMC(model, 'timespan', [0, 100], 'timestep', 1.0);
+tranAvg = solver.getTranAvg();
+@endcode
+
+@subsection solver_fluid FLUID Solver
+
+<b>Purpose:</b> Approximates model behavior using Ordinary Differential Equation (ODE)-based mean-field approximations. The FLUID solver analyzes models via a system of ODEs, providing faster solutions than CTMC but with some approximation error.
+
+The FLUID approximation becomes exact in the limit for processor-sharing (PS) and infinite-server (INF) scheduling. It scales better than CTMC for larger models and is particularly effective for models with many jobs.
+
+<b>Typical Usage:</b>
+
+@code{.m}
+% Steady-state analysis
+solver = FLD(model);
+avgTable = solver.getAvgTable();
+
+% Response time distribution
+cdfRespT = solver.getCdfRespT();
+
+% Transient analysis
+solverTransient = FLD(model, 'timespan', [0, 50]);
+tranAvg = solverTransient.getTranAvg();
+@endcode
+
+<b>Solver-Specific Methods:</b>
+
+- `getCdfRespT()` - Response time distribution
+- `getProbAggr()` - Marginal state probabilities by class
+- `getTranAvg()` - Transient performance metrics
+- `getTranCdfPassT()` - First passage time distributions
+
+<b>Solution Methods</b> (`method` option):
+
+- `'default'` or `'matrix'` - ODE-based mean field approximations (default)
+- `'closing'` - Fluid with closing method for open classes
+- `'statedep'` - Kurtz's mean field ODEs for closed models
+- `'softmin'` - Smoothed statedep with softmin replacing min functions
+
+<b>Key Options:</b>
+
+- `stiff` (bool) - Use stiff ODE solver (default: true)
+- `iter_tol` (float) - ODE solver tolerance (default: 1e-4)
+- `iter_max` (int) - Maximum iterations (default: 10)
+- `timespan` (vector) - Temporal range (default: [0, inf] for steady-state)
+
+<b>Example:</b>
+
+@code{.m}
+% Fluid with specific method and tolerance
+solver = FLD(model, 'method', 'statedep', 'iter_tol', 1e-6);
+avgTable = solver.getAvgTable();
+@endcode
+
+@subsection solver_jmt JMT Solver
+
+<b>Purpose:</b> Wrapper for the Java Modelling Tools (JMT) simulation (JSIM) and analytical solver (JMVA). The JMT solver supports the widest range of model features including non-Markovian distributions (Pareto, deterministic, empirical traces).
+
+JMT is the most comprehensive solver in LINE, supporting virtually all model features through discrete-event simulation. It can also invoke JMT's analytical MVA solver for product-form models.
+
+<b>Typical Usage:</b>
+
+@code{.m}
+% Simulation with specific seed and samples
+solver = JMT(model, 'seed', 23000, 'samples', 50000);
+avgTable = solver.getAvgTable();
+
+% Sample path generation
+samplePath = solver.sampleAggr(queue, 100);
+
+% Transient response time distribution
+tranCdf = solver.getTranCdfRespT();
+@endcode
+
+<b>Solver-Specific Methods:</b>
+
+- `getCdfRespT()` - Response time distribution
+- `getProbAggr()` - Marginal state probabilities
+- `getProbSysAggr()` - Joint probabilities by class
+- `sampleAggr()` - Sample path for a station (aggregated by class)
+- `sampleSysAggr()` - Sample path for system (aggregated by class)
+- `getTranCdfRespT()` - Transient response time distribution
+- `getTranAvg()` - Transient performance metrics
+
+@note JMT does NOT support `sample()` or `sampleSys()` with detailed phase information due to simulator limitations.
+
+<b>Solution Methods</b> (`method` option):
+
+Simulation methods:
+- `'jsim'` or `'default'` - Discrete-event simulation in JSIM (default)
+
+Analytical methods (product-form models only):
+- `'jmva'` or `'jmva.mva'` - Exact MVA in JMVA
+- `'jmva.recal'` - Exact RECAL algorithm
+- `'jmva.comom'` - Exact CoMoM algorithm
+- `'jmva.amva'` or `'jmva.bs'` - Bard-Schweitzer approximate MVA
+- `'jmva.aql'` - AQL algorithm
+- `'jmva.chow'` - Chow algorithm
+- `'jmva.dmlin'` - De Souza-Muntz Linearizer
+- `'jmva.lin'` - Linearizer algorithm
+- `'jmva.ls'` - Logistic sampling
+
+<b>Key Options:</b>
+
+- `seed` (int) - Random number generator seed for simulation (default: random)
+- `samples` (int) - Number of simulation samples per metric (minimum 5000, default: 10000)
+- `para` (bool) - Enable parallel simulation with multiple independent replicas
+- `keep` (bool) - Store intermediate .jsimg/.jsimw files for debugging
+
+<b>Example:</b>
+
+@code{.m}
+% High-precision simulation
+solver = JMT(model, 'seed', 12345, 'samples', 100000, 'verbose', 1);
+avgTable = solver.getAvgTable();
+
+% Use analytical JMVA solver
+solverAnalytical = JMT(model, 'method', 'jmva.mva');
+avgTable = solverAnalytical.getAvgTable();
+@endcode
+
+@subsection solver_ln LN Solver
+
+<b>Purpose:</b> LINE's native solver for Layered Queueing Networks (LQNs) with task-entry activity graphs and inter-task calls. Supports decomposition of layers with iterative analysis and specialized cache modeling.
+
+The LN solver iteratively analyzes each layer of the network until convergence of steady-state measures, allowing flexible composition of different solver types for individual layers.
+
+<b>Typical Usage:</b>
+
+@code{.m}
+% LN solver with MVA for layer analysis
+solver = LN(layeredModel, @(layer) MVA(layer));
+avgTable = solver.getAvgTable();
+@endcode
+
+<b>Available Methods:</b> All standard steady-state average methods (getAvg, getAvgTable, etc.)
+
+<b>Solution Methods</b> (`method` option):
+
+- `'default'` - Default recursive solution based on mean values
+- `'moment3'` - Solution by recursive 3-moment approximation of response time distributions
+
+<b>Key Options:</b>
+
+- `iter_tol` (float) - Convergence tolerance for layer iterations (default: 1e-6)
+
+@subsection solver_lqns LQNS Solver
+
+<b>Purpose:</b> Wrapper around the external LQNS solver for layered queueing networks. Transforms LINE models into LQNS XML format, invokes the external solver, and parses results back into LINE format.
+
+@note Requires `lqns` and `lqsim` executables to be available on the system PATH.
+
+<b>Typical Usage:</b>
+
+@code{.m}
+solver = LQNS(layeredModel);
+avgTable = solver.getAvgTable();
+@endcode
+
+<b>Solution Methods</b> (`method` option):
+
+- `'std'` or `'lqns'` - LQNS analytical solver with default settings (default)
+- `'exact'` - LQNS analytical solver with exact MVA method
+- `'srvn'` - LQNS analytical solver with SRVN layering
+- `'srvnexact'` - LQNS with SRVN layering and exact MVA
+- `'lqsim'` - LQSIM simulator (specify simulation length via `samples` option)
+
+<b>Key Options:</b>
+
+- `samples` (int) - Simulation length for lqsim method
+
+@subsection solver_mam MAM Solver
+
+<b>Purpose:</b> Matrix-Analytic Methods (MAM) solver providing <b>exact solutions</b> for open Markovian systems via quasi-birth-death (QBD) process analysis. Solves infinite state-space models exactly by exploiting repetitive CTMC structure.
+
+The MAM solver is particularly effective for open queueing models with MAP/PH arrivals and services, providing exact results without state-space truncation.
+
+<b>Typical Usage:</b>
+
+@code{.m}
+solver = MAM(model);
+avgTable = solver.getAvgTable();
+
+% Response time distribution
+cdfRespT = solver.getCdfRespT();
+@endcode
+
+<b>Solver-Specific Methods:</b>
+
+- `getCdfRespT()` - Response time distribution
+- `getProbAggr()` - Marginal state probabilities
+
+<b>Solution Methods</b> (`method` option):
+
+- `'default'` - Matrix-analytic solution of structured QBDs (default)
+- `'dec.source'` - Decomposition with arrivals as from the source
+- `'dec.poisson'` - Decomposition based on Poisson arrival flows
+- `'dec.mna'` - Decomposition based on MNA method
+
+@subsection solver_mva MVA Solver
+
+<b>Purpose:</b> Mean Value Analysis (MVA) solver providing fast approximate and exact solutions for product-form queueing networks. Typically the fastest solver with good accuracy for single-server stations.
+
+The MVA solver is ideal for closed and mixed queueing networks with product-form properties. It provides various approximation algorithms trading speed for accuracy, as well as exact methods for smaller models.
+
+<b>Typical Usage:</b>
+
+@code{.m}
+% Exact MVA
+solver = MVA(model, 'method', 'exact');
+avgTable = solver.getAvgTable();
+
+% Approximate MVA (faster for large models)
+solverApprox = MVA(model, 'method', 'qd');
+avgTable = solverApprox.getAvgTable();
+@endcode
+
+<b>Solver-Specific Methods:</b>
+
+All standard steady-state average methods are supported.
+
+@note MVA <b>cannot</b> produce response time distributions due to the nature of mean-value analysis.
+
+<b>Solution Methods</b> (`method` option):
+
+Approximation algorithms:
+- `'default'`, `'amva'`, or `'qd'` - Queue-dependent approximate MVA (default)
+- `'bs'` - Bard-Schweitzer approximate MVA
+- `'lin'` - Linearizer approximate MVA
+- `'qdlin'` - Queue-dependent Linearizer approximate MVA
+- `'exact'` - Exact solution (method depends on model features)
+
+Bounds methods:
+- `'aba.upper'` / `'aba.lower'` - Asymptotic bound analysis
+- `'bjb.upper'` / `'bjb.lower'` - Balanced job bounds
+- `'gb.upper'` / `'gb.lower'` - Geometric square-root bounds
+- `'pb.upper'` / `'pb.lower'` - Proportional bounds
+- `'sb.upper'` / `'sb.lower'` - Simple bounds
+
+Single-station formulas (for tandem/cyclic networks):
+- `'mm1'` - Exact M/M/1 formula
+- `'mmk'` - Exact M/M/k (Erlang-C) formula
+- `'mg1'` - M/G/1 (Pollaczek-Khinchine) formula
+- `'gig1.klb'`, `'gig1.allen'`, `'gig1.heyman'`, `'gig1.kingman'`, `'gig1.kobayashi'`, `'gig1.marchal'` - Various GI/G/1 approximations
+- `'gigk'` - Kingman approximation for GI/G/k
+
+<b>Key Options:</b>
+
+- `method` (string) - Algorithm selection (see above)
+- `iter_max` (int) - Maximum iterations (default: 1000)
+- `iter_tol` (float) - Convergence tolerance (default: 1e-6)
+
+Advanced configuration (via `config` struct):
+- `config.multiserver` (string) - Multiserver handling ('default', 'seidmann', 'softmin')
+- `config.np_priority` (string) - Non-preemptive priority ('default'/'cl', 'shadow')
+- `config.highvar` (string) - High variance handling ('default', 'interp', 'hvmva')
+- `config.fork_join` (string) - Fork-join handling ('default'/'mmt', 'ht')
+
+<b>Example:</b>
+
+@code{.m}
+% MVA with specific approximation and tolerance
+solver = MVA(model, 'method', 'lin', 'iter_tol', 1e-8, 'iter_max', 5000);
+avgTable = solver.getAvgTable();
+
+% MVA with advanced multiserver configuration
+options = MVA.defaultOptions();
+options.method = 'qd';
+options.config.multiserver = 'seidmann';
+solver = MVA(model, options);
+@endcode
+
+@subsection solver_nc NC Solver
+
+<b>Purpose:</b> Normalizing Constant Analyzer (NC) providing exact and approximate solutions based on the normalizing constant of state probability distributions. Maps the problem to multidimensional integrals solved with Monte Carlo sampling and asymptotic expansions.
+
+The NC solver is particularly useful for obtaining marginal and joint state probabilities in closed queueing networks, offering multiple exact and approximate algorithms.
+
+<b>Typical Usage:</b>
+
+@code{.m}
+% Exact convolution algorithm
+solver = NC(model, 'method', 'ca');
+avgTable = solver.getAvgTable();
+
+% State probabilities
+probAggr = solver.getProbAggr(queue1);
+probSysAggr = solver.getProbSysAggr();
+normConst = solver.getProbNormConstAggr();
+@endcode
+
+<b>Solver-Specific Methods:</b>
+
+- `getProbAggr()` - Marginal state probabilities by class
+- `getProbSysAggr()` - Joint probabilities by class
+- `getProbNormConstAggr()` - Normalizing constant
+
+<b>Solution Methods</b> (`method` option):
+
+Automatic selection:
+- `'default'` or `'adaptive'` - Automated choice of deterministic method (default)
+- `'exact'` - Automated choice of exact solution method
+- `'sampling'` - Automated selection of sampling method
+
+Exact methods:
+- `'ca'` - Multiclass convolution algorithm
+- `'comom'` - Class-oriented method of moments (for homogeneous models)
+- `'mva'` - Product of throughputs on MVA lattice
+
+Approximation methods:
+- `'cub'` - Grundmann-Moeller cubature rules
+- `'kt'` - Knessl-Tier asymptotic expansion
+- `'le'` - Logistic asymptotic expansion
+- `'ls'` - Logistic sampling
+- `'imci'` - Improved Monte Carlo integration
+- `'nr.logit'` - Norlund-Rice integral with logit transformation
+- `'nr.probit'` - Norlund-Rice integral with probit transformation
+- `'panacea'` - Panacea asymptotic expansion
+- `'rd'` - Reduction heuristic
+
+Loss network methods:
+- `'erlangfp'` - Erlang fixed-point approximation for open loss networks with FCR (Finite Capacity Region)
+
+<b>Example:</b>
+
+@code{.m}
+% NC with specific exact method
+solver = NC(model, 'method', 'comom');
+avgTable = solver.getAvgTable();
+
+% NC with sampling for large models
+solverSampling = NC(model, 'method', 'ls', 'samples', 50000);
+avgTable = solverSampling.getAvgTable();
+@endcode
+
+@subsection solver_ssa SSA Solver
+
+<b>Purpose:</b> Stochastic Simulation Algorithm (SSA) solver based on CTMC stochastic simulation. Estimates the probability distribution of system states by generating sample paths, deriving performance metrics indirectly.
+
+The SSA solver offers more efficient parallelization than JMT and can retrieve detailed node state evolution including active phases of service distributions.
+
+<b>Typical Usage:</b>
+
+@code{.m}
+% SSA simulation
+solver = SSA(model, 'samples', 50000, 'seed', 12345);
+avgTable = solver.getAvgTable();
+
+% Detailed sample path with phase information
+samplePath = solver.sample(queue, 100);
+sampleSys = solver.sampleSys(100);
+@endcode
+
+<b>Solver-Specific Methods:</b>
+
+- `getCdfRespT()` - Response time distribution (via simulation)
+- `getProb()` - State probabilities at equilibrium
+- `getProbSys()` - Joint system state probabilities
+- `sample()` - Sample path for a station (with phase information)
+- `sampleAggr()` - Sample path for a station (aggregated by class)
+- `sampleSys()` - Sample paths for all stations (with phase information)
+- `sampleSysAggr()` - Sample paths for all stations (aggregated by class)
+
+<b>Solution Methods</b> (`method` option):
+
+- `'default'` - Alias for 'nrm' if model supports it, otherwise 'serial' (default)
+- `'nrm'` - Next reaction method for population models (PS/INF scheduling only)
+- `'serial'` - CTMC stochastic simulation on single core
+- `'para'` - Parallel simulations with independent replicas on multiple cores
+
+<b>Key Options:</b>
+
+- `samples` (int) - Number of simulation samples (default: 10000)
+- `seed` (int) - Random number generator seed
+- `para` (bool) - Enable parallel execution
+
+<b>Example:</b>
+
+@code{.m}
+% Parallel SSA with many samples
+solver = SSA(model, 'method', 'para', 'samples', 100000, 'seed', 42);
+avgTable = solver.getAvgTable();
+@endcode
+
+@section solver_compat_matrix Solver Compatibility Matrix
+
+This table summarizes which methods are supported by each solver.
+
+<table>
+<tr>
+  <th>Method</th>
+  <th>AUTO</th>
+  <th>CTMC</th>
+  <th>FLUID</th>
+  <th>JMT</th>
+  <th>MAM</th>
+  <th>MVA</th>
+  <th>NC</th>
+  <th>SSA</th>
+</tr>
+<tr>
+  <td>getAvg() / getAvgTable()</td>
+  <td>Yes</td>
+  <td>Yes</td>
+  <td>Yes</td>
+  <td>Yes</td>
+  <td>Yes</td>
+  <td>Yes</td>
+  <td>Yes</td>
+  <td>Yes</td>
+</tr>
+<tr>
+  <td>getCdfRespT()</td>
+  <td>Yes</td>
+  <td>Yes</td>
+  <td>Yes</td>
+  <td>Yes</td>
+  <td>Yes</td>
+  <td>No</td>
+  <td>No</td>
+  <td>Yes</td>
+</tr>
+<tr>
+  <td>getProbAggr()</td>
+  <td>Yes</td>
+  <td>Yes</td>
+  <td>Yes</td>
+  <td>Yes</td>
+  <td>Yes</td>
+  <td>Yes</td>
+  <td>Yes</td>
+  <td>No</td>
+</tr>
+<tr>
+  <td>getProb()</td>
+  <td>Yes</td>
+  <td>Yes</td>
+  <td>No</td>
+  <td>No</td>
+  <td>No</td>
+  <td>No</td>
+  <td>No</td>
+  <td>Yes</td>
+</tr>
+<tr>
+  <td>getProbSysAggr()</td>
+  <td>Yes</td>
+  <td>Yes</td>
+  <td>No</td>
+  <td>Yes</td>
+  <td>No</td>
+  <td>No</td>
+  <td>Yes</td>
+  <td>No</td>
+</tr>
+<tr>
+  <td>getTranAvg()</td>
+  <td>Yes</td>
+  <td>Yes</td>
+  <td>Yes</td>
+  <td>Yes</td>
+  <td>No</td>
+  <td>No</td>
+  <td>No</td>
+  <td>No</td>
+</tr>
+<tr>
+  <td>sample() / sampleSys()</td>
+  <td>Yes</td>
+  <td>Yes</td>
+  <td>No</td>
+  <td>No</td>
+  <td>No</td>
+  <td>No</td>
+  <td>No</td>
+  <td>Yes</td>
+</tr>
+<tr>
+  <td>sampleAggr()</td>
+  <td>Yes</td>
+  <td>Yes</td>
+  <td>No</td>
+  <td>Yes</td>
+  <td>No</td>
+  <td>No</td>
+  <td>No</td>
+  <td>Yes</td>
+</tr>
+</table>
+
+@see @ref matlab_choosing_solver "Choosing the Right Solver"
+@see @ref matlab_quickstart "Quick Start"
+@see @ref matlab_examples "Examples"
+
+*/

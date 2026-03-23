@@ -1,0 +1,282 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+<link rel="stylesheet" href="css/line-solver.css" />
+	<meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<meta name="description" content="LINE Solver - SSA Solver Documentation" />
+	<meta name="keywords" content="LINE solver, SSA, Stochastic Simulation Algorithm" />
+	<meta name="author" content="Giuliano Casale" />
+	<title>SSA Solver - LINE Solver Documentation</title>
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" />
+	<script type="text/javascript" src="js/jquery-1.11.0.min.js"></script>
+	<script type="text/javascript" src="js/line-solver.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-matlab.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-java.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+	<script type="text/javascript">
+		$(document).ready(function(){
+
+			$('.sidebar-nav .expandable > a').click(function(e){
+				e.preventDefault();
+				var parent = $(this).parent();
+				parent.toggleClass('open');
+			});
+			// Auto-expand Solvers menu on solver pages
+			$('.sidebar-nav .expandable').addClass('open');
+
+			$('.language-tab').click(function(){
+				var lang = $(this).data('lang');
+				$(this).siblings().removeClass('active');
+				$(this).addClass('active');
+				$(this).closest('.example-section').find('.language-content').removeClass('active');
+				$(this).closest('.example-section').find('.language-content[data-lang="' + lang + '"]').addClass('active');
+			});
+
+			// Copy button functionality
+			$('.copy-button').click(function(){
+				var button = $(this);
+				var codeBlock = button.siblings('pre').find('code').length > 0
+					? button.siblings('pre').find('code').text()
+					: button.siblings('pre').text();
+
+				if (navigator.clipboard && navigator.clipboard.writeText) {
+					navigator.clipboard.writeText(codeBlock).then(function() {
+						button.text('Copied!').addClass('copied');
+						setTimeout(function(){
+							button.text('Copy').removeClass('copied');
+						}, 2000);
+					});
+				} else {
+					// Fallback for older browsers
+					var textArea = document.createElement("textarea");
+					textArea.value = codeBlock;
+					document.body.appendChild(textArea);
+					textArea.select();
+					document.execCommand('copy');
+					document.body.removeChild(textArea);
+					button.text('Copied!').addClass('copied');
+					setTimeout(function(){
+						button.text('Copy').removeClass('copied');
+					}, 2000);
+				}
+			});
+
+			// Apply syntax highlighting
+			Prism.highlightAll();
+		});
+	</script>
+</head>
+<body>
+<div id="wrap">
+
+<div id="header">
+	<p id="toplinks"><a href="index.html">Home</a> | <a href="index.html#solvers">Solvers</a></p>
+	
+	<h1><a href="index.html">LINE Solver</a></h1>
+	<p id="slogan">Queueing Theory Algorithms</p>
+</div>
+
+<div id="sidebar">
+<div id="sidebar-content">
+<h2>Navigate</h2>
+<ul class="sidebar-nav">
+<li><a href="index.html">Home</a></li>
+<li><a href="index.html#overview">Overview</a></li>
+<li><a href="index.html#papers">Documentation</a></li>
+<li><a href="tutorials.html">Tutorials</a></li>
+<!-- Re-enable when 3.0.4 is out: <li><a href="mcp.html">MCP Integration</a></li> -->
+<li><a href="index.html#solvers">Solvers</a></li>
+</ul>
+
+<h2>Support</h2>
+<ul class="sidebar-links">
+<li><a href="https://sourceforge.net/projects/line-solver/" target="_blank">Sourceforge site</a></li>
+<li><a href="https://github.com/imperial-qore/line-solver" target="_blank">Github repo</a></li>
+</ul>
+
+<h2>News</h2>
+<ul class="sidebar-news">
+<li><strong>2026</strong> - <a href="https://sourceforge.net/projects/line-solver/files/latest/download">LINE 3.0.4</a> is out!</li>
+<li><strong>2025</strong> - First release of LINE 3.0.0</li>
+<li><strong>2019</strong> - First release of LINE 2.0.0</li>
+<li><strong>2016</strong> - First release of LINE 1.0.0</li>
+</ul>
+</div>
+</div>
+
+<div id="content">
+	<h2>SSA (Stochastic Simulation Algorithm)</h2>
+
+	<div class="solver-section">
+	<p class="solver-subtitle">The SSA solver is a stochastic simulator for continuous-time Markov chains. The state space is not generated upfront but is built during simulation starting from the initial state. The solver offers both serial and parallel execution modes, with the latter supporting independent replications across multiple cores.</p>
+
+	<table class="algorithm-table">
+	<tr><th>Method</th><th>Algorithm</th><th>Reference</th></tr>
+	<tr><td><code>default</code></td><td>Automatic solver method selection</td><td>&mdash;</td></tr>
+	<tr><td><code>ssa</code></td><td>Stochastic Simulation Algorithm</td><td>&mdash;</td></tr>
+	<tr><td><code>serial</code></td><td>Gillespie's direct method (single core)</td><td><a class="ref-link" href="#ref-gillespie1977">[1]</a></td></tr>
+	<tr><td><code>para</code></td><td>Parallel independent replications</td><td>&mdash;</td></tr>
+	<tr><td><code>parallel</code></td><td>Parallel independent replications (alternate name)</td><td>&mdash;</td></tr>
+	<tr><td><code>nrm</code></td><td>Next Reaction Method</td><td><a class="ref-link" href="#ref-anderson2007">[2]</a></td></tr>
+	</table>
+	</div>
+
+	<div class="example-section">
+	<h3>Example</h3>
+	<p>This example demonstrates solving a simple M/M/1 queue using the SSA solver with stochastic simulation. The unique feature shown is the incremental sampling process (10,000 samples) using Gillespie's algorithm to explore the state space.</p>
+
+	<div class="language-tabs">
+		<button class="language-tab active" data-lang="matlab">MATLAB</button>
+		<button class="language-tab" data-lang="java">Java</button>
+		<button class="language-tab" data-lang="python">Python</button>
+	</div>
+
+	<div class="language-content active" data-lang="matlab">
+		<div class="code-block">
+		<button class="copy-button">Copy</button>
+		<pre><code class="language-matlab">% Create a simple M/M/1 queue
+model = Network('M/M/1 Example');
+source = Source(model, 'Source');
+queue = Queue(model, 'Queue1', SchedStrategy.FCFS);
+sink = Sink(model, 'Sink');
+
+jobclass = OpenClass(model, 'Class1');
+source.setArrival(jobclass, Exp(0.9));
+queue.setService(jobclass, Exp(1.0));
+
+model.link(Network.serialRouting(source, queue, sink));
+
+% Solve with SSA (Stochastic Simulation Algorithm)
+solver = SSA(model);
+
+% Display average performance metrics
+SSA(model).avgTable()</code></pre>
+		</div>
+
+		<div class="output-block">
+			<h4>Output:</h4>
+<pre>Default method: using serial SSA
+
+SSA samples:    100
+   200
+   ...
+  9900
+ 10000
+SSA analysis [method: default/serial, lang: matlab] completed in 2.376s.
+
+ans =
+  2×8 table
+    Station    JobClass     QLen     Util    RespT     ResidT    ArvR     Tput
+    _______    ________    ______    ____    ______    ______    ____    _______
+    Source      Class1          0      0          0         0      0         0.9
+    Queue1      Class1     7.8089    0.9     8.5969    8.5969    0.9     0.90834</pre>
+		</div>
+	</div>
+
+	<div class="language-content" data-lang="java">
+		<div class="code-block">
+		<button class="copy-button">Copy</button>
+		<pre><code class="language-java">import jline.lang.*;
+import jline.lang.constant.SchedStrategy;
+import jline.lang.nodes.*;
+import jline.lang.processes.Exp;
+import jline.solvers.NetworkAvgTable;
+import jline.solvers.ssa.SSA;
+
+public class SSAExample {
+    public static void main(String[] args) {
+        // Create a simple M/M/1 queue
+        Network model = new Network("M/M/1 Example");
+
+        Source source = new Source(model, "Source");
+        Queue queue = new Queue(model, "Queue1", SchedStrategy.FCFS);
+        Sink sink = new Sink(model, "Sink");
+
+        OpenClass jobclass = new OpenClass(model, "Class1");
+        source.setArrival(jobclass, Exp.fitRate(0.9));
+        queue.setService(jobclass, Exp.fitRate(1.0));
+
+        model.link(Network.serialRouting(source, queue, sink));
+
+        // Solve with SSA (Stochastic Simulation Algorithm)
+        SSA solver = new SSA(model);
+
+        // Display average performance metrics
+        NetworkAvgTable avgTable = solver.getAvgTable();
+        System.out.println(avgTable);
+    }
+}</code></pre>
+		</div>
+
+		<div class="output-block">
+			<h4>Output:</h4>
+<pre>Default method: using serial SSA
+SSA samples: 10000
+SSA analysis [method: default/serial, lang: java] completed.
+
+Station    JobClass     QLen     Util    RespT     ResidT    ArvR     Tput
+Source     Class1       0.0      0.0     0.0       0.0       0.0      0.9
+Queue1     Class1       7.8089   0.9     8.5969    8.5969    0.9      0.90834</pre>
+		</div>
+	</div>
+
+	<div class="language-content" data-lang="python">
+		<div class="code-block">
+		<button class="copy-button">Copy</button>
+		<pre><code class="language-python">from line_solver import *
+
+# Create a simple M/M/1 queue
+model = Network('M/M/1 Example')
+
+source = Source(model, 'Source')
+queue = Queue(model, 'Queue1', SchedStrategy.FCFS)
+sink = Sink(model, 'Sink')
+
+jobclass = OpenClass(model, 'Class1')
+source.setArrival(jobclass, Exp(0.9))
+queue.setService(jobclass, Exp(1.0))
+
+model.link(Network.serialRouting(source, queue, sink))
+
+# Solve with SSA (Stochastic Simulation Algorithm)
+solver = SSA(model)
+
+# Display average performance metrics
+print(solver.avg_table)</code></pre>
+		</div>
+
+		<div class="output-block">
+			<h4>Output:</h4>
+<pre>Default method: using serial SSA
+SSA samples: 10000
+SSA analysis [method: default/serial, lang: python] completed.
+
+  Station  JobClass  QLen    Util  RespT   ResidT  ArvR  Tput
+0  Source    Class1   0.0     0.0    0.0     0.0    0.0   0.9
+1  Queue1    Class1   7.8089  0.9    8.5969  8.5969 0.9   0.90834</pre>
+		</div>
+	</div>
+	</div>
+
+	<div class="references">
+	<h3>References</h3>
+	<ol>
+	<li id="ref-gillespie1977">Gillespie, D. T. (1977). Exact stochastic simulation of coupled chemical reactions. <em>The Journal of Physical Chemistry</em>, 81(25), 2340-2361.</li>
+	<li id="ref-anderson2007">Anderson, D. F. (2007). A modified next reaction method for simulating chemical systems with time dependent propensities and delays. <em>The Journal of Chemical Physics</em>, 127(21), 214107.</li>
+	</ol>
+	</div>
+
+	<div class="back-link">
+		<a href="index.html#solvers">&larr; Back to Solvers</a>
+	</div>
+</div>
+
+<div id="footer">
+	<p>&copy; 2025 <a href="https://www.imperial.ac.uk/">Imperial College London</a></p>
+</div>
+
+</div>
+</body>
+</html>

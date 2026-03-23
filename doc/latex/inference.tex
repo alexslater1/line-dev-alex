@@ -1,0 +1,457 @@
+\chapter{Parameter Inference}
+\label{parameter-inference}
+
+\textsc{Line} supports parameter inference, i.e., the estimation of queueing network model parameters from empirical data. Given observed system measurements such as response times, throughputs, queue lengths, and utilizations, the inference methods recover the model parameters---primarily service demands---that best explain the data. While the \textsc{Line} solvers perform {\em forward analysis} (computing performance metrics from model parameters), the inference functions address the {\em inverse problem}: recovering model parameters from observed metrics.
+
+\begin{MATLAB}
+\noindent The parameter inference methods additionally require the \emph{Optimization Toolbox}.
+\end{MATLAB}
+\begin{PYTHON}
+\noindent The RNN estimator additionally requires PyTorch.
+\end{PYTHON}
+
+\noindent To cite the parameter inference methods, we recommend referencing~\cite{SpinnerCBK15,LiuHCA06,PerezCPS15,WangCS16,WangCKN16,GarbiIT20}.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Quick start}
+\label{infer-quick-start}
+
+The typical workflow for parameter estimation is:
+\begin{enumerate}
+\item Define a model: create a \textsc{Line} \texttt{Network} with known structure but unknown service demands (set to \texttt{NaN}).
+\item Collect measurements: wrap observed data as \texttt{SampledMetric} objects, specifying the metric type, timestamps, values, node, and (optionally) job class.
+\item Configure the estimator: create a \texttt{ParamEstimator} with the model and desired method.
+\item Add data and estimate: add samples to the estimator, interpolate, and call \texttt{estimateAt} to obtain the estimated service demands.
+\end{enumerate}
+
+\noindent The following example estimates service demands at a PS queue in a closed network using the UBO method:
+
+\begin{PYTHON}
+\begin{lstlisting}[language=python]
+import numpy as np
+from line_solver import (Network, Delay, Queue, Exp,
+    ClosedClass, SchedStrategy, MetricType)
+from line_solver.inference import ParamEstimator, SampledMetric
+
+# Step 1: Define the queueing network model
+model = Network('model')
+delay = Delay(model, 'Delay')
+queue = Queue(model, 'Queue1', SchedStrategy.PS)
+class1 = ClosedClass(model, 'Class1', 1, delay, 0)
+class2 = ClosedClass(model, 'Class2', 2, delay, 0)
+
+# Set known service times at the delay station
+delay.setService(class1, Exp.fitMean(1.0))
+delay.setService(class2, Exp.fitMean(1.0))
+
+# Mark queue service demands as unknown (to be estimated)
+queue.setService(class1, Exp(float('nan')))
+queue.setService(class2, Exp(float('nan')))
+
+# Define routing: each class cycles between delay and queue
+P = model.initRoutingMatrix()
+P.set(class1, class1, delay, queue, 1.0)
+P.set(class1, class1, queue, delay, 1.0)
+P.set(class2, class2, delay, queue, 1.0)
+P.set(class2, class2, queue, delay, 1.0)
+model.link(P)
+
+# Step 2: Generate synthetic measurement data
+# True demands are D1=0.1 and D2=0.3
+n = 30
+ts = np.arange(1, n + 1, dtype=float)
+arvr1 = 2 * np.ones(n) - np.random.rand(n) * 0.15
+arvr2 = np.ones(n) - np.random.rand(n) * 0.15
+util = 0.1 * arvr1 + 0.3 * arvr2  # U = D1*lam1 + D2*lam2
+respt1 = 0.1 / (1 - util)  # M/G/1 response time formula
+respt2 = 0.3 / (1 - util)
+
+# Step 3: Configure the estimator with the UBO method
+options = ParamEstimator.defaultOptions()
+options['method'] = 'ubo'
+se = ParamEstimator(model, options)
+
+# Step 4: Add observed samples and run estimation
+se.addSamples(SampledMetric(MetricType.ArvR, ts, arvr1, queue, class1))
+se.addSamples(SampledMetric(MetricType.ArvR, ts, arvr2, queue, class2))
+se.addSamples(SampledMetric(MetricType.RespT, ts, respt1, queue, class1))
+se.addSamples(SampledMetric(MetricType.RespT, ts, respt2, queue, class2))
+se.addSamples(SampledMetric(MetricType.Util, ts, util, queue))
+se.interpolate()  # align all samples to common timestamps
+estVal = se.estimateAt(queue)
+print('Estimated demands:', estVal)  # close to [0.1, 0.3]
+\end{lstlisting}
+\end{PYTHON}
+
+\begin{MATLAB}
+\begin{lstlisting}[language=matlab]
+% Step 1: Define the queueing network model
+model = Network('model');
+node{1} = Delay(model, 'Delay');
+node{2} = Queue(model, 'Queue1', SchedStrategy.PS);
+jobclass{1} = ClosedClass(model, 'Class1', 1, node{1}, 0);
+jobclass{2} = ClosedClass(model, 'Class2', 2, node{1}, 0);
+
+% Set known service times at the delay station
+node{1}.setService(jobclass{1}, Exp.fitMean(1.0));
+node{1}.setService(jobclass{2}, Exp.fitMean(1.0));
+
+% Mark queue service demands as unknown (to be estimated)
+node{2}.setService(jobclass{1}, Exp(NaN));
+node{2}.setService(jobclass{2}, Exp(NaN));
+
+% Define routing: each class cycles between delay and queue
+P = model.initRoutingMatrix();
+P{jobclass{1},jobclass{1}}(node{1},node{2}) = 1;
+P{jobclass{1},jobclass{1}}(node{2},node{1}) = 1;
+P{jobclass{2},jobclass{2}}(node{1},node{2}) = 1;
+P{jobclass{2},jobclass{2}}(node{2},node{1}) = 1;
+model.link(P);
+
+% Step 2: Generate synthetic measurement data
+% True demands are D1=0.1 and D2=0.3
+n = 30; ts = (1:n)';
+arvr1 = 2*ones(n,1) - rand(n,1)*0.15;
+arvr2 = ones(n,1) - rand(n,1)*0.15;
+util = 0.1*arvr1 + 0.3*arvr2;   % U = D1*lam1 + D2*lam2
+respt1 = 0.1 ./ (1 - util);     % M/G/1 response time formula
+respt2 = 0.3 ./ (1 - util);
+
+% Step 3: Configure the estimator with the UBO method
+options = ParamEstimator.defaultOptions();
+options.method = 'ubo';
+se = ParamEstimator(model, options);
+
+% Step 4: Add observed samples and run estimation
+se.addSamples(SampledMetric(MetricType.ArvR, ts, arvr1, node{2}, jobclass{1}));
+se.addSamples(SampledMetric(MetricType.ArvR, ts, arvr2, node{2}, jobclass{2}));
+se.addSamples(SampledMetric(MetricType.RespT, ts, respt1, node{2}, jobclass{1}));
+se.addSamples(SampledMetric(MetricType.RespT, ts, respt2, node{2}, jobclass{2}));
+se.addSamples(SampledMetric(MetricType.Util, ts, util, node{2}));
+se.interpolate();  % align all samples to common timestamps
+estVal = se.estimateAt(node{2});
+disp(estVal); % close to [0.1; 0.3]
+\end{lstlisting}
+\end{MATLAB}
+
+\begin{JAVA}
+\begin{lstlisting}[language=kotlin]
+import jline.lang.Network;
+import jline.lang.nodes.Delay;
+import jline.lang.nodes.Queue;
+import jline.lang.distributions.Exp;
+import jline.lang.ClosedClass;
+import jline.lang.constant.SchedStrategy;
+import jline.lang.constant.MetricType;
+import jline.inference.lang.ParamEstimator;
+import jline.inference.lang.SampledMetric;
+
+// Step 1: Define the queueing network model
+Network model = new Network("model");
+Delay delay = new Delay(model, "Delay");
+Queue queue = new Queue(model, "Queue1", SchedStrategy.PS);
+ClosedClass class1 = new ClosedClass(model, "Class1", 1, delay, 0);
+ClosedClass class2 = new ClosedClass(model, "Class2", 2, delay, 0);
+delay.setService(class1, Exp.fitMean(1.0));  // known
+delay.setService(class2, Exp.fitMean(1.0));  // known
+queue.setService(class1, new Exp(Double.NaN)); // unknown
+queue.setService(class2, new Exp(Double.NaN)); // unknown
+model.serialRouting(delay, queue);
+
+// Step 2: Generate synthetic measurement data
+// True demands are D1=0.1 and D2=0.3
+int n = 30;
+double[] ts = new double[n];
+for (int i = 0; i < n; i++) ts[i] = i + 1;
+Random rng = new Random();
+double[] arvr1 = new double[n], arvr2 = new double[n];
+double[] util = new double[n];
+double[] respt1 = new double[n], respt2 = new double[n];
+for (int i = 0; i < n; i++) {
+    arvr1[i] = 2.0 - rng.nextDouble() * 0.15;
+    arvr2[i] = 1.0 - rng.nextDouble() * 0.15;
+    util[i] = 0.1 * arvr1[i] + 0.3 * arvr2[i];
+    respt1[i] = 0.1 / (1 - util[i]);
+    respt2[i] = 0.3 / (1 - util[i]);
+}
+
+// Step 3: Configure the estimator with the UBO method
+EstimatorOptions options = ParamEstimator.defaultOptions();
+options.method = "ubo";
+ParamEstimator se = new ParamEstimator(model, options);
+
+// Step 4: Add observed samples and run estimation
+se.addSamples(new SampledMetric(MetricType.ArvR, ts, arvr1, queue, class1));
+se.addSamples(new SampledMetric(MetricType.ArvR, ts, arvr2, queue, class2));
+se.addSamples(new SampledMetric(MetricType.RespT, ts, respt1, queue, class1));
+se.addSamples(new SampledMetric(MetricType.RespT, ts, respt2, queue, class2));
+se.addSamples(new SampledMetric(MetricType.Util, ts, util, queue));
+se.interpolate(); // align all samples to common timestamps
+double[] estVal = se.estimateAt(Arrays.asList(queue));
+// close to [0.1, 0.3]
+\end{lstlisting}
+\end{JAVA}
+
+\begin{KOTLIN}
+\begin{lstlisting}[language=kotlin]
+import jline.lang.Network
+import jline.lang.nodes.Delay
+import jline.lang.nodes.Queue
+import jline.lang.distributions.Exp
+import jline.lang.ClosedClass
+import jline.lang.constant.SchedStrategy
+import jline.lang.constant.MetricType
+import jline.inference.lang.ParamEstimator
+import jline.inference.lang.SampledMetric
+
+// Step 1: Define the queueing network model
+val model = Network("model")
+val delay = Delay(model, "Delay")
+val queue = Queue(model, "Queue1", SchedStrategy.PS)
+val class1 = ClosedClass(model, "Class1", 1, delay, 0)
+val class2 = ClosedClass(model, "Class2", 2, delay, 0)
+delay.setService(class1, Exp.fitMean(1.0))   // known
+delay.setService(class2, Exp.fitMean(1.0))   // known
+queue.setService(class1, Exp(Double.NaN))    // unknown
+queue.setService(class2, Exp(Double.NaN))    // unknown
+model.serialRouting(delay, queue)
+
+// Step 2: Generate synthetic measurement data
+// True demands are D1=0.1 and D2=0.3
+val n = 30
+val ts = DoubleArray(n) { (it + 1).toDouble() }
+val rng = java.util.Random()
+val arvr1 = DoubleArray(n) { 2.0 - rng.nextDouble() * 0.15 }
+val arvr2 = DoubleArray(n) { 1.0 - rng.nextDouble() * 0.15 }
+val util = DoubleArray(n) { 0.1 * arvr1[it] + 0.3 * arvr2[it] }
+val respt1 = DoubleArray(n) { 0.1 / (1 - util[it]) }
+val respt2 = DoubleArray(n) { 0.3 / (1 - util[it]) }
+
+// Step 3: Configure the estimator with the UBO method
+val options = ParamEstimator.defaultOptions()
+options.method = "ubo"
+val se = ParamEstimator(model, options)
+
+// Step 4: Add observed samples and run estimation
+se.addSamples(SampledMetric(MetricType.ArvR, ts, arvr1, queue, class1))
+se.addSamples(SampledMetric(MetricType.ArvR, ts, arvr2, queue, class2))
+se.addSamples(SampledMetric(MetricType.RespT, ts, respt1, queue, class1))
+se.addSamples(SampledMetric(MetricType.RespT, ts, respt2, queue, class2))
+se.addSamples(SampledMetric(MetricType.Util, ts, util, queue))
+se.interpolate() // align all samples to common timestamps
+val estVal = se.estimateAt(listOf(queue))
+println("Estimated demands: ${estVal.contentToString()}")
+// close to [0.1, 0.3]
+\end{lstlisting}
+\end{KOTLIN}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Specifying measurement data}
+\label{infer-classes}
+
+Parameter estimation requires observed performance measurements to be provided as \texttt{SampledMetric} objects. Each \texttt{SampledMetric} encapsulates a single time series and is constructed from the following arguments:
+\begin{enumerate}
+\item A metric type (one of \texttt{MetricType.ArvR}, \texttt{MetricType.RespT}, \texttt{MetricType.Util}, \texttt{MetricType.QLen}, or \texttt{MetricType.Tput}).
+\item A vector of timestamps \texttt{ts}, of length~$n$.
+\item A vector of observed values \texttt{data}, also of length~$n$, where \texttt{data[k]} is the measurement taken at time \texttt{ts[k]}.
+\item The node at which the measurements were taken (e.g., a \texttt{Queue} or \texttt{Delay} station).
+\item Optionally, the job class to which the measurements refer. If omitted, the metric is treated as an aggregate measurement across all classes.
+\end{enumerate}
+
+\noindent The five metric types are summarized below:
+\begin{center}
+\begin{tabular}{|l|l|l|}
+\hline
+\textbf{Metric type} & \textbf{Description} & \textbf{Unit / range} \\
+\hline
+\texttt{ArvR} & Arrival rate at the node & jobs / time unit \\
+\texttt{RespT} & Response time (waiting + service) & time units \\
+\texttt{Util} & Utilization of server capacity & $[0,1]$ \\
+\texttt{QLen} & Queue length (jobs present at the node) & jobs (non-negative) \\
+\texttt{Tput} & Throughput (completions at the node) & jobs / time unit \\
+\hline
+\end{tabular}
+\end{center}
+
+\noindent Timestamps and values must be numeric vectors of the same length. The timestamps should be monotonically increasing and represent the instants at which each measurement was collected. The values represent the observed metric at each timestamp. The following example creates a \texttt{SampledMetric} containing 30 per-class arrival rate observations at a queue:
+\begin{PYTHON}
+\begin{lstlisting}[language=python]
+ts = np.arange(1, 31, dtype=float)          # 30 timestamps: [1, 2, ..., 30]
+data = 2 * np.ones(30) + np.random.rand(30) # 30 observed arrival rates
+sample = SampledMetric(MetricType.ArvR, ts, data, queue, class1)
+\end{lstlisting}
+\end{PYTHON}
+\begin{MATLAB}
+\begin{lstlisting}[language=matlab]
+ts = (1:30)';                              % 30 timestamps: [1; 2; ...; 30]
+data = 2*ones(30,1) + rand(30,1);          % 30 observed arrival rates
+sample = SampledMetric(MetricType.ArvR, ts, data, node{2}, jobclass{1});
+\end{lstlisting}
+\end{MATLAB}
+
+\noindent When the job class argument is omitted, the metric is treated as an aggregate measurement across all classes. This is common for utilization data, which monitoring tools typically report at the station level rather than per class:
+\begin{PYTHON}
+\begin{lstlisting}[language=python]
+util_sample = SampledMetric(MetricType.Util, ts, util_data, queue)
+\end{lstlisting}
+\end{PYTHON}
+\begin{MATLAB}
+\begin{lstlisting}[language=matlab]
+util_sample = SampledMetric(MetricType.Util, ts, util_data, node{2});
+\end{lstlisting}
+\end{MATLAB}
+
+\noindent Different estimation methods require different combinations of metric types (see Table~\ref{TAB_infer_methods}). For example, UBR requires per-class arrival rates and station utilization, while MCMC requires per-class queue-length samples.
+
+\subsection{Periodic samples and trace data}
+
+By default, a \texttt{SampledMetric} represents periodic samples: the values are averages or snapshots collected at regular intervals. Some estimation methods (MLPS, FMLPS, Gibbs) instead require individual job traces, where each entry records a single job event. In a trace, timestamps are irregular (one per event rather than one per interval), and values represent instantaneous observations for that event. To indicate that a \texttt{SampledMetric} contains trace data, call \texttt{set\_trace()}:
+\begin{PYTHON}
+\begin{lstlisting}[language=python]
+# arrival_times[k]: time of the k-th arrival
+# rates[k]: instantaneous arrival rate at that time
+arvr_trace = SampledMetric(MetricType.ArvR, arrival_times, rates, queue, class1)
+arvr_trace.set_trace()
+\end{lstlisting}
+\end{PYTHON}
+\begin{MATLAB}
+\begin{lstlisting}[language=matlab]
+% arrival_times(k): time of the k-th arrival
+% rates(k): instantaneous arrival rate at that time
+arvr_trace = SampledMetric(MetricType.ArvR, arrival_times, rates, node{2}, jobclass{1});
+arvr_trace.setTrace();
+\end{lstlisting}
+\end{MATLAB}
+
+\subsection{Conditional metrics}
+
+Some estimation methods require measurements that were recorded conditionally upon a specific event. For example, the ERPS estimator uses queue-length observations collected only at the instants when a job of a given class arrives. This conditional relationship is expressed using the \texttt{Event} class:
+\begin{PYTHON}
+\begin{lstlisting}[language=python]
+from line_solver.inference import Event
+evt = Event(EventType.ARV, queue, class1)   # arrivals of class1
+ql = SampledMetric(MetricType.QLen, ts, ql_data, queue)
+ql.set_conditional(evt)                     # queue length seen by arriving class1 jobs
+\end{lstlisting}
+\end{PYTHON}
+\begin{MATLAB}
+\begin{lstlisting}[language=matlab]
+evt = Event(EventType.ARV, node{2}, jobclass{1}); % arrivals of class1
+ql = SampledMetric(MetricType.QLen, ts, ql_data, node{2});
+ql.setConditional(evt);                            % queue length seen by arriving class1 jobs
+\end{lstlisting}
+\end{MATLAB}
+
+\subsection{Configuring and running the estimator}
+\label{sec:infer-param-estimator}
+
+The \texttt{ParamEstimator} takes a \textsc{Line} \texttt{Network} model in which the unknown service demands are set to \texttt{Exp(NaN)}. After adding all measurement samples, a call to \texttt{interpolate()} aligns the time series onto common timestamps (using linear interpolation so that all metrics share the same time grid), and \texttt{estimateAt()} runs the estimation:
+\begin{PYTHON}
+\begin{lstlisting}[language=python]
+options = ParamEstimator.defaultOptions()
+options['method'] = 'ubo'                  # choose estimation method
+se = ParamEstimator(model, options)
+se.addSamples(arvr_sample)                 # add each SampledMetric
+se.addSamples(respt_sample)
+se.addSamples(util_sample)
+se.interpolate()                           # align timestamps
+estVal = se.estimateAt(queue)              # returns estimated demands
+\end{lstlisting}
+\end{PYTHON}
+\begin{MATLAB}
+\begin{lstlisting}[language=matlab]
+options = ParamEstimator.defaultOptions();
+options.method = 'ubo';                    % choose estimation method
+se = ParamEstimator(model, options);
+se.addSamples(arvr_sample);               % add each SampledMetric
+se.addSamples(respt_sample);
+se.addSamples(util_sample);
+se.interpolate();                          % align timestamps
+estVal = se.estimateAt(node{2});           % returns estimated demands
+\end{lstlisting}
+\end{MATLAB}
+
+\noindent The \texttt{estimateAt} method returns the estimated service demands and also updates the model's service distributions in-place. If the best method is not known in advance, \texttt{auto\_method()} selects one automatically based on the types of data that have been added.
+
+\label{sec:infer-options}
+The estimator accepts several configuration options through \texttt{ParamEstimator.defaultOptions()}. The \texttt{method} option selects the estimation algorithm (see Section~\ref{infer-estimation-methods}; default: \texttt{'ubr'}). The \texttt{solver} option specifies the forward solver used during estimation (default: \texttt{SolverMVA}). Iterative methods respect \texttt{iter\_max} (default: 1000) and \texttt{tol} (default: $10^{-3}$). For open networks, several methods automatically construct a closed equivalent with population controlled by \texttt{openPopulation} (default: 100).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Estimation methods}
+\label{infer-estimation-methods}
+
+\textsc{Line} provides twelve estimation methods, each suited to different data availability scenarios. Table~\ref{TAB_infer_methods} summarizes all methods along with their required input data and references.
+
+\input{inference-methods}
+
+\section{Inference examples}
+\label{infer-examples}
+
+\Matlab{The table below lists the inference example scripts available under the \texttt{examples/inference/} folder.}
+\Python{The table below lists the inference example scripts available under the \texttt{examples/inference/} folder.}
+\Java{The inference examples are available as test classes in the \texttt{jline.inference} package under the \texttt{jar/src/test/kotlin/} folder.}
+\Kotlin{The inference examples are available as test classes in the \texttt{jline.inference} package under the \texttt{jar/src/test/kotlin/} folder.}
+\begin{footnotesize}
+\begin{longtable}{|p{0.42\linewidth}|p{0.53\linewidth}|}
+\caption{Inference examples}
+\\\hline
+\textbf{Example} & \textbf{Problem}
+\\\hline
+\endfirsthead
+\multicolumn{2}{c}%
+{\tablename\ \thetable\ -- Inference examples.\textit{ Continued from previous page}} \\
+\hline
+\textbf{Example} & \textbf{Problem}\\
+\hline
+\endhead
+\hline \multicolumn{2}{r}{\textit{Continued on next page}} \\
+\endfoot
+\hline
+\endlastfoot
+\hline
+\multicolumn{2}{|l|}{\textit{Utilization-Based Regression (UBR)}} \\
+\hline
+\texttt{est\_ubr\_closed} & UBR estimation in a closed queueing network\\
+\texttt{est\_ubr\_open} & UBR estimation in an open queueing network\\
+\texttt{est\_ubr\_changepoint} & UBR estimation with workload change-point detection\\
+\hline
+\multicolumn{2}{|l|}{\textit{Utilization-Based Optimization (UBO)}} \\
+\hline
+\texttt{est\_ubo\_closed} & UBO estimation in a closed queueing network\\
+\texttt{est\_ubo\_open} & UBO estimation in an open queueing network\\
+\texttt{est\_ubo\_changepoint} & UBO estimation with workload change-point detection\\
+\texttt{est\_ubo\_variants\_closed} & Comparison of UBO and MLE estimators in a closed network\\
+\hline
+\multicolumn{2}{|l|}{\textit{Extended Kalman Filter (EKF)}} \\
+\hline
+\texttt{est\_ekf\_closed} & EKF estimation in a closed queueing network\\
+\texttt{est\_ekf\_open} & EKF estimation in an open queueing network\\
+\texttt{est\_ekf\_changepoint} & EKF estimation with workload change-point detection\\
+\hline
+\multicolumn{2}{|l|}{\textit{Maximum Likelihood (MLE)}} \\
+\hline
+\texttt{est\_mle\_open} & MLE estimation in an open queueing network\\
+\hline
+\multicolumn{2}{|l|}{\textit{Markov Chain Monte Carlo (MCMC)}} \\
+\hline
+\texttt{est\_mcmc\_closed} & MCMC estimation in a closed queueing network\\
+\hline
+\multicolumn{2}{|l|}{\textit{Quick Maximum Likelihood (QMLE)}} \\
+\hline
+\texttt{est\_qmle\_closed} & QMLE estimation in a closed queueing network\\
+\hline
+\multicolumn{2}{|l|}{\textit{Extended Regression for PS (ERPS)}} \\
+\hline
+\texttt{est\_erps\_closed} & ERPS estimation in a closed queueing network\\
+\texttt{est\_erps\_open} & ERPS estimation in an open queueing network\\
+\hline
+\multicolumn{2}{|l|}{\textit{Recurrent Neural Network (RNN)}} \\
+\hline
+\texttt{est\_rnn\_closed} & RNN estimation from queue-length traces\\
+\hline
+\multicolumn{2}{|l|}{\textit{Trace-Based Estimation}} \\
+\hline
+\texttt{est\_trace\_closed} & Trace-based estimation (MLPS/FMLPS) in a closed network\\
+\hline
+\end{longtable}
+\end{footnotesize}

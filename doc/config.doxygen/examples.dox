@@ -1,0 +1,497 @@
+/**
+@page matlab_examples Examples
+
+This section contains examples demonstrating LINE Solver MATLAB capabilities, organized by complexity and topic. All examples are available in the `matlab/examples/` directory.
+
+@section gallery_examples Gallery Examples
+
+The gallery contains fundamental queueing models used for validation and benchmarking.
+
+@subsection single_server_models Single Server Models
+
+<b>M/M/1 Queue</b> (`examples/gallery/gallery_mm1.m`)
+
+Classic single-server queue with Poisson arrivals and exponential service times.
+
+<b>M/M/1 with Processor Sharing</b> (`examples/gallery/gallery_mm1_ps.m`)
+
+Single-server queue with processor sharing scheduling.
+
+<b>M/M/1 with Priority Classes</b> (`examples/gallery/gallery_mm1_prio.m`)
+
+Single-server queue with multiple priority classes.
+
+<b>M/M/1 with Multiclass</b> (`examples/gallery/gallery_mm1_multiclass.m`)
+
+Single-server queue with multiple job classes.
+
+<b>M/M/1 with Linear Service</b> (`examples/gallery/gallery_mm1_linear.m`)
+
+Single-server queue with load-dependent linear service rates.
+
+<b>M/M/1 with Feedback</b> (`examples/gallery/gallery_mm1_feedback.m`)
+
+Single-server queue with probabilistic feedback routing.
+
+<b>M/M/1 Tandem Network</b> (`examples/gallery/gallery_mm1_tandem.m`)
+
+Series of M/M/1 queues in tandem.
+
+<b>M/M/1 Reentrant Network</b> (`examples/gallery/gallery_mm1_reentrant.m`)
+
+Jobs can revisit the same queue multiple times.
+
+@subsection multi_server_models Multi-Server and Specialized Models
+
+<b>M/M/k Queue</b> (`examples/gallery/gallery_mmk.m`)
+
+Multi-server queue with exponential service times.
+
+<b>HyperExp/M/1 Queue</b> (`examples/gallery/gallery_hypm1.m`)
+
+Single-server queue with hyper-exponential arrivals.
+
+<b>M/HyperExp/1 Queue</b> (`examples/gallery/gallery_mhyp1.m`)
+
+Single-server queue with hyper-exponential service times.
+
+<b>Gamma/M/1 Queue</b> (`examples/gallery/gallery_gamm1.m`)
+
+Single-server queue with Gamma arrivals.
+
+<b>Det/M/1 Queue</b> (`examples/gallery/gallery_detm1.m`)
+
+Single-server queue with deterministic arrivals.
+
+<b>M/Erlang/1 Queue</b> (`examples/gallery/gallery_merl1.m`)
+
+Single-server queue with Erlang service times.
+
+<b>Erlang/M/1 Queue</b> (`examples/gallery/gallery_erlm1.m`)
+
+Single-server queue with Erlang arrivals.
+
+@subsection network_models Network Models
+
+<b>Closed Queueing Network</b> (`examples/gallery/gallery_cqn.m`)
+
+Basic closed queueing network with fixed population.
+
+<b>Multiclass Closed Network</b> (`examples/gallery/gallery_cqn_multiclass.m`)
+
+Closed network with multiple job classes.
+
+<b>Repairmen Model</b> (`examples/gallery/gallery_repairmen.m`)
+
+Classic machine repair model with limited repairmen.
+
+@section basic_examples Basic Examples
+
+@subsection open_qn_examples Open Queueing Networks
+
+<b>Basic Open Network</b> (`examples/basic/openQN/oqn_basic.m`)
+
+Simple open queueing network with multiple solvers comparison.
+
+<b>One-Line Open Model</b> (`examples/basic/openQN/oqn_oneline.m`)
+
+Minimal open model created in a single line of code.
+
+<b>Four-Queue Network</b> (`examples/basic/openQN/oqn_fourqueues.m`)
+
+Open network with four interconnected queues.
+
+<b>Class-Switching Routing</b> (`examples/basic/openQN/oqn_cs_routing.m`)
+
+Open network with class-switching routing behavior.
+
+<b>Trace-Driven Model</b> (`examples/basic/openQN/oqn_trace_driven.m`)
+
+Open network driven by empirical trace data.
+
+<b>Multiple Sinks</b> (`examples/basic/openQN/oqn_vsinks.m`)
+
+Open network with multiple sink nodes.
+
+@subsection closed_qn_examples Closed Queueing Networks
+
+<b>One-Line Closed Model</b> (`examples/basic/closedQN/cqn_oneline.m`)
+
+Minimal closed model created in a single line of code.
+
+<b>Two-Queue Network</b> (`examples/basic/closedQN/cqn_twoqueues.m`)
+
+Basic two-queue closed network.
+
+<b>Multi-Queue Network</b> (`examples/basic/closedQN/cqn_twoqueues_multi.m`)
+
+Closed network with multiple queues and routing.
+
+<b>Multi-Server Network</b> (`examples/basic/closedQN/cqn_multiserver.m`)
+
+Closed network with multi-server queues.
+
+<b>Repairmen Model</b> (`examples/basic/closedQN/cqn_repairmen.m`)
+
+Machine repair model with multiple repairmen.
+
+<b>Multi-Repairmen Model</b> (`examples/basic/closedQN/cqn_repairmen_multi.m`)
+
+Extended repairmen model with complex routing.
+
+<b>BCMP Theorem Example</b> (`examples/basic/closedQN/cqn_bcmp_theorem.m`)
+
+Example demonstrating BCMP network properties.
+
+<b>DPS Scheduling</b> (`examples/basic/closedQN/cqn_scheduling_dps.m`)
+
+Closed network with Discriminatory Processor Sharing.
+
+<b>MMPP/2 Service</b> (`examples/basic/closedQN/cqn_mmpp2_service.m`)
+
+Closed network with MMPP/2 service process.
+
+<b>Two-Class Erlang</b> (`examples/basic/closedQN/cqn_twoclass_erl.m`)
+
+Two-class closed network with Erlang distributions.
+
+<b>Two-Class HyperExp</b> (`examples/basic/closedQN/cqn_twoclass_hyperl.m`)
+
+Two-class closed network with hyper-exponential distributions.
+
+<b>Three-Class HyperExp</b> (`examples/basic/closedQN/cqn_threeclass_hyperl.m`)
+
+Three-class closed network with hyper-exponential distributions.
+
+@subsection mixed_qn_examples Mixed Queueing Networks
+
+<b>Basic Mixed Network</b> (`examples/basic/mixedQN/mqn_basic.m`)
+
+Network with both open and closed job classes.
+
+<b>Single-Server FCFS</b> (`examples/basic/mixedQN/mqn_singleserver_fcfs.m`)
+
+Mixed network with single-server FCFS scheduling.
+
+<b>Single-Server PS</b> (`examples/basic/mixedQN/mqn_singleserver_ps.m`)
+
+Mixed network with single-server processor sharing.
+
+<b>Multi-Server FCFS</b> (`examples/basic/mixedQN/mqn_multiserver_fcfs.m`)
+
+Mixed network with multi-server FCFS scheduling.
+
+<b>Multi-Server PS</b> (`examples/basic/mixedQN/mqn_multiserver_ps.m`)
+
+Mixed network with multi-server processor sharing.
+
+@subsection forkjoin_examples Fork-Join Networks
+
+<b>Basic Fork-Join</b> (`examples/basic/forkJoin/fj_basic.m`)
+
+Simple fork-join parallel processing model.
+
+<b>Basic Nesting</b> (`examples/basic/forkJoin/fj_basic_nesting.m`)
+
+Fork-join network with nested parallel sections.
+
+<b>Three Branches</b> (`examples/basic/forkJoin/fj_threebranches.m`)
+
+Fork-join with three parallel processing branches.
+
+<b>Serial Fork-Join (Closed)</b> (`examples/basic/forkJoin/fj_serialfjs_closed.m`)
+
+Serial combination of fork-join sections in closed network.
+
+<b>Route Overlap</b> (`examples/basic/forkJoin/fj_route_overlap.m`)
+
+Fork-join with overlapping routing paths.
+
+<b>With Delays</b> (`examples/basic/forkJoin/fj_delays.m`)
+
+Fork-join network including delay nodes.
+
+<b>Complex Serial</b> (`examples/basic/forkJoin/fj_complex_serial.m`)
+
+Complex serial arrangement of fork-join sections.
+
+<b>Class-Switching Pre-Fork</b> (`examples/basic/forkJoin/fj_cs_prefork.m`)
+
+Class-switching before fork operations.
+
+<b>Class-Switching Multi-Visits</b> (`examples/basic/forkJoin/fj_cs_multi_visits.m`)
+
+Class-switching with multiple revisits in fork-join.
+
+@subsection priority_examples Priority and Scheduling Models
+
+<b>Identical Priority Classes</b> (`examples/basic/prioModel/prio_identical.m`)
+
+Multiple job classes with identical priorities.
+
+<b>FCFS Priority Open</b> (`examples/basic/prioModel/prio_hol_open.m`)
+
+Open network with first-come first-served priority scheduling.
+
+<b>FCFS Priority Closed</b> (`examples/basic/prioModel/prio_hol_closed.m`)
+
+Closed network with first-come first-served priority scheduling.
+
+<b>PS Priority</b> (`examples/basic/prioModel/prio_psprio.m`)
+
+Processor sharing with priority classes.
+
+@subsection classswitching_examples Class Switching Models
+
+<b>Implicit Class Switching</b> (`examples/basic/classSwitching/cs_implicit.m`)
+
+Network with implicit class switching behavior.
+
+<b>Single Diamond</b> (`examples/basic/classSwitching/cs_single_diamond.m`)
+
+Diamond-shaped routing with class switching.
+
+<b>Multi Diamond</b> (`examples/basic/classSwitching/cs_multi_diamond.m`)
+
+Multiple diamond routing patterns with class switching.
+
+<b>Transient Class</b> (`examples/basic/classSwitching/cs_transient_class.m`)
+
+Class switching with transient job classes.
+
+@subsection cache_examples Cache Models
+
+<b>FIFO Replacement</b> (`examples/basic/cacheModel/cache_replc_fifo.m`)
+
+Cache model with FIFO replacement policy.
+
+<b>Round-Robin Replacement</b> (`examples/basic/cacheModel/cache_replc_rr.m`)
+
+Cache model with round-robin replacement policy.
+
+<b>Routing-Based Cache</b> (`examples/basic/cacheModel/cache_replc_routing.m`)
+
+Cache model with routing-based replacement.
+
+<b>Replacement Policy Comparison</b> (`examples/basic/cacheModel/cache_compare_replc.m`)
+
+Comparison of different cache replacement policies.
+
+@subsection layered_examples Layered Queueing Networks
+
+<b>Basic LQN</b> (`examples/basic/layeredModel/lqn_basic.m`)
+
+Basic layered queueing network model.
+
+<b>Serial LQN</b> (`examples/basic/layeredModel/lqn_serial.m`)
+
+Serial arrangement of layered stochastic services.
+
+<b>Two Tasks</b> (`examples/basic/layeredModel/lqn_twotasks.m`)
+
+Layered model with two interacting tasks.
+
+<b>Function Calls</b> (`examples/basic/layeredModel/lqn_function.m`)
+
+Layered model representing function call patterns.
+
+<b>BPMN Workflow</b> (`examples/basic/layeredModel/lqn_bpmn.m`)
+
+BPMN workflow modeled as layered queueing network.
+
+<b>Multi-Solver LQN</b> (`examples/basic/layeredModel/lqn_multi_solvers.m`)
+
+Layered model solved with multiple solvers.
+
+<b>Workflow Example</b> (`examples/basic/layeredModel/lqn_workflows.m`)
+
+Complex workflow modeled with layered networks.
+
+<b>OFBiz Example</b> (`examples/basic/layeredModel/lqn_ofbiz.m`)
+
+Real-world OFBiz application modeled as LQN.
+
+@subsection petri_examples Stochastic Petri Nets
+
+<b>Basic Open SPN</b> (`examples/basic/stochPetriNet/spn_basic_open.m`)
+
+Open stochastic Petri net model.
+
+<b>Basic Closed SPN</b> (`examples/basic/stochPetriNet/spn_basic_closed.m`)
+
+Closed stochastic Petri net model.
+
+<b>Two Places Closed</b> (`examples/basic/stochPetriNet/spn_closed_twoplaces.m`)
+
+Closed SPN with two places.
+
+<b>Four Places Closed</b> (`examples/basic/stochPetriNet/spn_closed_fourplaces.m`)
+
+Closed SPN with four places.
+
+<b>Seven Places Open</b> (`examples/basic/stochPetriNet/spn_open_sevenplaces.m`)
+
+Open SPN with seven places.
+
+<b>Two Modes</b> (`examples/basic/stochPetriNet/spn_twomodes.m`)
+
+SPN with two operational modes.
+
+<b>Four Modes</b> (`examples/basic/stochPetriNet/spn_fourmodes.m`)
+
+SPN with four operational modes.
+
+<b>Inhibiting Arcs</b> (`examples/basic/stochPetriNet/spn_inhibiting.m`)
+
+SPN with inhibiting arc constraints.
+
+@section advanced_examples Advanced Examples
+
+@subsection stateprob_examples State Probabilities
+
+<b>Aggregated State Probabilities</b> (`examples/advanced/stateProbabilities/statepr_aggr.m`)
+
+Computing aggregated state probabilities for network analysis.
+
+<b>Large Model Aggregation</b> (`examples/advanced/stateProbabilities/statepr_aggr_large.m`)
+
+Aggregated state probabilities for large-scale models.
+
+<b>System Aggregation</b> (`examples/advanced/stateProbabilities/statepr_sys_aggr.m`)
+
+System-level aggregated state probability analysis.
+
+<b>Large System Aggregation</b> (`examples/advanced/stateProbabilities/statepr_sys_aggr_large.m`)
+
+System aggregation for large-scale network models.
+
+<b>All Probabilities FCFS</b> (`examples/advanced/stateProbabilities/statepr_allprobs_fcfs.m`)
+
+Complete state probability enumeration for FCFS scheduling.
+
+<b>All Probabilities PS</b> (`examples/advanced/stateProbabilities/statepr_allprobs_ps.m`)
+
+Complete state probability enumeration for processor sharing.
+
+@subsection statedep_examples State-Dependent Routing
+
+<b>Open State-Dependent Routing</b> (`examples/advanced/stateDepRouting/sdroute_open.m`)
+
+Open network with routing decisions based on system state.
+
+<b>Closed State-Dependent Routing</b> (`examples/advanced/stateDepRouting/sdroute_closed.m`)
+
+Closed network with state-dependent routing policies.
+
+<b>Two-Class State-Dependent</b> (`examples/advanced/stateDepRouting/sdroute_twoclasses_closed.m`)
+
+Two-class closed network with state-dependent routing.
+
+@subsection initstate_examples Initial State Specification
+
+<b>FCFS Exponential Init</b> (`examples/advanced/initState/init_state_fcfs_exp.m`)
+
+FCFS network with exponential service and specified initial state.
+
+<b>FCFS Non-Exponential Init</b> (`examples/advanced/initState/init_state_fcfs_nonexp.m`)
+
+FCFS network with non-exponential service and initial state.
+
+<b>PS Initial State</b> (`examples/advanced/initState/init_state_ps.m`)
+
+Processor sharing network with specified initial state.
+
+@subsection loaddep_examples Load-Dependent Services
+
+<b>Multi-Server PS</b> (`examples/advanced/loadDependent/ld_multiserver_ps.m`)
+
+Multi-server processor sharing with load-dependent rates.
+
+<b>Multi-Server PS Two-Class</b> (`examples/advanced/loadDependent/ld_multiserver_ps_twoclasses.m`)
+
+Two-class multi-server PS with load dependence.
+
+<b>Multi-Server FCFS</b> (`examples/advanced/loadDependent/ld_multiserver_fcfs.m`)
+
+Multi-server FCFS with load-dependent service rates.
+
+<b>Class Dependence</b> (`examples/advanced/loadDependent/ld_class_dependence.m`)
+
+Load dependence based on specific job classes.
+
+@subsection randomenv_examples Random Environment Models
+
+<b>Two-Stage Repairmen</b> (`examples/advanced/randomEnv/renv_twostages_repairmen.m`)
+
+Two-stage random environment with repairmen model.
+
+<b>Three-Stage Repairmen</b> (`examples/advanced/randomEnv/renv_threestages_repairmen.m`)
+
+Three-stage random environment with repairmen model.
+
+<b>Four-Stage Repairmen</b> (`examples/advanced/randomEnv/renv_fourstages_repairmen.m`)
+
+Four-stage random environment with repairmen model.
+
+@subsection switchover_examples Switchover Times
+
+<b>Basic Switchover</b> (`examples/advanced/switchoverTimes/switchover_basic.m`)
+
+Queueing model with switchover times between service modes.
+
+@subsection reward_examples Reward Models
+
+<b>Reward-Based CTMC Analysis</b> (`examples/advanced/rewardModel/example_rewardModel_1.m`)
+
+Demonstrates custom reward functions for CTMC analysis using setReward, getReward, and getAvgReward methods.
+
+@subsection lcq_examples Layered Cache-Queueing Models
+
+<b>Single Host</b> (`examples/advanced/layeredCQ/lcq_singlehost.m`)
+
+Layered cache-queueing model with single host.
+
+<b>Three Hosts</b> (`examples/advanced/layeredCQ/lcq_threehosts.m`)
+
+Layered cache-queueing model with three hosts.
+
+@section getting_started_examples Getting Started
+
+For new users, we recommend starting with these examples in order:
+
+1. <b>Basic M/M/1</b> - `examples/gallery/gallery_mm1.m`
+2. <b>Open Network</b> - `examples/basic/openQN/oqn_basic.m`
+3. <b>Closed Network</b> - `examples/basic/closedQN/cqn_twoqueues.m`
+4. <b>Mixed Network</b> - `examples/basic/mixedQN/mqn_basic.m`
+
+@section example_code_pattern Example Code Pattern
+
+Most examples follow this general pattern:
+
+@code{.m}
+% Create model
+model = Network('MyModel');
+
+% Define nodes
+source = Source(model, 'Source');
+queue = Queue(model, 'Queue', SchedStrategy.FCFS);
+sink = Sink(model, 'Sink');
+
+% Define job classes and service processes
+jobclass = OpenClass(model, 'Jobs');
+source.setArrival(jobclass, Exp(1.0));
+queue.setService(jobclass, Exp(2.0));
+
+% Define routing
+P = model.initRoutingMatrix();
+P{jobclass}(source, queue) = 1.0;
+P{jobclass}(queue, sink) = 1.0;
+model.link(P);
+
+% Solve with preferred solver
+solver = MVA(model);
+avgTable = solver.getAvgTable();
+disp(avgTable);
+@endcode
+
+*/

@@ -1,0 +1,55 @@
+/**
+@page matlab_installation Installation
+
+@section matlab_requirements Requirements
+
+- MATLAB R2022b or later
+- Java 8 or higher (for the JAR backend)
+
+@section matlab_installing Installing LINE
+
+Download the latest release from SourceForge.
+
+To install LINE for MATLAB:
+
+1. Download and extract the LINE package
+2. Start MATLAB
+3. Navigate to the `matlab` directory within the LINE project
+4. Run the installation script:
+
+@code{.m}
+lineInstall
+@endcode
+
+This only needs to be done once. The installation script downloads required Java dependencies and configures the MATLAB path.
+
+@section matlab_dependencies Dependencies
+
+LINE for MATLAB requires the following Java dependencies (automatically downloaded by `lineInstall`):
+
+- jline.jar (core LINE library)
+- JMT.jar (Java Modelling Tools, for simulation)
+
+These will be automatically downloaded when you run `lineInstall`.
+
+@section matlab_starting Starting LINE
+
+Before using LINE in a MATLAB session, you must first initialize it by running `lineStart`. This script adds the necessary LINE folders to the MATLAB path.
+
+@code{.m}
+lineStart
+@endcode
+
+You need to run `lineStart` at the beginning of each MATLAB session where you intend to use LINE.
+
+@section matlab_verifying Verifying Installation
+
+To verify your installation, run:
+
+@code{.m}
+lineStart
+model = Network('Test');
+disp('LINE installation successful!');
+@endcode
+
+*/

@@ -1,0 +1,12 @@
+MEX {
+	global:
+		mexFunction;
+		mexfilerequiredapiversion;
+		emlrtMexFcnProperties;
+		qsys_mmcc_retrial_fp;
+		qsys_mmcc_retrial_fp_initialize;
+		qsys_mmcc_retrial_fp_terminate;
+		qsys_mmcc_retrial_fp_atexit;
+	local:
+		*;
+};

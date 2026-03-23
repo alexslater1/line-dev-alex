@@ -1,0 +1,22 @@
+/**
+@page api_lsn Layered Stochastic Networks
+@brief Layered queueing network analysis
+
+The lsn module provides algorithms for layered stochastic networks and
+layered queueing networks (LQNs).
+
+@subsection spec_lsn_functions Key Functions
+
+- @ref lsn_max_multiplicity "lsn_max_multiplicity" - Computes the maximum multiplicity of nodes in a Layered Software Network
+
+@anchor lsn_max_multiplicity
+### lsn_max_multiplicity
+  <b>Description:</b> Computes the maximum multiplicity of nodes in a Layered Software Network
+
+  <b>Syntax:</b>
+  @code
+  lsn_max_multiplicity(...)
+  @endcode
+
+
+*/

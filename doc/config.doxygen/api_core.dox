@@ -1,0 +1,787 @@
+/**
+@page api_core Core Modules
+@brief Networks, nodes, classes, distributions, solvers
+
+These modules provide the fundamental building blocks for creating and solving queueing models.
+
+@section core_network Network Models (matlab/src/lang/)
+
+The lang module contains the core classes for building queueing network models.
+
+@subsection core_network_main Main Classes
+
+<b>Network</b> - Main queueing network model container
+
+<table>
+<tr><th>Method</th><th>Description</th></tr>
+<tr><td colspan="2"><b>Constructor</b></td></tr>
+<tr><td><code>model = Network(name)</code></td><td>Create a new queueing network model</td></tr>
+<tr><td colspan="2"><b>Static Factory Methods</b></td></tr>
+<tr><td><code>model = Network.cyclic(N, D, strategy, S)</code></td><td>Generate cyclic queueing network</td></tr>
+<tr><td><code>model = Network.tandem(lambda, D, strategy)</code></td><td>Generate tandem queueing network</td></tr>
+<tr><td><code>model = Network.cyclicPs(N, D)</code></td><td>Create cyclic network with PS scheduling</td></tr>
+<tr><td><code>model = Network.cyclicFcfs(N, D, S)</code></td><td>Create cyclic network with FCFS scheduling</td></tr>
+<tr><td><code>model = Network.tandemPs(lambda, D)</code></td><td>Create tandem network with PS scheduling</td></tr>
+<tr><td><code>model = Network.tandemFcfs(lambda, D)</code></td><td>Create tandem network with FCFS scheduling</td></tr>
+<tr><td colspan="2"><b>Network Construction</b></td></tr>
+<tr><td><code>addNode(model, node)</code></td><td>Add a node (Queue, Source, Sink, etc.) to the network</td></tr>
+<tr><td><code>addJobClass(model, classObj)</code></td><td>Add a job class (OpenClass or ClosedClass)</td></tr>
+<tr><td><code>addLink(model, nodeA, nodeB)</code></td><td>Create a link between two nodes</td></tr>
+<tr><td><code>addLinks(model, nodeList)</code></td><td>Add multiple links from a node list</td></tr>
+<tr><td><code>addRegion(model, nodes)</code></td><td>Create a finite capacity region over nodes</td></tr>
+<tr><td><code>addItemSet(model, itemSet)</code></td><td>Add an item set for cache modeling</td></tr>
+<tr><td colspan="2"><b>Routing</b></td></tr>
+<tr><td><code>link(model, P)</code></td><td>Link nodes using routing probability matrix</td></tr>
+<tr><td><code>relink(model, P)</code></td><td>Re-establish links using new routing matrix</td></tr>
+<tr><td><code>linkAndLog(model, nodes, classes, P, wantLogger, logPath)</code></td><td>Link nodes with logging capability</td></tr>
+<tr><td><code>setRouting(model, nodeA, nodeB, jobclass, prob)</code></td><td>Set routing probability from nodeA to nodeB for a job class</td></tr>
+<tr><td><code>serialRouting(model, nodes, ...)</code></td><td>Create serial routing pattern through nodes</td></tr>
+<tr><td><code>initRoutingMatrix(model)</code></td><td>Initialize routing probability matrix</td></tr>
+<tr><td><code>P = getRoutingMatrix(model, arvRates)</code></td><td>Get routing matrix with optional arrival rates</td></tr>
+<tr><td><code>P = getLinkedRoutingMatrix(model)</code></td><td>Get the currently linked routing matrix</td></tr>
+<tr><td><code>printRoutingMatrix(model, onlyclass)</code></td><td>Print routing matrix to console</td></tr>
+<tr><td colspan="2"><b>Query Methods - Nodes</b></td></tr>
+<tr><td><code>nodes = getNodes(model)</code></td><td>Get all nodes in the network</td></tr>
+<tr><td><code>names = getNodeNames(model)</code></td><td>Get names of all nodes</td></tr>
+<tr><td><code>types = getNodeTypes(model)</code></td><td>Get types of all nodes</td></tr>
+<tr><td><code>node = getNodeByName(model, name)</code></td><td>Get node by name</td></tr>
+<tr><td><code>node = getNodeByIndex(model, idx)</code></td><td>Get node by index</td></tr>
+<tr><td><code>idx = getNodeIndex(model, name)</code></td><td>Get index of a node by name</td></tr>
+<tr><td><code>M = getNumberOfNodes(model)</code></td><td>Get total number of nodes</td></tr>
+<tr><td><code>nodes = getStatefulNodes(model)</code></td><td>Get all stateful nodes</td></tr>
+<tr><td><code>names = getStatefulNodeNames(model)</code></td><td>Get names of stateful nodes</td></tr>
+<tr><td><code>M = getNumberOfStatefulNodes(model)</code></td><td>Get count of stateful nodes</td></tr>
+<tr><td><code>idx = getIndexStatefulNodes(model)</code></td><td>Get indices of stateful nodes</td></tr>
+<tr><td><code>idx = getStatefulNodeIndex(model, name)</code></td><td>Get index of stateful node</td></tr>
+<tr><td colspan="2"><b>Query Methods - Stations</b></td></tr>
+<tr><td><code>names = getStationNames(model)</code></td><td>Get names of all stations</td></tr>
+<tr><td><code>station = getStationByName(model, name)</code></td><td>Get station by name</td></tr>
+<tr><td><code>station = getStationByIndex(model, idx)</code></td><td>Get station by index</td></tr>
+<tr><td><code>idx = getStationIndex(model, name)</code></td><td>Get index of a station</td></tr>
+<tr><td><code>M = getNumberOfStations(model)</code></td><td>Get total number of stations</td></tr>
+<tr><td><code>idx = getStationIndexes(model)</code></td><td>Get indices of all stations</td></tr>
+<tr><td><code>sched = getStationScheduling(model)</code></td><td>Get scheduling strategies for all stations</td></tr>
+<tr><td><code>S = getStationServers(model)</code></td><td>Get number of servers at each station</td></tr>
+<tr><td><code>S = getStatefulServers(model)</code></td><td>Get server counts for stateful nodes</td></tr>
+<tr><td><code>idx = getIndexSourceStation(model)</code></td><td>Get index of source station</td></tr>
+<tr><td><code>idx = getIndexSourceNode(model)</code></td><td>Get index of source node</td></tr>
+<tr><td><code>idx = getIndexSinkNode(model)</code></td><td>Get index of sink node</td></tr>
+<tr><td colspan="2"><b>Query Methods - Classes</b></td></tr>
+<tr><td><code>classes = getClasses(model)</code></td><td>Get all job classes</td></tr>
+<tr><td><code>names = getClassNames(model)</code></td><td>Get names of all classes</td></tr>
+<tr><td><code>class = getClassByName(model, name)</code></td><td>Get class by name</td></tr>
+<tr><td><code>class = getClassByIndex(model, idx)</code></td><td>Get class by index</td></tr>
+<tr><td><code>idx = getClassIndex(model, name)</code></td><td>Get index of a class</td></tr>
+<tr><td><code>R = getNumberOfClasses(model)</code></td><td>Get total number of classes</td></tr>
+<tr><td><code>N = getNumberOfJobs(model)</code></td><td>Get population vector for all classes</td></tr>
+<tr><td><code>refs = getReferenceStations(model)</code></td><td>Get reference stations for classes</td></tr>
+<tr><td><code>refs = getReferenceClasses(model)</code></td><td>Get reference classes</td></tr>
+<tr><td><code>idx = getIndexOpenClasses(model)</code></td><td>Get indices of open classes</td></tr>
+<tr><td><code>idx = getIndexClosedClasses(model)</code></td><td>Get indices of closed classes</td></tr>
+<tr><td><code>chain = getClassChain(model, className)</code></td><td>Get chain for a class</td></tr>
+<tr><td><code>idx = getClassChainIndex(model, className)</code></td><td>Get chain index for a class</td></tr>
+<tr><td colspan="2"><b>Query Methods - Chains</b></td></tr>
+<tr><td><code>[chainTable, chainMatrix] = getChains(model, rt)</code></td><td>Get chain table and matrix</td></tr>
+<tr><td><code>C = getNumberOfChains(model)</code></td><td>Get number of chains in the model</td></tr>
+<tr><td><code>D = getDemandsChain(model)</code></td><td>Get service demands by chain</td></tr>
+<tr><td colspan="2"><b>Query Methods - Structure</b></td></tr>
+<tr><td><code>sn = getStruct(model, structType, wantState)</code></td><td>Get internal data structure representation</td></tr>
+<tr><td><code>[M, R] = getSize(model)</code></td><td>Get [M,R] where M=nodes, R=classes</td></tr>
+<tr><td><code>conn = getConnectionMatrix(model)</code></td><td>Get node connection matrix</td></tr>
+<tr><td><code>[H, G] = getGraph(model)</code></td><td>Get graph representation</td></tr>
+<tr><td><code>mask = getClassSwitchingMask(model)</code></td><td>Get class switching mask</td></tr>
+<tr><td><code>fj = getForkJoins(model, rt)</code></td><td>Get fork-join pairs</td></tr>
+<tr><td><code>ulf = getUsedLangFeatures(model)</code></td><td>Get structure of used language features</td></tr>
+<tr><td colspan="2"><b>Query Methods - Performance Handles</b></td></tr>
+<tr><td><code>[Q,U,R,T,A,W] = getAvgHandles(model)</code></td><td>Get all average metric handles</td></tr>
+<tr><td><code>Q = getAvgQLenHandles(model)</code></td><td>Get queue length handles</td></tr>
+<tr><td><code>U = getAvgUtilHandles(model)</code></td><td>Get utilization handles</td></tr>
+<tr><td><code>R = getAvgRespTHandles(model)</code></td><td>Get response time handles</td></tr>
+<tr><td><code>T = getAvgTputHandles(model)</code></td><td>Get throughput handles</td></tr>
+<tr><td><code>A = getAvgArvRHandles(model)</code></td><td>Get arrival rate handles</td></tr>
+<tr><td><code>W = getAvgResidTHandles(model)</code></td><td>Get residence time handles</td></tr>
+<tr><td><code>[Qt,Ut,Tt] = getTranHandles(model)</code></td><td>Get transient metric handles</td></tr>
+<tr><td colspan="2"><b>Query Methods - Parameters</b></td></tr>
+<tr><td><code>[D, Z] = getDemands(model)</code></td><td>Get service demands</td></tr>
+<tr><td><code>[lambda,D,N,Z,mu,S] = getProductFormParameters(model)</code></td><td>Get product-form parameters</td></tr>
+<tr><td><code>params = getProductFormChainParameters(model)</code></td><td>Get product-form parameters by chain</td></tr>
+<tr><td><code>ld = getLimitedLoadDependence(model)</code></td><td>Get load-dependent scaling factors</td></tr>
+<tr><td><code>cd = getLimitedClassDependence(model)</code></td><td>Get class-dependent scaling factors</td></tr>
+<tr><td><code>path = getLogPath(model)</code></td><td>Get logging path</td></tr>
+<tr><td colspan="2"><b>Query Methods - CTMC Analysis</b></td></tr>
+<tr><td><code>Q = getGenerator(model, ...)</code></td><td>Get CTMC generator matrix (delegates to CTMC)</td></tr>
+<tr><td><code>SS = getStateSpace(model, ...)</code></td><td>Get state space (delegates to CTMC)</td></tr>
+<tr><td><code>MCTMC = getCTMC(model, par1, par2)</code></td><td>Get marked CTMC representation</td></tr>
+<tr><td><code>MCTMC = getMarkedCTMC(model, ...)</code></td><td>Alias for getCTMC</td></tr>
+<tr><td colspan="2"><b>Boolean Query Methods - Classes and Chains</b></td></tr>
+<tr><td><code>bool = hasOpenClasses(model)</code></td><td>Check if model has open classes</td></tr>
+<tr><td><code>bool = hasClosedClasses(model)</code></td><td>Check if model has closed classes</td></tr>
+<tr><td><code>bool = hasClassSwitching(model)</code></td><td>Check if model has class switching</td></tr>
+<tr><td><code>bool = hasSingleChain(model)</code></td><td>Check if single chain model</td></tr>
+<tr><td><code>bool = hasMultiChain(model)</code></td><td>Check if multi-chain model</td></tr>
+<tr><td><code>bool = hasSingleClass(model)</code></td><td>Check if single class model</td></tr>
+<tr><td><code>bool = hasMultiClass(model)</code></td><td>Check if multi-class model</td></tr>
+<tr><td colspan="2"><b>Boolean Query Methods - Nodes</b></td></tr>
+<tr><td><code>bool = hasFork(model)</code></td><td>Check if model has fork nodes</td></tr>
+<tr><td><code>bool = hasJoin(model)</code></td><td>Check if model has join nodes</td></tr>
+<tr><td><code>bool = hasMultiServer(model)</code></td><td>Check for multi-server stations</td></tr>
+<tr><td colspan="2"><b>Boolean Query Methods - Scheduling</b></td></tr>
+<tr><td><code>bool = hasFCFS(model)</code></td><td>Check if model has FCFS scheduling</td></tr>
+<tr><td><code>bool = hasDPS(model)</code></td><td>Check if model has DPS scheduling</td></tr>
+<tr><td><code>bool = hasGPS(model)</code></td><td>Check if model has GPS scheduling</td></tr>
+<tr><td><code>bool = hasINF(model)</code></td><td>Check if model has infinite server scheduling</td></tr>
+<tr><td><code>bool = hasPS(model)</code></td><td>Check if model has PS scheduling</td></tr>
+<tr><td><code>bool = hasSIRO(model)</code></td><td>Check if model has SIRO scheduling</td></tr>
+<tr><td><code>bool = hasHOL(model)</code></td><td>Check if model has HOL scheduling</td></tr>
+<tr><td><code>bool = hasLCFS(model)</code></td><td>Check if model has LCFS scheduling</td></tr>
+<tr><td><code>bool = hasLCFSPR(model)</code></td><td>Check if model has LCFSPR scheduling</td></tr>
+<tr><td><code>bool = hasSEPT(model)</code></td><td>Check if model has SEPT scheduling</td></tr>
+<tr><td><code>bool = hasLEPT(model)</code></td><td>Check if model has LEPT scheduling</td></tr>
+<tr><td><code>bool = hasSJF(model)</code></td><td>Check if model has SJF scheduling</td></tr>
+<tr><td><code>bool = hasLJF(model)</code></td><td>Check if model has LJF scheduling</td></tr>
+<tr><td><code>bool = hasHomogeneousScheduling(model, strategy)</code></td><td>Check for homogeneous scheduling</td></tr>
+<tr><td><code>bool = hasMultiClassFCFS(model)</code></td><td>Check for multi-class FCFS</td></tr>
+<tr><td><code>bool = hasMultiClassHeterFCFS(model)</code></td><td>Check for heterogeneous multi-class FCFS</td></tr>
+<tr><td colspan="2"><b>Boolean Query Methods - Properties</b></td></tr>
+<tr><td><code>bool = hasInitState(model)</code></td><td>Check if initial state is defined</td></tr>
+<tr><td><code>bool = hasProductFormSolution(model)</code></td><td>Check if model has product-form solution</td></tr>
+<tr><td><code>bool = isMatlabNative(model)</code></td><td>Returns true for MATLAB implementation</td></tr>
+<tr><td><code>bool = isJavaNative(model)</code></td><td>Returns false for MATLAB implementation</td></tr>
+<tr><td><code>bool = isLimitedLoadDependent(model)</code></td><td>Check for load dependence</td></tr>
+<tr><td><code>bool = isStateValid(model)</code></td><td>Check if state is valid</td></tr>
+<tr><td colspan="2"><b>State Initialization</b></td></tr>
+<tr><td><code>reset(model, resetState)</code></td><td>Reset the model</td></tr>
+<tr><td><code>resetHandles(model)</code></td><td>Reset performance metric handles</td></tr>
+<tr><td><code>resetModel(model, resetState)</code></td><td>Reset model to initial state</td></tr>
+<tr><td><code>resetNetwork(model, deleteCSnodes)</code></td><td>Reset network structure</td></tr>
+<tr><td><code>resetStruct(model)</code></td><td>Reset internal data structure</td></tr>
+<tr><td><code>[state, priorStateSpace, stateSpace] = getState(model)</code></td><td>Get current state</td></tr>
+<tr><td><code>initDefault(model, nodes)</code></td><td>Initialize with default state</td></tr>
+<tr><td><code>initFromAvgTableQLen(model, AvgTable)</code></td><td>Initialize from average queue length table</td></tr>
+<tr><td><code>initFromAvgQLen(model, AvgQLen)</code></td><td>Initialize from average queue lengths</td></tr>
+<tr><td><code>initFromMarginal(model, n, options)</code></td><td>Initialize from marginal distribution</td></tr>
+<tr><td><code>initFromMarginalAndRunning(model, n, s, options)</code></td><td>Initialize from marginal and running jobs</td></tr>
+<tr><td><code>initFromMarginalAndStarted(model, n, s, options)</code></td><td>Initialize from marginal and started jobs</td></tr>
+<tr><td><code>setInitialized(model, bool)</code></td><td>Set initialization flag</td></tr>
+<tr><td colspan="2"><b>Refresh Methods</b></td></tr>
+<tr><td><code>refreshStruct(model, hard)</code></td><td>Refresh internal data structure</td></tr>
+<tr><td><code>refreshRates(model, statSet, classSet)</code></td><td>Refresh service rates and SCVs</td></tr>
+<tr><td><code>refreshProcessPhases(model, statSet, classSet)</code></td><td>Refresh process phases</td></tr>
+<tr><td><code>refreshProcessTypes(model)</code></td><td>Refresh process types</td></tr>
+<tr><td><code>refreshRoutingMatrix(model, rates)</code></td><td>Refresh routing matrix</td></tr>
+<tr><td><code>refreshLST(model, statSet, classSet)</code></td><td>Refresh Laplace-Stieltjes transforms</td></tr>
+<tr><td><code>refreshSync(model)</code></td><td>Refresh synchronization constraints</td></tr>
+<tr><td><code>refreshPriorities(model)</code></td><td>Refresh class priorities</td></tr>
+<tr><td><code>refreshScheduling(model)</code></td><td>Refresh scheduling strategies</td></tr>
+<tr><td><code>refreshProcesses(model, statSet, classSet)</code></td><td>Refresh all processes</td></tr>
+<tr><td><code>refreshChains(model, propagate)</code></td><td>Refresh chains and visits</td></tr>
+<tr><td><code>refreshCapacity(model)</code></td><td>Refresh capacity constraints</td></tr>
+<tr><td><code>refreshLocalVars(model)</code></td><td>Refresh local variables</td></tr>
+<tr><td colspan="2"><b>Utility Methods</b></td></tr>
+<tr><td><code>setChecks(model, bool)</code></td><td>Enable/disable consistency checks</td></tr>
+<tr><td><code>setUsedLangFeature(model, className)</code></td><td>Mark a language feature as used</td></tr>
+<tr><td><code>setLogPath(model, logPath)</code></td><td>Set path for logging</td></tr>
+<tr><td><code>sanitize(model)</code></td><td>Sanitize model for consistency</td></tr>
+<tr><td><code>summary(model)</code></td><td>Print model summary</td></tr>
+<tr><td><code>plot(model)</code></td><td>Plot network graph</td></tr>
+<tr><td><code>view(model)</code></td><td>View network in JSIM viewer</td></tr>
+<tr><td><code>jsimwView(model)</code></td><td>View in JSIM What-If viewer</td></tr>
+<tr><td><code>jsimgView(model)</code></td><td>View in JSIM Graphical viewer</td></tr>
+<tr><td><code>source = getSource(model)</code></td><td>Get source node</td></tr>
+<tr><td><code>sink = getSink(model)</code></td><td>Get sink node</td></tr>
+</table>
+
+<b>LayeredNetwork</b> - Layered queueing network model for client-server systems
+
+<table>
+<tr><th>Method</th><th>Description</th></tr>
+<tr><td colspan="2"><b>Constructor</b></td></tr>
+<tr><td><code>model = LayeredNetwork(name)</code></td><td>Create a new layered queueing network</td></tr>
+<tr><td><code>model = LayeredNetwork(name, filename)</code></td><td>Create and load from XML file</td></tr>
+<tr><td colspan="2"><b>Static Methods</b></td></tr>
+<tr><td><code>model = LayeredNetwork.readXML(filename, verbose)</code></td><td>Read model from XML file</td></tr>
+<tr><td><code>model = LayeredNetwork.load(filename, verbose)</code></td><td>Load model from file (alias for readXML)</td></tr>
+<tr><td><code>model = LayeredNetwork.parseXML(filename, verbose)</code></td><td>Parse XML file into LayeredNetwork</td></tr>
+<tr><td><code>model = LayeredNetwork.fromNetwork(network)</code></td><td>Convert Network model to LayeredNetwork</td></tr>
+<tr><td colspan="2"><b>Construction Methods</b></td></tr>
+<tr><td><code>proc = addProcessor(model, name)</code></td><td>Add a processor (hardware) to the LQN</td></tr>
+<tr><td><code>task = addTask(model, name, mult, proc)</code></td><td>Add a task (software component) running on processor</td></tr>
+<tr><td><code>entry = addEntry(model, task, name)</code></td><td>Add an entry point (service interface) to task</td></tr>
+<tr><td><code>addPrecedence(model, entryA, entryB)</code></td><td>Define call dependency between entries</td></tr>
+<tr><td colspan="2"><b>Query Methods</b></td></tr>
+<tr><td><code>lqn = getStruct(model)</code></td><td>Get LQN data structure</td></tr>
+<tr><td><code>E = getNumberOfLayers(model)</code></td><td>Get number of layers</td></tr>
+<tr><td><code>E = getNumberOfModels(model)</code></td><td>Get number of models in ensemble</td></tr>
+<tr><td><code>layers = getLayers(model)</code></td><td>Get all layer models</td></tr>
+<tr><td><code>idx = getNodeIndex(model, node)</code></td><td>Get index of a node</td></tr>
+<tr><td><code>node = getNodeByName(model, name)</code></td><td>Get node by name</td></tr>
+<tr><td><code>[names,hosts,tasks,entries,acts] = getNodeNames(model)</code></td><td>Get all node names</td></tr>
+<tr><td><code>ulf = getUsedLangFeatures(model)</code></td><td>Get used language features per layer</td></tr>
+<tr><td colspan="2"><b>Kotlin-Style Aliases</b></td></tr>
+<tr><td><code>idx = nodeIndex(model, node)</code></td><td>Alias for getNodeIndex</td></tr>
+<tr><td><code>node = nodeByName(model, name)</code></td><td>Alias for getNodeByName</td></tr>
+<tr><td><code>names = nodeNames(model)</code></td><td>Alias for getNodeNames</td></tr>
+<tr><td><code>lqn = struct(model)</code></td><td>Alias for getStruct</td></tr>
+<tr><td><code>E = numberOfLayers(model)</code></td><td>Alias for getNumberOfLayers</td></tr>
+<tr><td><code>E = numberOfModels(model)</code></td><td>Alias for getNumberOfModels</td></tr>
+<tr><td><code>layers = layers(model)</code></td><td>Alias for getLayers</td></tr>
+<tr><td><code>ulf = usedLangFeatures(model)</code></td><td>Alias for getUsedLangFeatures</td></tr>
+<tr><td colspan="2"><b>Utility Methods</b></td></tr>
+<tr><td><code>reset(model, isHard)</code></td><td>Reset the layered model</td></tr>
+<tr><td><code>sn = summary(model)</code></td><td>Print model summary (returns sn structure)</td></tr>
+<tr><td><code>plot(model, showTaskGraph)</code></td><td>Plot the layered network</td></tr>
+<tr><td><code>plotGraph(model, useNodes)</code></td><td>Plot network graph</td></tr>
+<tr><td><code>plotGraphSimple(model, useNodes)</code></td><td>Plot simplified graph</td></tr>
+<tr><td><code>plotTaskGraph(model, useNodes)</code></td><td>Plot task graph</td></tr>
+<tr><td><code>view(model)</code></td><td>View model in JLINE viewer</td></tr>
+<tr><td><code>writeXML(model, filename, useAbstractNames)</code></td><td>Write model to XML file</td></tr>
+<tr><td><code>setUsedLangFeature(model, e, className)</code></td><td>Mark a language feature as used in layer e</td></tr>
+<tr><td><code>initUsedFeatures(model)</code></td><td>Initialize feature tracking</td></tr>
+</table>
+
+<b>Ensemble</b> - Collection of network models for ensemble analysis
+
+| Class | Description |
+|-------|-------------|
+| Ensemble | Collection of network models for ensemble analysis |
+| NetworkStruct | Internal structure representation of a network |
+| RoutingMatrix | Defines customer routing between nodes |
+
+@subsection core_network_nodes Node Classes (matlab/src/lang/nodes/)
+
+<b>Source</b> - Arrival point for open classes (generates customers)
+
+<table>
+<tr><th>Method</th><th>Description</th></tr>
+<tr><td colspan="2"><b>Constructor</b></td></tr>
+<tr><td><code>source = Source(model, name)</code></td><td>Create a source node</td></tr>
+<tr><td colspan="2"><b>Arrival Configuration</b></td></tr>
+<tr><td><code>setArrival(source, jobclass, distribution)</code></td><td>Set arrival process for a job class</td></tr>
+<tr><td><code>distrib = getArrivalProcess(source, oclass)</code></td><td>Get arrival process for a class</td></tr>
+</table>
+
+<b>Queue</b> - Service station with waiting buffer (supports FCFS, LCFS, PS, etc.)
+
+<table>
+<tr><th>Method</th><th>Description</th></tr>
+<tr><td colspan="2"><b>Constructor</b></td></tr>
+<tr><td><code>queue = Queue(model, name, schedStrategy)</code></td><td>Create queue with scheduling strategy (FCFS, LCFS, PS, etc.)</td></tr>
+<tr><td colspan="2"><b>Service Configuration</b></td></tr>
+<tr><td><code>setService(queue, jobclass, distribution)</code></td><td>Set service time distribution for a job class</td></tr>
+<tr><td><code>setService(queue, jobclass, distribution, weight)</code></td><td>Set service distribution with weight parameter</td></tr>
+<tr><td><code>distrib = getService(queue, jobclass)</code></td><td>Get service distribution for a class</td></tr>
+<tr><td colspan="2"><b>Server Configuration</b></td></tr>
+<tr><td><code>setNumberOfServers(queue, numServers)</code></td><td>Set number of parallel servers</td></tr>
+<tr><td><code>setNumServers(queue, numServers)</code></td><td>Alternative method to set number of servers</td></tr>
+<tr><td colspan="2"><b>Scheduling Parameters</b></td></tr>
+<tr><td><code>setStrategyParam(queue, jobclass, weight)</code></td><td>Set scheduling strategy parameter for class</td></tr>
+<tr><td colspan="2"><b>Load and Class Dependence</b></td></tr>
+<tr><td><code>setLoadDependence(queue, alpha)</code></td><td>Set load-dependent service (PS, FCFS only)</td></tr>
+<tr><td><code>setClassDependence(queue, beta)</code></td><td>Set class-dependent service (PS, FCFS only)</td></tr>
+<tr><td colspan="2"><b>Polling Configuration (POLLING strategy)</b></td></tr>
+<tr><td><code>setPollingType(queue, rule, par)</code></td><td>Set polling rule and parameter</td></tr>
+<tr><td><code>setSwitchover(queue, jobclass, soTime)</code></td><td>Set switchover time for POLLING</td></tr>
+<tr><td><code>setSwitchover(queue, jobclass_from, jobclass_to, soTime)</code></td><td>Set general switchover between classes</td></tr>
+<tr><td colspan="2"><b>Delay-Off Configuration</b></td></tr>
+<tr><td><code>setDelayOff(queue, jobclass, setupTime, delayoffTime)</code></td><td>Set setup and delay-off times</td></tr>
+</table>
+
+<b>Delay</b> - Infinite-server station (think time/delay station)
+
+<table>
+<tr><th>Method</th><th>Description</th></tr>
+<tr><td colspan="2"><b>Constructor</b></td></tr>
+<tr><td><code>delay = Delay(model, name)</code></td><td>Create delay (infinite server) node</td></tr>
+<tr><td colspan="2"><b>Service Configuration</b></td></tr>
+<tr><td><code>setService(delay, jobclass, distribution)</code></td><td>Set delay time distribution for a job class</td></tr>
+<tr><td><code>setService(delay, jobclass, distribution, weight)</code></td><td>Set service distribution with weight</td></tr>
+<tr><td><code>distrib = getService(delay, jobclass)</code></td><td>Get service distribution for a class</td></tr>
+</table>
+
+<b>Sink</b> - Departure point for open classes (absorbs customers)
+
+<table>
+<tr><th>Method</th><th>Description</th></tr>
+<tr><td colspan="2"><b>Constructor</b></td></tr>
+<tr><td><code>sink = Sink(model, name)</code></td><td>Create a sink node</td></tr>
+<tr><td colspan="2"><b>Utility Methods</b></td></tr>
+<tr><td><code>sections = getSections(sink)</code></td><td>Get node sections</td></tr>
+</table>
+
+<b>Other Node Types</b>
+
+| Class | Description |
+|-------|-------------|
+| Router | Routing node for complex routing decisions |
+| Fork | Splits a job into parallel tasks |
+| Join | Merges parallel tasks back into a single job |
+| Cache | Content caching station with replacement policies |
+| ClassSwitch | Node that changes job class probabilistically |
+| Logger | Records job traces for analysis |
+| Place | Petri net place (for generalized stochastic Petri nets) |
+| Transition | Petri net transition (for generalized stochastic Petri nets) |
+
+@subsection core_network_classes Job Class Classes
+
+<b>OpenClass</b> - Job class with external arrivals (open workload)
+
+<table>
+<tr><th>Method</th><th>Description</th></tr>
+<tr><td colspan="2"><b>Constructor</b></td></tr>
+<tr><td><code>jobclass = OpenClass(model, name)</code></td><td>Create an open job class</td></tr>
+<tr><td><code>jobclass = OpenClass(model, name, priority)</code></td><td>Create open class with priority level</td></tr>
+<tr><td colspan="2"><b>Configuration</b></td></tr>
+<tr><td><code>setReferenceStation(jobclass, source)</code></td><td>Set reference station (must be a Source)</td></tr>
+</table>
+
+<b>ClosedClass</b> - Job class with fixed population (closed workload)
+
+<table>
+<tr><th>Method</th><th>Description</th></tr>
+<tr><td colspan="2"><b>Constructor</b></td></tr>
+<tr><td><code>jobclass = ClosedClass(model, name, population, refNode)</code></td><td>Create closed class with fixed population</td></tr>
+<tr><td><code>jobclass = ClosedClass(model, name, population, refNode, priority)</code></td><td>Create closed class with priority</td></tr>
+<tr><td colspan="2"><b>Configuration</b></td></tr>
+<tr><td><code>setReferenceStation(jobclass, refNode)</code></td><td>Set reference station</td></tr>
+<tr><td colspan="2"><b>Utility</b></td></tr>
+<tr><td><code>summary(jobclass)</code></td><td>Print class summary with population</td></tr>
+</table>
+
+<b>Other Job Class Types</b>
+
+| Class | Description |
+|-------|-------------|
+| SelfLoopingClass | Special class for self-looping behavior |
+| DisabledClass | Placeholder for disabled class |
+
+@subsection core_network_support Support Classes
+
+| Class | Description |
+|-------|-------------|
+| Chain | Group of related job classes forming a Markov chain |
+| Element | Base class for model elements |
+| NetworkElement | Base class for network-specific elements |
+| Event | Represents discrete events in the model |
+| ModeEvent | Mode-specific event representation |
+| Mode | Operating mode for multi-mode models |
+| Env | Random environment definition |
+| GlobalConstants | Global configuration constants |
+
+
+@section core_solvers Solvers (matlab/src/solvers/)
+
+The solvers module provides various analytical and simulation-based solvers.
+
+@subsection core_solvers_base Base Solver Classes and Common Methods
+
+All solver classes inherit from <b>NetworkSolver</b> and provide these common methods:
+
+<table>
+<tr><th>Method</th><th>Description</th></tr>
+<tr><td colspan="2"><b>Constructor</b></td></tr>
+<tr><td><code>solver = SolverXXX(model)</code></td><td>Create solver instance for a model</td></tr>
+<tr><td><code>solver = SolverXXX(model, options)</code></td><td>Create solver with custom options</td></tr>
+<tr><td colspan="2"><b>Analysis Execution</b></td></tr>
+<tr><td><code>results = solve(solver)</code></td><td>Run the solver and return results structure</td></tr>
+<tr><td><code>[runtime, analyzer] = runAnalyzer(solver, options)</code></td><td>Run solver analysis with detailed output</td></tr>
+<tr><td colspan="2"><b>Average Performance Metrics</b></td></tr>
+<tr><td><code>[QN,UN,RN,TN,AN,WN] = getAvg(solver)</code></td><td>Get average performance metrics</td></tr>
+<tr><td><code>[QN,UN,RN,TN,AN,WN] = getAvg(solver, Q,U,R,T)</code></td><td>Get specified average metrics using handles</td></tr>
+<tr><td><code>AvgTable = getAvgTable(solver)</code></td><td>Get results as formatted table</td></tr>
+<tr><td><code>[QNc,UNc,RNc,TNc] = getAvgChain(solver)</code></td><td>Get chain-level average metrics</td></tr>
+<tr><td><code>[CNc,XNc] = getAvgSys(solver)</code></td><td>Get system-level averages</td></tr>
+<tr><td><code>[QN,UN,RN,TN,AN,WN] = getAvgNode(solver)</code></td><td>Get node-level averages</td></tr>
+<tr><td><code>QN = getAvgQLenChain(solver)</code></td><td>Get chain queue lengths</td></tr>
+<tr><td><code>UN = getAvgUtilChain(solver)</code></td><td>Get chain utilizations</td></tr>
+<tr><td><code>RN = getAvgRespTChain(solver)</code></td><td>Get chain response times</td></tr>
+<tr><td><code>TN = getAvgTputChain(solver)</code></td><td>Get chain throughputs</td></tr>
+<tr><td><code>AN = getAvgArvRChain(solver)</code></td><td>Get chain arrival rates</td></tr>
+<tr><td><code>RN = getAvgSysRespT(solver)</code></td><td>Get system response time</td></tr>
+<tr><td><code>TN = getAvgSysTput(solver)</code></td><td>Get system throughput</td></tr>
+<tr><td colspan="2"><b>Transient Metrics (solver-dependent)</b></td></tr>
+<tr><td><code>[QNt,UNt,TNt] = getTranAvg(solver, Qt,Ut,Tt)</code></td><td>Get transient average metrics</td></tr>
+<tr><td><code>[Pi_t, SSnode] = getTranProb(solver, node)</code></td><td>Get transient node probabilities</td></tr>
+<tr><td><code>[Pi_t, SSnode_a] = getTranProbAggr(solver, node)</code></td><td>Get transient aggregated node probabilities</td></tr>
+<tr><td><code>[Pi_t, SSsys] = getTranProbSys(solver)</code></td><td>Get transient system probabilities</td></tr>
+<tr><td><code>[Pi_t, SSsysa] = getTranProbSysAggr(solver)</code></td><td>Get transient aggregated system probabilities</td></tr>
+<tr><td><code>RD = getTranCdfRespT(solver, R)</code></td><td>Get transient response time CDF</td></tr>
+<tr><td><code>RD = getTranCdfPassT(solver, R)</code></td><td>Get transient passage time CDF</td></tr>
+<tr><td colspan="2"><b>State Probabilities (solver-dependent)</b></td></tr>
+<tr><td><code>Pnir = getProb(solver, node, state)</code></td><td>Get state probabilities at node</td></tr>
+<tr><td><code>Pnir = getProbAggr(solver, node, state_a)</code></td><td>Get aggregated state probabilities</td></tr>
+<tr><td><code>Pn = getProbSys(solver)</code></td><td>Get system-wide state probabilities</td></tr>
+<tr><td><code>Pn = getProbSysAggr(solver)</code></td><td>Get aggregated system probabilities</td></tr>
+<tr><td><code>lNormConst = getProbNormConstAggr(solver)</code></td><td>Get log normalizing constant</td></tr>
+<tr><td colspan="2"><b>Distributions (solver-dependent)</b></td></tr>
+<tr><td><code>RD = getCdfRespT(solver, R)</code></td><td>Get response time CDF</td></tr>
+<tr><td><code>RD = getCdfSysRespT(solver)</code></td><td>Get system response time CDF</td></tr>
+<tr><td colspan="2"><b>Sampling (solver-dependent)</b></td></tr>
+<tr><td><code>tstate = sample(solver, node, numSamples)</code></td><td>Sample node state trajectory</td></tr>
+<tr><td><code>tstate = sampleAggr(solver, node, numSamples)</code></td><td>Sample aggregated node state</td></tr>
+<tr><td><code>tstate = sampleSys(solver, numSamples)</code></td><td>Sample system state trajectory</td></tr>
+<tr><td><code>tstate = sampleSysAggr(solver, numSamples)</code></td><td>Sample aggregated system state</td></tr>
+<tr><td colspan="2"><b>Query Methods</b></td></tr>
+<tr><td><code>sn = getStruct(solver)</code></td><td>Get model data structure</td></tr>
+<tr><td><code>name = getName(solver)</code></td><td>Get solver name</td></tr>
+<tr><td colspan="2"><b>Kotlin-Style Aliases (from EnsembleSolver)</b></td></tr>
+<tr><td><code>s = solver(obj, e)</code></td><td>Alias for getSolver - get solver for stage e</td></tr>
+<tr><td><code>it = iteration(obj)</code></td><td>Alias for getIteration - get current iteration</td></tr>
+<tr><td><code>E = numberOfModels(obj)</code></td><td>Alias for getNumberOfModels</td></tr>
+<tr><td><code>avg = ensembleAvg(obj)</code></td><td>Alias for getEnsembleAvg</td></tr>
+<tr><td><code>tables = ensembleAvgTables(obj)</code></td><td>Alias for getEnsembleAvgTables</td></tr>
+<tr><td><code>methods = listValidMethods(solver)</code></td><td>Get list of valid solution methods</td></tr>
+<tr><td><code>options = getOptions(solver)</code></td><td>Get current solver options</td></tr>
+<tr><td colspan="2"><b>Control Methods</b></td></tr>
+<tr><td><code>reset(solver)</code></td><td>Reset solver state</td></tr>
+<tr><td><code>setOptions(solver, options)</code></td><td>Set solver options</td></tr>
+<tr><td><code>setChecks(solver, bool)</code></td><td>Enable/disable consistency checks</td></tr>
+<tr><td colspan="2"><b>Static Methods</b></td></tr>
+<tr><td><code>featSupported = SolverXXX.getFeatureSet()</code></td><td>Get supported model features</td></tr>
+<tr><td><code>[bool, featSupported] = SolverXXX.supports(model)</code></td><td>Check if model is supported</td></tr>
+<tr><td><code>options = SolverXXX.defaultOptions()</code></td><td>Get default solver options</td></tr>
+</table>
+
+<tr><td colspan="2"><b>Kotlin-Style Aliases (for get* methods)</b></td></tr>
+<tr><td><code>AvgTable = avgTable(solver)</code></td><td>Alias for getAvgTable</td></tr>
+<tr><td><code>AvgTable = avgSysTable(solver)</code></td><td>Alias for getAvgSysTable</td></tr>
+<tr><td><code>AvgTable = avgNodeTable(solver)</code></td><td>Alias for getAvgNodeTable</td></tr>
+<tr><td><code>AvgTable = avgChainTable(solver)</code></td><td>Alias for getAvgChainTable</td></tr>
+<tr><td><code>[QNc,UNc,RNc,TNc] = avgChain(solver)</code></td><td>Alias for getAvgChain</td></tr>
+<tr><td><code>[CNc,XNc] = avgSys(solver)</code></td><td>Alias for getAvgSys</td></tr>
+<tr><td><code>[QN,UN,RN,TN,AN,WN] = avgNode(solver)</code></td><td>Alias for getAvgNode</td></tr>
+<tr><td><code>RN = avgSysRespT(solver)</code></td><td>Alias for getAvgSysRespT</td></tr>
+<tr><td><code>TN = avgSysTput(solver)</code></td><td>Alias for getAvgSysTput</td></tr>
+<tr><td><code>AN = avgArvRChain(solver)</code></td><td>Alias for getAvgArvRChain</td></tr>
+<tr><td><code>QN = avgQLenChain(solver)</code></td><td>Alias for getAvgQLenChain</td></tr>
+<tr><td><code>UN = avgUtilChain(solver)</code></td><td>Alias for getAvgUtilChain</td></tr>
+<tr><td><code>RN = avgRespTChain(solver)</code></td><td>Alias for getAvgRespTChain</td></tr>
+<tr><td><code>TN = avgTputChain(solver)</code></td><td>Alias for getAvgTputChain</td></tr>
+<tr><td><code>QN = avgQLen(solver)</code></td><td>Alias for getAvgQLen</td></tr>
+<tr><td><code>UN = avgUtil(solver)</code></td><td>Alias for getAvgUtil</td></tr>
+<tr><td><code>RN = avgRespT(solver)</code></td><td>Alias for getAvgRespT</td></tr>
+<tr><td><code>TN = avgTput(solver)</code></td><td>Alias for getAvgTput</td></tr>
+<tr><td><code>AN = avgArvR(solver)</code></td><td>Alias for getAvgArvR</td></tr>
+<tr><td><code>[QNt,UNt,TNt] = tranAvg(solver, Qt,Ut,Tt)</code></td><td>Alias for getTranAvg</td></tr>
+<tr><td><code>RD = cdfRespT(solver, R)</code></td><td>Alias for getCdfRespT</td></tr>
+<tr><td><code>Pnir = prob(solver, node, state)</code></td><td>Alias for getProb</td></tr>
+<tr><td><code>Pnir = probAggr(solver, node, state_a)</code></td><td>Alias for getProbAggr</td></tr>
+<tr><td><code>Pn = probSys(solver)</code></td><td>Alias for getProbSys</td></tr>
+<tr><td><code>Pn = probSysAggr(solver)</code></td><td>Alias for getProbSysAggr</td></tr>
+<tr><td><code>lNormConst = probNormConstAggr(solver)</code></td><td>Alias for getProbNormConstAggr</td></tr>
+<tr><td><code>[Q,U,R,T,A,W] = avgHandles(solver)</code></td><td>Alias for getAvgHandles</td></tr>
+<tr><td><code>[Qt,Ut,Tt] = tranHandles(solver)</code></td><td>Alias for getTranHandles</td></tr>
+<b>Solver Options</b>
+
+| Class | Description |
+|-------|-------------|
+| SolverOptions | Configuration options for solvers (method, tolerance, iterations, etc.) |
+| SolverFeatureSet | Describes features supported by a solver |
+
+@subsection core_solvers_analytical Analytical Solvers
+
+<b>MVA</b> - Mean Value Analysis (MVA/)
+
+<table>
+<tr><th>Method</th><th>Description</th></tr>
+<tr><td colspan="2"><b>Valid Methods</b></td></tr>
+<tr><td colspan="2">'default', 'mva', 'exact', 'amva', 'qna', 'qdlin', 'amva.qdlin', 'bs', 'amva.bs', 'sqni', 'qd', 'amva.qd', 'qli', 'amva.qli', 'fli', 'amva.fli', 'lin', 'egflin', 'gflin', 'amva.lin', 'mm1', 'mmk', 'mg1', 'mgi1', 'gm1', 'gig1', 'gig1.kingman', 'gigk', 'gigk.kingman_approx', 'gig1.gelenbe', 'gig1.heyman', 'gig1.kimura', 'gig1.allen', 'gig1.kobayashi', 'gig1.klb', 'gig1.marchal', plus bounds methods</td></tr>
+<tr><td colspan="2"><b>Description</b></td></tr>
+<tr><td colspan="2">Exact solver for product-form networks, approximate solver for non-product-form. Supports closed, open, and mixed models with various scheduling disciplines.</td></tr>
+</table>
+
+<b>CTMC</b> - Continuous-Time Markov Chain (CTMC/)
+
+<table>
+<tr><th>Method</th><th>Description</th></tr>
+<tr><td colspan="2"><b>Additional Methods</b></td></tr>
+<tr><td><code>[infGen, eventFilt, synchInfo] = getGenerator(solver, options)</code></td><td>Get infinitesimal generator matrix</td></tr>
+<tr><td><code>[infGen, eventFilt, synchInfo] = getInfGen(solver, options)</code></td><td>Get infinitesimal generator (alias)</td></tr>
+<tr><td><code>[infGen, eventFilt, synchInfo, SS, SSnode] = getSymbolicGenerator(solver, invertSymbol, primeNumbers)</code></td><td>Get symbolic generator with state space</td></tr>
+<tr><td><code>[SS, SSnode] = getStateSpace(solver, options)</code></td><td>Get state space representation</td></tr>
+<tr><td><code>SSa = getStateSpaceAggr(solver)</code></td><td>Get aggregated state space</td></tr>
+<tr><td><code>MCTMC = getMarkedCTMC(solver, options)</code></td><td>Get marked CTMC object</td></tr>
+<tr><td colspan="2"><b>Kotlin-Style Aliases</b></td></tr>
+<tr><td><code>SS = stateSpace(solver, options)</code></td><td>Alias for getStateSpace</td></tr>
+<tr><td><code>Q = generator(solver, options)</code></td><td>Alias for getGenerator</td></tr>
+<tr><td colspan="2"><b>Valid Methods</b></td></tr>
+<tr><td colspan="2">'default', 'gpu'</td></tr>
+<tr><td colspan="2"><b>Description</b></td></tr>
+<tr><td colspan="2">State-space enumeration solver. Exact for models with finite state space. Supports arbitrary service distributions and scheduling.</td></tr>
+</table>
+
+<b>FLD</b> - Fluid/Mean-Field Approximation (Fluid/)
+
+<table>
+<tr><th>Method</th><th>Description</th></tr>
+<tr><td colspan="2"><b>Valid Methods</b></td></tr>
+<tr><td colspan="2">'default', 'softmin', 'statedep', 'closing', 'matrix'</td></tr>
+<tr><td colspan="2"><b>Description</b></td></tr>
+<tr><td colspan="2">ODE-based fluid approximation for large-scale models. Efficient for models with large populations.</td></tr>
+</table>
+
+<b>MAM</b> - Matrix-Analytic Methods (MAM/)
+
+<table>
+<tr><th>Method</th><th>Description</th></tr>
+<tr><td colspan="2"><b>Valid Methods</b></td></tr>
+<tr><td colspan="2">'default', 'dec.source', 'dec.mmap', 'dec.poisson', 'mna'</td></tr>
+<tr><td colspan="2"><b>Description</b></td></tr>
+<tr><td colspan="2">Matrix-analytic methods for models with phase-type distributions and Markovian arrival processes.</td></tr>
+</table>
+
+<b>NC</b> - Normalizing Constant (NC/)
+
+<table>
+<tr><th>Method</th><th>Description</th></tr>
+<tr><td colspan="2"><b>Additional Methods</b></td></tr>
+<tr><td><code>[normConst, lNormConst] = getNormalizingConstant(solver)</code></td><td>Get normalizing constant</td></tr>
+<tr><td colspan="2"><b>Valid Methods</b></td></tr>
+<tr><td colspan="2">'default', 'exact', 'imci', 'ls', 'le', 'mmint2', 'gleint', 'panacea', 'ca', 'kt', 'sampling', 'propfair', 'comom', 'cub', 'rd', 'nrp', 'nrl', 'gm'</td></tr>
+<tr><td colspan="2"><b>Description</b></td></tr>
+<tr><td colspan="2">Normalizing constant computation for closed product-form networks. Multiple exact and approximate algorithms.</td></tr>
+</table>
+
+<b>SSA</b> - Stochastic Simulation Algorithm (SSA/)
+
+<table>
+<tr><th>Method</th><th>Description</th></tr>
+<tr><td colspan="2"><b>Additional Methods</b></td></tr>
+<tr><td><code>[runtime, tranSysState, tranSync] = run(solver, options)</code></td><td>Run stochastic simulation</td></tr>
+<tr><td colspan="2"><b>Valid Methods</b></td></tr>
+<tr><td colspan="2">'default', 'ssa', 'serial', 'para', 'parallel', 'nrm'</td></tr>
+<tr><td colspan="2"><b>Description</b></td></tr>
+<tr><td colspan="2">Gillespie-style stochastic simulation. Supports all model features, provides trajectory sampling.</td></tr>
+</table>
+
+<b>AUTO</b> - Automatic solver selection (AUTO/)
+
+<table>
+<tr><th>Method</th><th>Description</th></tr>
+<tr><td colspan="2"><b>Additional Methods</b></td></tr>
+<tr><td><code>chooseSolver(solver, method)</code></td><td>Choose appropriate solver based on model</td></tr>
+<tr><td><code>chooseSolverAI(solver, method)</code></td><td>AI-based solver selection</td></tr>
+<tr><td><code>chooseSolverHeur(solver, method)</code></td><td>Heuristic solver selection</td></tr>
+<tr><td><code>chooseAvgSolverAI(solver)</code></td><td>AI-based choice for Avg methods</td></tr>
+<tr><td><code>chooseAvgSolverHeur(solver)</code></td><td>Heuristic choice for Avg methods</td></tr>
+<tr><td><code>delegate(solver, method, nretout, varargin)</code></td><td>Delegate method to chosen solver</td></tr>
+<tr><td colspan="2"><b>Description</b></td></tr>
+<tr><td colspan="2">Automatically selects the best solver for a given model and metric. Delegates all performance metric methods to the chosen solver.</td></tr>
+</table>
+
+@subsection core_solvers_external External Solver Wrappers
+
+<b>JMT</b> - Java Modelling Tools (JMT/)
+
+<table>
+<tr><th>Method</th><th>Description</th></tr>
+<tr><td colspan="2"><b>Configuration</b></td></tr>
+<tr><td><code>setJMTJarPath(solver, path)</code></td><td>Set path to JMT.jar</td></tr>
+<tr><td><code>path = getJMTJarPath(solver)</code></td><td>Get JMT.jar path</td></tr>
+<tr><td><code>path = getFilePath(solver)</code></td><td>Get file path for JMT files</td></tr>
+<tr><td><code>filename = getFileName(solver)</code></td><td>Get filename for JMT files</td></tr>
+<tr><td colspan="2"><b>Analysis</b></td></tr>
+<tr><td><code>[result, parsed] = getResults(solver)</code></td><td>Get simulation results</td></tr>
+<tr><td><code>result = getResultsJSIM(solver)</code></td><td>Get JSIM simulation results</td></tr>
+<tr><td><code>result = getResultsJMVA(solver)</code></td><td>Get JMVA analytical results</td></tr>
+<tr><td colspan="2"><b>File I/O</b></td></tr>
+<tr><td><code>writeJSIM(solver, sn, outputFileName)</code></td><td>Write JSIM model file</td></tr>
+<tr><td><code>writeJMVA(solver, sn, outputFileName, options)</code></td><td>Write JMVA model file</td></tr>
+<tr><td colspan="2"><b>Viewing</b></td></tr>
+<tr><td><code>jsimwView(solver, options)</code></td><td>View in JSIM What-If viewer</td></tr>
+<tr><td><code>jsimgView(solver, options)</code></td><td>View in JSIM graphical viewer</td></tr>
+<tr><td colspan="2"><b>Static Methods</b></td></tr>
+<tr><td><code>bool = JMT.isAvailable()</code></td><td>Check if JMT is available</td></tr>
+<tr><td><code>JMT.jsimgOpen(filename)</code></td><td>Open file in JSIM graphical mode</td></tr>
+<tr><td><code>JMT.jsimwOpen(filename)</code></td><td>Open file in JSIM What-If mode</td></tr>
+<tr><td><code>parseLogs(solver, model, isNodeLogged, metric)</code></td><td>Parse JMT log files</td></tr>
+<tr><td><code>parseTranState(solver, fileArv, fileDep, nodePreload)</code></td><td>Parse transient state data</td></tr>
+<tr><td><code>parseTranRespT(solver, fileArv, fileDep)</code></td><td>Parse transient response time data</td></tr>
+<tr><td colspan="2"><b>Valid Methods</b></td></tr>
+<tr><td colspan="2">'default', 'jsim', 'jmva', 'jmva.amva', 'jmva.mva', 'jmva.recal', 'jmva.comom', 'jmva.chow', 'jmva.bs', 'jmva.aql', 'jmva.lin', 'jmva.dmlin'</td></tr>
+<tr><td colspan="2"><b>Description</b></td></tr>
+<tr><td colspan="2">Wrapper for Java Modelling Tools solvers. Provides both simulation (JSIM) and analytical (JMVA) capabilities.</td></tr>
+</table>
+
+<b>LQNS</b> - Layered Queueing Network Solver (LQNS/)
+
+<table>
+<tr><th>Method</th><th>Description</th></tr>
+<tr><td colspan="2"><b>Analysis</b></td></tr>
+<tr><td><code>AvgTable = getAvgTable(solver)</code></td><td>Get metrics table for layered model</td></tr>
+<tr><td><code>[result, iterations] = parseXMLResults(solver, filename)</code></td><td>Parse LQNS XML results</td></tr>
+<tr><td><code>savedfname = plot(solver, model)</code></td><td>Plot layered model</td></tr>
+<tr><td colspan="2"><b>Static Methods</b></td></tr>
+<tr><td><code>bool = LQNS.isAvailable()</code></td><td>Check if LQNS is available on system path</td></tr>
+<tr><td colspan="2"><b>Valid Methods</b></td></tr>
+<tr><td colspan="2">'default', 'lqns', 'srvn', 'exactmva', 'srvn.exactmva', 'sim', 'lqsim', 'lqnsdefault'</td></tr>
+<tr><td colspan="2"><b>Description</b></td></tr>
+<tr><td colspan="2">Wrapper for Layered Queueing Network Solver. Supports both analytical and simulation methods for LQN models.</td></tr>
+</table>
+
+<b>QNS</b> - QNS Solver (LQNS/)
+
+<table>
+<tr><th>Method</th><th>Description</th></tr>
+<tr><td colspan="2"><b>Analysis</b></td></tr>
+<tr><td><code>runtime = run(solver)</code></td><td>Run QNS solver</td></tr>
+<tr><td colspan="2"><b>Static Methods</b></td></tr>
+<tr><td><code>bool = QNS.isAvailable()</code></td><td>Check if QNS is available</td></tr>
+<tr><td colspan="2"><b>Valid Methods</b></td></tr>
+<tr><td colspan="2">'default', 'conway', 'rolia', 'zhou', 'suri', 'reiser', 'schmidt'</td></tr>
+<tr><td colspan="2"><b>Description</b></td></tr>
+<tr><td colspan="2">Wrapper for QNS queueing network solver. Multiple approximation algorithms available.</td></tr>
+</table>
+
+@subsection core_solvers_composite Composite Model Solvers
+
+<b>LN</b> - Layered Network Decomposition (LN/)
+
+<table>
+<tr><th>Method</th><th>Description</th></tr>
+<tr><td colspan="2"><b>Constructor</b></td></tr>
+<tr><td><code>solver = LN(lqnmodel, solverFactory, options)</code></td><td>Create layered network solver with factory for per-layer solvers</td></tr>
+<tr><td colspan="2"><b>Analysis</b></td></tr>
+<tr><td><code>[QN,UN,RN,TN,AN,WN] = getEnsembleAvg(solver)</code></td><td>Get layer-averaged metrics</td></tr>
+<tr><td><code>[AvgTable,QT,UT,RT,WT,AT,TT] = getAvgTable(solver, useLQNSNaming)</code></td><td>Get metrics table with optional LQN naming</td></tr>
+<tr><td><code>cdfRespT = getCdfRespT(solver)</code></td><td>Get entry response time CDFs</td></tr>
+<tr><td><code>[QNlqn_t, UNlqn_t, TNlqn_t] = getTranAvg(solver)</code></td><td>Get transient layer averages</td></tr>
+<tr><td colspan="2"><b>Layer Management</b></td></tr>
+<tr><td><code>svcmatrix = getEntryServiceMatrix(solver)</code></td><td>Get entry service matrix</td></tr>
+<tr><td colspan="2"><b>Kotlin-Style Aliases (from EnsembleSolver)</b></td></tr>
+<tr><td><code>s = solver(obj, e)</code></td><td>Alias for getSolver - get solver for layer e</td></tr>
+<tr><td><code>it = iteration(obj)</code></td><td>Alias for getIteration - get current iteration</td></tr>
+<tr><td><code>E = numberOfModels(obj)</code></td><td>Alias for getNumberOfModels</td></tr>
+<tr><td><code>avg = ensembleAvg(obj)</code></td><td>Alias for getEnsembleAvg</td></tr>
+<tr><td><code>tables = ensembleAvgTables(obj)</code></td><td>Alias for getEnsembleAvgTables</td></tr>
+<tr><td colspan="2"><b>Valid Methods</b></td></tr>
+<tr><td colspan="2">'default', 'moment3'</td></tr>
+<tr><td colspan="2"><b>Description</b></td></tr>
+<tr><td colspan="2">Layered network decomposition solver. Iteratively solves each layer using specified per-layer solver.</td></tr>
+</table>
+
+<b>ENV</b> - Random Environment Solver (ENV/)
+
+<table>
+<tr><th>Method</th><th>Description</th></tr>
+<tr><td colspan="2"><b>Constructor</b></td></tr>
+<tr><td><code>solver = ENV(renv, solverFactory, options)</code></td><td>Create environment solver with factory for stage solvers</td></tr>
+<tr><td colspan="2"><b>Analysis</b></td></tr>
+<tr><td><code>[QN,UN,RN,TN,AN,WN] = getEnsembleAvg(solver)</code></td><td>Get environment-averaged metrics</td></tr>
+<tr><td><code>AvgTable = getAvgTable(solver, keepDisabled)</code></td><td>Get metrics table</td></tr>
+<tr><td><code>envsn = getStruct(solver)</code></td><td>Get environment structures (cell array)</td></tr>
+<tr><td><code>[renvInfGen, stageInfGen, ...] = getGenerator(solver)</code></td><td>Get random environment generator</td></tr>
+<tr><td colspan="2"><b>Description</b></td></tr>
+<tr><td colspan="2">Solver for models in random environments. Computes weighted averages across environment stages.</td></tr>
+</table>
+
+<b>LINE</b> - Unified solver interface
+
+| Method | Description |
+|--------|-------------|
+| LINE | Unified solver interface that delegates to appropriate solver |
+
+
+@section core_distributions Distributions (matlab/src/lang/processes/)
+
+The processes module provides probability distributions for service and arrival processes.
+
+@subsection core_dist_base Base Distribution Classes
+
+| Class | Description |
+|-------|-------------|
+| Distribution | Abstract base class for all distributions |
+| ContinuousDistribution | Base class for continuous distributions |
+| DiscreteDistribution | Base class for discrete distributions |
+| Markovian | Marker interface for Markovian (memoryless) distributions |
+| Process | Base class for stochastic processes |
+
+@subsection core_dist_continuous Continuous Distributions
+
+| Class | Parameters | Description |
+|-------|------------|-------------|
+| Exp | (rate) | Exponential distribution - memoryless, fundamental for queueing |
+| Det | (value) | Deterministic (constant) distribution |
+| Erlang | (k, rate) | Erlang distribution - sum of k exponentials |
+| Gamma | (shape, scale) | Gamma distribution - generalization of Erlang |
+| HyperExp | (p, rates) | Hyperexponential - mixture of exponentials |
+| Lognormal | (mu, sigma) | Log-normal distribution |
+| Pareto | (shape, scale) | Pareto (power-law) distribution |
+| Uniform | (min, max) | Continuous uniform distribution |
+| Weibull | (shape, scale) | Weibull distribution |
+
+@subsection core_dist_phasetype Phase-Type Distributions
+
+| Class | Parameters | Description |
+|-------|------------|-------------|
+| APH | (alpha, T) | Acyclic Phase-Type distribution |
+| Coxian | (mu, phi) | Coxian distribution (sequential phases) |
+| Cox2 | (mu1, mu2, phi1) | Two-phase Coxian distribution |
+| PH | (alpha, T) | General Phase-Type distribution |
+
+@subsection core_dist_map Markovian Arrival Processes
+
+| Class | Parameters | Description |
+|-------|------------|-------------|
+| MAP | (D0, D1) | Markovian Arrival Process |
+| MarkedMAP | (D0, D1, ...) | Marked Markovian Arrival Process |
+| MMPP2 | (lambda0, lambda1, sigma0, sigma1) | Two-state Markov-Modulated Poisson Process |
+| MarkedMMPP | (D0, D1, ...) | Marked Markov-Modulated Poisson Process |
+| MarkovModulated | - | Base for Markov-modulated processes |
+| MarkovProcess | - | General Markov process |
+| MarkovChain | - | Discrete/continuous-time Markov chain |
+
+@subsection core_dist_discrete Discrete Distributions
+
+| Class | Parameters | Description |
+|-------|------------|-------------|
+| Bernoulli | (p) | Bernoulli distribution (success/failure) |
+| Binomial | (n, p) | Binomial distribution |
+| DiscreteUniform | (min, max) | Discrete uniform distribution |
+| Geometric | (p) | Geometric distribution |
+| Poisson | (rate) | Poisson distribution |
+| Zipf | (s, N) | Zipf distribution (power-law for ranks) |
+| DiscreteSampler | (p, x) | Empirical discrete distribution from samples |
+
+@subsection core_dist_special Special Distributions
+
+| Class | Parameters | Description |
+|-------|------------|-------------|
+| Disabled | - | Placeholder for disabled process |
+| Immediate | - | Zero-time (instantaneous) distribution |
+| Replayer | (filename) | Replays events from a trace file |
+| Trace | (filename) | Generic trace representation |
+| EmpiricalCDF | (c, x) | Empirical CDF from data |
+
+
+@section core_layered Layered Networks (matlab/src/lang/layered/)
+
+The layered module provides support for layered queueing networks (LQNs).
+
+@subsection core_layered_main Main Classes
+
+| Class | Description |
+|-------|-------------|
+| LayeredNetwork | Container for layered queueing network models |
+| LayeredNetworkElement | Base class for LQN elements |
+| LayeredNetworkStruct | Internal structure representation |
+
+@subsection core_layered_elements Network Elements
+
+| Class | Description |
+|-------|-------------|
+| Processor | Hardware resource (CPU, disk, etc.) |
+| Host | Alias for Processor |
+| Task | Software component running on a processor |
+| Entry | Service interface of a task |
+| Activity | Unit of work within an entry |
+| ActivityPrecedence | Control flow between activities |
+
+@subsection core_layered_cache Cache Tasks
+
+| Class | Description |
+|-------|-------------|
+| CacheTask | Task with caching behavior |
+| FunctionTask | Task defined by a function |
+| ItemEntry | Entry for cache item access |
+
+*/

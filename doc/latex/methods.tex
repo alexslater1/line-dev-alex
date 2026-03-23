@@ -1,0 +1,141 @@
+{\centering
+\begin{longtable}{|p{1cm}|p{3.5cm}|p{0.45\linewidth}|p{2.5cm}|}
+\caption{Solution methods for \texttt{Network} solvers.}\label{TAB_solver_methods}\\
+\hline
+\textbf{Solver}	&\textbf{Method}	& \textbf{Description} & \textbf{Refs.} \\
+\hline
+\endfirsthead
+\multicolumn{4}{c}%
+{\tablename\ \thetable\ -- Solution methods for \texttt{Network} solvers.\textit{ Continued from previous page}} \\
+\hline
+\textbf{Solver}	&\textbf{Method}	& \textbf{Description} & \textbf{Refs.} \\
+\hline
+	\endhead
+\hline \multicolumn{4}{r}{\textit{Continued on next page}} \\
+\endfoot
+\hline
+\endlastfoot
+\hline
+\texttt{CTMC} & \texttt{default}  & Solution based on global balance  & \cite[\S~2.1.2]{BolGMT06}\\
+%\Matlab{\texttt{CTMC} & \texttt{gpu}  & Solution based on global balance run on GPU & --\\
+\hline
+\texttt{LDES} & \texttt{default}  & LINE Discrete Event Simulator using SSJ library & --\\
+\hline
+\texttt{FLUID} & \texttt{default}  & ODE-based mean field approximations  & \cite{PerC17,RuuskanenBAC21}\\
+\texttt{FLUID} & \texttt{matrix}  & Alias for the \texttt{default} method   & \cite{PerC17,RuuskanenBAC21}\\
+\texttt{FLUID} & \texttt{closing}  & Fluid with closing method for open classes & \cite[p. 507]{BolGMT06}\\
+\texttt{FLUID} & \texttt{statedep}  & Kurtz's mean field ODEs for closed models & \cite{PerC17}\\
+\texttt{FLUID} & \texttt{pnorm}  & ODE approximation using $p$-norm smoothing for the processor-share constraint & \cite{RuuskanenBAC21}\\
+\texttt{FLUID} & \texttt{softmin}  & Smoothed \texttt{statedep} with \textit{softmin} replacing \textit{min} functions & --\\
+\texttt{FLUID} & \texttt{diffusion}  & Diffusion approximation via Euler-Maruyama SDEs & \cite[\S~10.1.1]{BolGMT06}\\
+\texttt{FLUID} & \texttt{mfq}  & Markovian fluid queue for single-queue systems & \cite{HorT14}\\
+\texttt{FLUID} & \texttt{rmf}  & Refined mean field approximation for multi-list cache analysis & \cite{GastH16}\\
+\hline
+\texttt{JMT} & \texttt{default}  &  Alias for the \texttt{jsim} method   & --\\
+\texttt{JMT} & \texttt{jmva} & Alias for the \texttt{jmva.mva} method & --\\
+\texttt{JMT} & \texttt{jmva.mva}  & Exact MVA in JMVA & \cite{reis.lave80}\\
+\texttt{JMT} & \texttt{jmva.recal} & Exact RECAL algorithm in JMVA & \cite{ConG86}\\
+\texttt{JMT} & \texttt{jmva.comom} & Exact CoMoM algorithm in JMVA & \cite{Cas09}\\
+\texttt{JMT} & \texttt{jmva.amva} & Approximate MVA, alias for \texttt{jmva.bs}. &--\\
+\texttt{JMT} & \texttt{jmva.aql}  & AQL algorithm in JMVA & \cite{ZahES88}\\
+\texttt{JMT} & \texttt{jmva.bs} &  Bard-Schweitzer algorithm in JMVA & \cite[\S~9.1.1]{BolGMT06}\\
+\texttt{JMT} & \texttt{jmva.chow}  & Chow algorithm in JMVA & \cite{Chow83}\\
+\texttt{JMT} & \texttt{jmva.dmlin} & De Souza-Muntz Linearizer in JMVA & \cite{SilvaM90}\\
+\texttt{JMT} & \texttt{jmva.lin}  & Linearizer algorithm in JMVA & \cite{ChaN82}\\
+\texttt{JMT} & \texttt{jmva.ls}  & Logistic sampling in JMVA & \cite{Cas17}\\
+\texttt{JMT}& \texttt{jsim}  & Exact discrete-event simulation in JSIM & \cite{BerCS07}\\
+\texttt{JMT}& \texttt{replication}  & Transient simulation via independent replications & --\\
+\hline
+\texttt{MAM} & \texttt{default}  & Matrix-analytic solution of structured QBDs & \cite{Hor17}\\
+\texttt{MAM} & \texttt{dec.source}  & Decomposition with arrivals as from the source & --\\
+\texttt{MAM} & \texttt{dec.poisson}  & Decomposition based on Poisson arrival flows & --\\
+\texttt{MAM} & \texttt{dec.mna}  & Decomposition based on MNA method & \cite{ZhuC24}\\
+\texttt{MAM} & \texttt{inap}  & Iterative Numerical Approximation Procedure via RCAT & \cite{CasH13}\\
+\texttt{MAM} & \texttt{inapplus}  & Improved INAP with weighted rates (no normalization) & \cite{CasH13}\\
+\hline
+\texttt{MVA} & \texttt{default}  & Approximate MVA, same as \texttt{qd} option & --\\
+\texttt{MVA} & \texttt{amva}  & Approximate MVA, same as \texttt{qd} option   & --\\
+%\texttt{MVA} & \texttt{aql}  & Aggregate queue length approximate MVA & \cite{ZahES88}\\
+\texttt{MVA} & \texttt{bs}  & Bard-Schweitzer approximate MVA & \cite[\S~9.1.1]{BolGMT06}\\
+%\Matlab{\texttt{MVA} & \texttt{fli}  & Wang-Sevcik fraction line approximate MVA & \cite{WangS00}\\}
+\texttt{MVA} & \texttt{lin}  & Linearizer approximate MVA & \cite{ChaN82}\\
+\texttt{MVA} & \texttt{qd}  & Queue-dependent approximate MVA & \cite{casale2015qdamva}\\
+%\texttt{MVA} & \texttt{qdaql}  & Queue-dependent Aggregate queue length (AQL) approximate MVA & --\\
+\texttt{MVA} & \texttt{qdlin}  & Queue-dependent Linearizer approximate MVA & --\\
+%\Matlab{\texttt{MVA} & \texttt{qli}  & Wang-Sevcik queue line approximate MVA & \cite{WangS00}\\}
+\texttt{MVA} & \texttt{exact} & Exact solution, method depends on model  & --\\
+\texttt{MVA} & \texttt{mva} & Alias for the \texttt{mva.amva} method & \cite{reis.lave80},\cite{AfBaBr84}\\ \hline
+\texttt{MVA} & \texttt{aba.upper}  & Asymptotic bound analysis (upper bounds) & \cite[\S~9.4]{BolGMT06}\\
+\texttt{MVA} & \texttt{aba.lower}  & Asymptotic bound analysis (lower bounds) & \cite[\S~9.4]{BolGMT06}\\
+\texttt{MVA} & \texttt{bjb.upper}  & Balanced job bounds (upper bounds) & \cite[Table~3]{CasMS08}\\
+\texttt{MVA} & \texttt{bjb.lower}  & Balanced job bounds (lower bounds) & \cite[Table~3]{CasMS08}\\
+\texttt{MVA} & \texttt{gb.upper}  & Geometric square-root bounds (upper bounds) & \cite{CasMS08}\\
+\texttt{MVA} & \texttt{gb.lower}  & Geometric square-root bounds (lower bounds) & \cite{CasMS08}\\
+\texttt{MVA} & \texttt{pb.upper}  & Proportional bounds (upper bounds) & \cite[Table3]{CasMS08}\\
+\texttt{MVA} & \texttt{pb.lower}  & Proportional bounds (lower bounds) & \cite[Table3]{CasMS08}\\
+\texttt{MVA} & \texttt{sb.upper}  & Simple bounds (upper bounds, Thm. 3.2, $n=3$) & \cite[Table3]{Harel1999}\\
+\texttt{MVA} & \texttt{sb.lower}  & Simple bounds (lower bounds, Eq. 1.6) & \cite[Table3]{Harel1999}\\ \hline
+\texttt{MVA}& \texttt{gig1.allen}  & Allen-Cunneen formula - GI/G/1 & \cite[\S~6.3.4]{BolGMT06}\\
+\texttt{MVA}& \texttt{gig1.heyman}  & Heyman formula - GI/G/1 & --\\
+\texttt{MVA}& \texttt{gig1.kingman}  & Kingman upper bound- GI/G/1 & \cite[\S~6.3.6]{BolGMT06}\\
+\texttt{MVA}& \texttt{gig1.klb}  & Kramer-Langenbach-Belz formula - GI/G/1 & \cite[\S~6.3.4]{BolGMT06}\\
+\texttt{MVA}& \texttt{gig1.kobayashi}  & Kobayashi diffusion approximation - GI/G/1 & \cite[\S~10.1.1]{BolGMT06}\\
+\texttt{MVA}& \texttt{gig1.marchal}  & Marchal formula - GI/G/1 & \cite[\S~10.1.3]{BolGMT06}\\
+\texttt{MVA}& \texttt{gigk}  & Kingman approximation - GI/G/k & \\
+\texttt{MVA}& \texttt{mg1}  & Pollaczek–Khinchine formula - M/G/1 & \cite[\S~3.3.1]{BolGMT06}\\
+\texttt{MVA}& \texttt{mg1.fb}  & Feedback/LAS scheduling - M/G/1/FB & \cite{WieH03}\\
+\texttt{MVA}& \texttt{mg1.lrpt}  & Longest remaining PT - M/G/1/LRPT & \cite{WieH03}\\
+\texttt{MVA}& \texttt{mg1.psjf}  & Preemptive SJF - M/G/1/PSJF & \cite{WieH03}\\
+\texttt{MVA}& \texttt{mg1.srpt}  & Shortest remaining PT - M/G/1/SRPT & \cite{WieH03}\\
+\texttt{MVA}& \texttt{mg1.setf}  & Shortest elapsed time first - M/G/1/SETF & \cite{NuyW08}\\
+\texttt{MVA}& \texttt{mm1}  & Exact formula - M/M/1 & \cite[\S~6.2.1]{BolGMT06}\\
+\texttt{MVA}& \texttt{mmk}  & Exact formula - M/M/k (Erlang-C) & \\
+\hline
+\texttt{NC} & \texttt{default}  &  Alias for the \texttt{adaptive} method   & --\\
+\texttt{NC} & \texttt{adaptive}   & Automated choice of deterministic method &--\\
+\texttt{NC} & \texttt{exact} & Automated choice of exact solution method. & --\\
+%\Matlab{\texttt{NC} & \texttt{brute} & Brute force summation over all the state space & --\\}
+\texttt{NC} & \texttt{ca} & Multiclass convolution algorithm (exact) & --\\
+\texttt{NC} & \texttt{comom} & Class-oriented method of moments for hommogeneous models (exact) & \cite{Cas09}\\
+\texttt{NC} & \texttt{cub} & Grundmann-Moeller cubature rules & \cite{Cas17} \\
+%\texttt{NC} & \texttt{camp} & Convolution algorithm with multi-precision arithmetic. & --\\
+\texttt{NC} & \texttt{mva} & Product of throughputs on MVA lattice (exact) & \cite[Eq. (47)]{Rei81}\\
+\texttt{NC} & \texttt{imci}  & Improved Monte carlo integration sampler & \cite{WangCS16}\\
+\texttt{NC} & \texttt{kt} & Knessl-Tier asymptotic expansion  & \cite{KneT92} \\
+\texttt{NC} & \texttt{le} & Logistic asymptotic expansion & \cite{Cas17} \\
+\texttt{NC} & \texttt{ls} & Logistic sampling & \cite{Cas17} \\
+%\texttt{NC} & \texttt{mom} & Method of moments (exact) & \cite{Cas11a}\\
+%\Matlab{\texttt{NC} & \texttt{mmint2} & McKenna-Mitra integral (2-station models only) & \cite{McKM84}\\}
+\texttt{NC} & \texttt{nr.logit} & Norlund-Rice integral with logit transformation & \cite{CasHH21}\\
+\texttt{NC} & \texttt{nr.probit} & Norlund-Rice integral with probit transformation & \cite{CasHH21}\\
+\texttt{NC} & \texttt{panacea}   & Panacea asymptotic expansion & \cite{McKM84},\cite{Rob00}\\
+%\Matlab{\texttt{NC} & \texttt{propfair}   & Product of proportionally fair throughputs & \cite{Sch79}\\}
+\texttt{NC} & \texttt{rd}   & Reduction heuristic & \cite{CasHH21}\\
+%\texttt{NC} & \texttt{rgf} & Recursive generating function & \cite{HarL04}\\
+\texttt{NC} & \texttt{sampling}   & Automated selection of sampling method & --\\
+\texttt{NC} & \texttt{mem}   & Maximum Entropy Method for open queueing networks & \cite{Kou94}\\
+\hline
+\texttt{SSA} & \texttt{default}  & Alias for \texttt{nrm} if the model supports it, otherwise \texttt{serial}.  & --\\
+\texttt{SSA} & \texttt{nrm}   &  Next reaction method for population models (e.g., PS/INF scheduling). & \cite{And07}\\
+\texttt{SSA} & \texttt{serial}  & CTMC stochastic simulation on a single core& \cite{Gill77}\\
+%\Matlab{\texttt{SSA} & \texttt{serial.hash}   &  \texttt{serial} with state hashing (slower, less memory) & --\\}
+\texttt{SSA} & \texttt{para}   & Parallel simulations (independent replicas)  & --\\
+%\Matlab{\texttt{SSA} & \texttt{para.hash} & \texttt{para} with state hashing (slower, less memory) & --\\}
+%\texttt{SSA} & \texttt{taussa}   & Java-based SSA simulation  & \cite{SheC22}\\
+%\texttt{SSA} & \texttt{tauleap}   & Java-based SSA simulation with tau leaping  & \cite{SheC22}\\
+\hline
+%\label{TAB_solver_methods}
+\end{longtable}
+} % centering
+
+\paragraph{MAM method selection.}
+The MAM solver offers several decomposition approaches for networks with non-exponential service. The \texttt{dec.mna} method uses the MNA decomposition, which is generally the most accurate for networks with Markovian arrival processes. The \texttt{dec.source} method approximates arrivals at each station using the distribution observed at the source, while \texttt{dec.poisson} replaces all arrival flows with Poisson processes. The \texttt{inapplus} method provides an improved iterative approximation that avoids the normalization step of the standard \texttt{inap} method, and is recommended for models where RCAT convergence is slow.
+
+\paragraph{FLUID method selection.}
+The default FLUID method (\texttt{matrix}) formulates a set of ordinary differential equations (ODEs) that describe the mean-field dynamics of the network. The \texttt{statedep} method uses Kurtz's mean-field theorem, which is exact for state-dependent models in the large population limit. The \texttt{softmin} variant replaces the \textit{min} function with a smooth approximation, improving numerical stability of the ODE integration at the cost of a small approximation error. The \texttt{mfq} method solves Markovian fluid queues and is applicable to single-queue systems with MAP arrivals. The \texttt{diffusion} method applies Euler-Maruyama discretization to model stochastic fluctuations around the mean field. The \texttt{rmf} method uses the refined mean field approximation~\cite{GastH16} to analyze multi-list caches with RANDOM($m$) replacement, providing $O(1/N)$ corrections to mean field fixed points via Lyapunov equations; it is automatically selected when the model contains Cache nodes.
+
+\paragraph{NC method selection.}
+The normalizing constant solver provides both exact and approximate methods. For exact computation, \texttt{ca} (convolution algorithm) and \texttt{comom} (class-oriented method of moments) are available, with \texttt{comom} being generally faster for models with many classes. Among the approximate methods, \texttt{nr.logit} and \texttt{nr.probit} use Norlund-Rice integrals with different variable transformations and are suitable for large populations. The \texttt{rd} method applies a reduction heuristic that recursively simplifies the network. The \texttt{cub} method employs cubature rules for numerical integration of the normalizing constant. For open networks, the \texttt{mem} method applies the Maximum Entropy Method to estimate the joint queue-length distribution.
+
+\paragraph{SSA method selection.}
+The \texttt{serial} method implements Gillespie's stochastic simulation algorithm on a single core, while \texttt{para} runs independent replicas in parallel for faster convergence. The \texttt{nrm} (next reaction method) offers significantly faster simulation for population models with processor-sharing or infinite-server scheduling, as it avoids recomputing all transition rates after each event.

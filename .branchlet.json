@@ -1,0 +1,14 @@
+{
+  "worktreeCopyPatterns": [
+    ".env.local",
+    ".vscode/**",
+    "package.json",
+    "tsconfig.json"
+  ],
+  "worktreePathTemplate": "$BRANCH_NAME",
+  "postCreateCmd": [
+    "npm install",
+    "npm run db:populate"
+  ],
+  "terminalCommand": "code ."
+}

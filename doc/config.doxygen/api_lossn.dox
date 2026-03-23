@@ -1,0 +1,94 @@
+/**
+@page api_lossn Loss Networks
+@brief Analysis of networks with blocking
+
+The lossn module implements algorithms for loss networks where arrivals can
+be blocked (dropped) when resources are unavailable. These algorithms are based
+on the Erlang fixed-point approximation for multiclass loss systems.
+
+@subsection lossn_nc_solver NC Solver Integration
+
+The NC solver automatically uses the `erlangfp` method when detecting an open model
+with a single Delay node inside a Finite Capacity Region (FCR) configured with
+DROP policy. The FCR constraints are mapped to the Erlang fixed-point parameters:
+
+- **Global max jobs** → First capacity link (all classes contribute)
+- **Per-class max jobs** → Additional capacity links (one per class)
+
+<b>Example usage via NC solver:</b>
+@code{.m}
+model = Network('Loss Network');
+source = Source(model, 'Source');
+delay = Delay(model, 'Delay');
+sink = Sink(model, 'Sink');
+
+class1 = OpenClass(model, 'Class1', 0);
+class2 = OpenClass(model, 'Class2', 1);
+
+source.setArrival(class1, Exp(0.3));
+source.setArrival(class2, Exp(0.2));
+delay.setService(class1, Exp(1.0));
+delay.setService(class2, Exp(0.8));
+
+P = model.initRoutingMatrix();
+P.set(class1, class1, source, delay, 1.0);
+P.set(class1, class1, delay, sink, 1.0);
+P.set(class2, class2, source, delay, 1.0);
+P.set(class2, class2, delay, sink, 1.0);
+model.link(P);
+
+% Add FCR with drop policy
+fcr = model.addRegion({delay});
+fcr.setGlobalMaxJobs(5);
+fcr.setClassMaxJobs(class1, 3);
+fcr.setClassMaxJobs(class2, 3);
+fcr.setDropRule(class1, true);  % true = drop
+fcr.setDropRule(class2, true);
+
+% NC solver automatically selects 'erlangfp' method
+solver = SolverNC(model);
+avgTable = solver.getAvgTable();
+@endcode
+
+@note The NC solver requires DROP policy (not WAITQ/blocking) for FCR loss network analysis.
+
+@subsection spec_lossn_functions Key Functions
+
+- @ref lossn_erlangfp "lossn_erlangfp" - Erlang fixed point approximation for loss networks
+
+@anchor lossn_erlangfp
+### lossn_erlangfp
+  <b>Description:</b> Erlang fixed-point approximation for multiclass loss networks.
+  Computes effective throughputs and blocking probabilities using iterative fixed-point
+  computation based on the reduced-load approximation.
+
+  <b>Syntax:</b>
+  @code
+  [QLen, Loss, E, niter] = lossn_erlangfp(nu, A, C)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>nu</td><td>Offered load vector (1 x R), where nu(r) = arrival_rate(r) / service_rate(r) for each class r</td></tr>
+  <tr><td>A</td><td>Routing/constraint matrix (J x R), where A(j,r) = 1 if class r uses link/constraint j</td></tr>
+  <tr><td>C</td><td>Capacity vector (J x 1), where C(j) is the maximum jobs allowed on link/constraint j</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>QLen</td><td>Effective throughput per class (1 x R), i.e., arrival rate after blocking</td></tr>
+  <tr><td>Loss</td><td>Loss probability per class (1 x R)</td></tr>
+  <tr><td>E</td><td>Blocking probability per link/constraint (J x 1)</td></tr>
+  <tr><td>niter</td><td>Number of fixed-point iterations performed</td></tr>
+  </table>
+
+  <b>Algorithm:</b> The algorithm iterates until convergence, computing:
+  1. Reduced loads on each link based on current blocking estimates
+  2. Link blocking probabilities using Erlang-B formula
+  3. Class loss probabilities as product of link blocking probabilities
+
+  <b>Reference:</b> Kelly, F.P. (1991). Loss networks. Annals of Applied Probability.
+
+*/

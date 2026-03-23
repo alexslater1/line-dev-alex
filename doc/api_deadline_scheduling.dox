@@ -1,0 +1,286 @@
+/**
+@page api_deadline_scheduling Soft Deadline Support and Deadline-Based Scheduling
+@brief Deadline-based scheduling strategies (EDD/EDF) and soft deadline modeling
+
+This module provides support for modeling soft deadlines (due dates) in queueing systems
+and scheduling strategies that prioritize jobs based on their deadlines.
+
+@section deadline_overview Overview
+
+Soft deadlines allow modeling systems where jobs have target completion times (due dates),
+but missing a deadline does not result in job termination. This differs from hard deadlines
+where jobs are dropped or canceled when deadlines are missed.
+
+LINE supports deadline-based scheduling through:
+- **EDD (Earliest Due Date)**: Non-preemptive priority scheduling based on absolute deadlines
+- **EDF (Earliest Deadline First)**: Non-preemptive priority scheduling based on absolute deadlines
+- **Soft deadline modeling**: Jobs have associated deadline values used by schedulers
+
+@section deadline_vs_impatience Deadlines vs. Impatience
+
+While both deadlines and impatience model time-based constraints on jobs, they differ:
+
+<table>
+<tr><th>Feature</th><th>Soft Deadlines</th><th>Impatience (Reneging)</th></tr>
+<tr><td>Purpose</td><td>Target completion time for scheduling</td><td>Maximum waiting time before abandonment</td></tr>
+<tr><td>Behavior</td><td>Influences scheduling priority</td><td>Job leaves queue if patience expires</td></tr>
+<tr><td>Job outcome</td><td>Job completes (may miss deadline)</td><td>Job abandons and leaves system</td></tr>
+<tr><td>Classification</td><td>ImpatienceType.DEADLINE</td><td>ImpatienceType.RENEGING or BALKING</td></tr>
+</table>
+
+The `ImpatienceType` enum classifies different types of time-based behaviors:
+- `ImpatienceType.DEADLINE` - Soft deadlines for scheduling
+- `ImpatienceType.RENEGING` - Customer abandonment after waiting
+- `ImpatienceType.BALKING` - Customer refusal to join based on queue state
+
+@section deadline_schedulers Deadline-Based Schedulers
+
+@subsection edd_scheduler EDD (Earliest Due Date)
+
+EDD is a non-preemptive priority scheduling strategy that selects the job with the earliest
+absolute deadline for service. Jobs are ordered by their deadline values.
+
+<b>Properties:</b>
+- Non-preemptive (jobs complete once started)
+- Priority class: NPPrio (Non-Preemptive Priority)
+- Minimizes maximum lateness in single-server systems
+- Optimal for minimizing maximum lateness (non-preemptive case)
+
+<b>Solver Support:</b> JMT, LDES (via SSJ simulation)
+
+@subsection edf_scheduler EDF (Earliest Deadline First)
+
+EDF is conceptually similar to EDD in the non-preemptive case supported by LINE.
+Both select jobs with the earliest deadline.
+
+<b>Properties:</b>
+- Non-preemptive in LINE's implementation
+- Priority class: NPPrio (Non-Preemptive Priority)
+- Commonly used in real-time systems
+
+<b>Solver Support:</b> JMT, LDES (via SSJ simulation)
+
+<b>Note:</b> In LINE's current implementation, EDD and EDF are functionally equivalent
+as both implement non-preemptive earliest-deadline scheduling. In broader scheduling
+literature, EDF often refers to preemptive variants.
+
+@section deadline_usage Usage
+
+@subsection deadline_matlab MATLAB
+
+<b>Setting Deadlines on Job Classes:</b>
+@code
+% Create open class with deadline
+urgentClass = OpenClass(model, 'Urgent', 0);
+urgentClass.setDeadline(5.0);  % Deadline of 5 time units
+
+% Or specify deadline in constructor
+urgentClass = OpenClass(model, 'Urgent', 0, 5.0);
+
+% Create closed class with deadline
+batchClass = ClosedClass(model, 'Batch', 10, node);
+batchClass.setDeadline(20.0);
+@endcode
+
+<b>Creating Queue with Deadline Scheduling:</b>
+@code
+% EDD scheduling
+queue = Queue(model, 'Server', SchedStrategy.EDD);
+
+% EDF scheduling
+queue = Queue(model, 'Server', SchedStrategy.EDF);
+@endcode
+
+<b>Complete Example:</b>
+@code
+model = Network('DeadlineExample');
+
+% Define nodes
+source = Source(model, 'Source');
+queue = Queue(model, 'Server', SchedStrategy.EDD);
+sink = Sink(model, 'Sink');
+
+% Define job classes with different deadlines
+urgentClass = OpenClass(model, 'Urgent', 0);
+urgentClass.setDeadline(5.0);   % Tight deadline
+
+regularClass = OpenClass(model, 'Regular', 0);
+regularClass.setDeadline(15.0);  % Loose deadline
+
+% Set arrival and service distributions
+source.setArrival(urgentClass, Exp(0.3));
+source.setArrival(regularClass, Exp(0.5));
+queue.setService(urgentClass, Exp(2.0));
+queue.setService(regularClass, Exp(2.0));
+
+% Link network
+model.link(Network.serialRouting(source, queue, sink));
+
+% Solve
+solver = SolverJMT(model);
+results = solver.getAvgTable();
+@endcode
+
+@subsection deadline_java Java/Kotlin
+
+<b>Setting Deadlines on Job Classes:</b>
+@code
+// Create open class with deadline
+OpenClass urgentClass = new OpenClass(model, "Urgent", 0);
+urgentClass.setDeadline(5.0);  // Deadline of 5 time units
+
+// Or use constructor
+OpenClass urgentClass = new OpenClass(model, "Urgent", 0, 5.0);
+
+// Create closed class with deadline
+ClosedClass batchClass = new ClosedClass(model, "Batch", 10, node);
+batchClass.setDeadline(20.0);
+@endcode
+
+<b>Creating Queue with Deadline Scheduling:</b>
+@code
+// EDD scheduling
+Queue queue = new Queue(model, "Server", SchedStrategy.EDD);
+
+// EDF scheduling
+Queue queue = new Queue(model, "Server", SchedStrategy.EDF);
+@endcode
+
+<b>Complete Example:</b>
+@code
+Network model = new Network("DeadlineExample");
+
+// Define nodes
+Source source = new Source(model, "Source");
+Queue queue = new Queue(model, "Server", SchedStrategy.EDD);
+Sink sink = new Sink(model, "Sink");
+
+// Define job classes with different deadlines
+OpenClass urgentClass = new OpenClass(model, "Urgent", 0, 5.0);   // Tight deadline
+OpenClass regularClass = new OpenClass(model, "Regular", 0, 15.0); // Loose deadline
+
+// Set arrival and service distributions
+source.setArrival(urgentClass, new Exp(0.3));
+source.setArrival(regularClass, new Exp(0.5));
+queue.setService(urgentClass, new Exp(2.0));
+queue.setService(regularClass, new Exp(2.0));
+
+// Link network
+model.link(Network.serialRouting(source, queue, sink));
+
+// Solve
+SolverJMT solver = new SolverJMT(model);
+solver.getAvgTable();
+@endcode
+
+@subsection deadline_python Python
+
+<b>Setting Deadlines on Job Classes:</b>
+@code
+# Create open class with deadline
+urgent_class = OpenClass(model, 'Urgent', prio=0, deadline=5.0)
+
+# For existing class
+urgent_class.set_deadline(5.0)
+
+# Create closed class with deadline
+batch_class = ClosedClass(model, 'Batch', population=10, refstat=node, deadline=20.0)
+@endcode
+
+<b>Creating Queue with Deadline Scheduling:</b>
+@code
+# EDD scheduling
+queue = Queue(model, 'Server', SchedStrategy.EDD)
+
+# EDF scheduling
+queue = Queue(model, 'Server', SchedStrategy.EDF)
+@endcode
+
+<b>Complete Example:</b>
+@code
+from line_solver import *
+
+model = Network('DeadlineExample')
+
+# Define nodes
+source = Source(model, 'Source')
+queue = Queue(model, 'Server', SchedStrategy.EDD)
+sink = Sink(model, 'Sink')
+
+# Define job classes with different deadlines
+urgent_class = OpenClass(model, 'Urgent', prio=0, deadline=5.0)   # Tight deadline
+regular_class = OpenClass(model, 'Regular', prio=0, deadline=15.0) # Loose deadline
+
+# Set arrival and service distributions
+source.setArrival(urgent_class, Exp(0.3))
+source.setArrival(regular_class, Exp(0.5))
+queue.setService(urgent_class, Exp(2.0))
+queue.setService(regular_class, Exp(2.0))
+
+# Link network
+model.link(Network.serialRouting(source, queue, sink))
+
+# Solve
+solver = SolverJMT(model)
+results = solver.getAvgTable()
+@endcode
+
+@section deadline_api API Reference
+
+@subsection deadline_jobclass JobClass Methods
+
+<b>setDeadline(double deadline)</b> - Set soft deadline for job class
+
+<b>Syntax:</b>
+@code
+jobClass.setDeadline(deadline)  % MATLAB
+jobClass.setDeadline(deadline);  // Java
+job_class.set_deadline(deadline)  # Python
+@endcode
+
+<b>Parameters:</b>
+<table>
+<tr><th>Name</th><th>Type</th><th>Description</th></tr>
+<tr><td>deadline</td><td>double</td><td>Target completion time (soft deadline)</td></tr>
+</table>
+
+<b>getDeadline()</b> - Get deadline for job class
+
+<b>Syntax:</b>
+@code
+dl = jobClass.getDeadline()  % MATLAB
+double dl = jobClass.getDeadline();  // Java
+dl = job_class.get_deadline()  # Python
+@endcode
+
+@subsection deadline_schedstrategy SchedStrategy Constants
+
+Available deadline-based scheduling strategies:
+
+<b>MATLAB/Java/Kotlin:</b>
+@code
+SchedStrategy.EDD  % Earliest Due Date
+SchedStrategy.EDF  % Earliest Deadline First
+@endcode
+
+<b>Python:</b>
+@code
+SchedStrategy.EDD  # Earliest Due Date
+SchedStrategy.EDF  # Earliest Deadline First
+@endcode
+
+@section deadline_examples Examples
+
+<b>Example Files:</b>
+- `python/examples/example_deadline.py` - Python example with EDD/EDF scheduling
+- `matlab/test/test_forwarding.m` - MATLAB test cases including deadline examples
+- `jar/src/test/java/jline/solvers/jmt/SolverJMTTest.java` - Java test cases
+
+@section deadline_references References
+
+- Liu, C. L., & Layland, J. W. (1973). Scheduling algorithms for multiprogramming in a hard-real-time environment. Journal of the ACM, 20(1), 46-61.
+- Pinedo, M. L. (2016). Scheduling: Theory, Algorithms, and Systems (5th ed.). Springer.
+
+@see @ref api_impatience for customer abandonment (reneging/balking)
+@see ImpatienceType for classification of time-based behaviors
+*/

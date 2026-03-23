@@ -1,0 +1,15 @@
+MEX {
+	global:
+		mexFunction;
+		mexfilerequiredapiversion;
+		emlrtMexFcnProperties;
+		pfqn_xzgsblow;
+		pfqn_xzgsblow_initialize;
+		pfqn_xzgsblow_terminate;
+		pfqn_xzgsblow_atexit;
+		emxFree_real_T;
+		emxInit_real_T;
+		emxEnsureCapacity_real_T;
+	local:
+		*;
+};

@@ -1,0 +1,244 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+<link rel="stylesheet" href="css/line-solver.css" />
+	<meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<meta name="description" content="LINE Solver - Tutorial 7: Response Time Distribution" />
+	<meta name="keywords" content="LINE solver, tutorials, queueing networks, response time, percentiles" />
+	<meta name="author" content="Giuliano Casale" />
+	<title>Tutorial 7: Response Time Distribution - LINE Solver Documentation</title>
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" />
+	<script type="text/javascript" src="js/jquery-1.11.0.min.js"></script>
+	<script type="text/javascript" src="js/line-solver.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-matlab.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-java.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-kotlin.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+	<script type="text/javascript">
+		$(document).ready(function(){
+
+			$('.sidebar-nav .expandable > a').click(function(e){
+				e.preventDefault();
+				var parent = $(this).parent();
+				parent.toggleClass('open');
+			});
+
+			$('.language-tab').click(function(){
+				var lang = $(this).data('lang');
+				var section = $(this).closest('.tutorial-section');
+				section.find('.language-tab').removeClass('active');
+				section.find('.language-tab[data-lang="' + lang + '"]').addClass('active');
+				section.find('.language-content').removeClass('active');
+				section.find('.language-content[data-lang="' + lang + '"]').addClass('active');
+			});
+
+			$('.copy-button').click(function(){
+				var button = $(this);
+				var codeBlock = button.siblings('pre').find('code').length > 0
+					? button.siblings('pre').find('code').text()
+					: button.siblings('pre').text();
+
+				if (navigator.clipboard && navigator.clipboard.writeText) {
+					navigator.clipboard.writeText(codeBlock).then(function() {
+						button.text('Copied!').addClass('copied');
+						setTimeout(function(){
+							button.text('Copy').removeClass('copied');
+						}, 2000);
+					});
+				} else {
+					var textArea = document.createElement("textarea");
+					textArea.value = codeBlock;
+					document.body.appendChild(textArea);
+					textArea.select();
+					document.execCommand('copy');
+					document.body.removeChild(textArea);
+					button.text('Copied!').addClass('copied');
+					setTimeout(function(){
+						button.text('Copy').removeClass('copied');
+					}, 2000);
+				}
+			});
+
+			Prism.highlightAll();
+		});
+	</script>
+</head>
+<body>
+<div id="wrap">
+
+<div id="header">
+	<p id="toplinks"><a href="index.html">Home</a> | <a href="tutorials.html">Tutorials</a> | <a href="index.html#solvers">Solvers</a></p>
+
+	<h1><a href="index.html">LINE Solver</a></h1>
+	<p id="slogan">Queueing Theory Algorithms</p>
+</div>
+
+<div id="sidebar">
+<div id="sidebar-content">
+<h2>Navigate</h2>
+<ul class="sidebar-nav">
+<li><a href="index.html">Home</a></li>
+<li><a href="index.html#overview">Overview</a></li>
+<li><a href="index.html#papers">Documentation</a></li>
+<li><a href="tutorials.html">Tutorials</a></li>
+<!-- Re-enable when 3.0.4 is out: <li><a href="mcp.html">MCP Integration</a></li> -->
+<li><a href="index.html#solvers">Solvers</a></li>
+</ul>
+
+<h2>Support</h2>
+<ul class="sidebar-links">
+<li><a href="https://sourceforge.net/projects/line-solver/" target="_blank">Sourceforge site</a></li>
+<li><a href="https://github.com/imperial-qore/line-solver" target="_blank">Github repo</a></li>
+</ul>
+
+<h2>News</h2>
+<ul class="sidebar-news">
+<li><strong>2026</strong> - <a href="https://sourceforge.net/projects/line-solver/files/latest/download">LINE 3.0.4</a> is out!</li>
+<li><strong>2025</strong> - First release of LINE 3.0.0</li>
+<li><strong>2019</strong> - First release of LINE 2.0.0</li>
+<li><strong>2016</strong> - First release of LINE 1.0.0</li>
+</ul>
+</div>
+</div>
+
+<div id="content">
+	<div class="tutorial-nav">
+		<a href="tutorials.html">&larr; Back to Tutorials</a>
+		<span class="nav-prev"><a href="tutorial-06.html">Prev: Tutorial 06</a></span>
+		<span class="nav-next"><a href="tutorial-08.html">Next: Tutorial 08</a></span>
+	</div>
+
+	<div id="tutorial-07" class="tutorial-section">
+	<h2>Tutorial 7: Response Time Distribution and Percentiles</h2>
+	<p class="tutorial-subtitle">This example illustrates the computation of response time percentiles in a queueing network model. We compare results from the Fluid solver (analytical steady-state) and JMT simulation (transient).</p>
+
+	<div class="network-diagram">
+		<img src="img/tut07_respt_network.png" alt="Response Time Distribution Network Diagram" style="max-width: 300px; display: block; margin: 15px auto;">
+	</div>
+
+	<div class="example-section">
+	<div class="language-tabs">
+		<button class="language-tab" data-lang="matlab">MATLAB</button>
+		<button class="language-tab" data-lang="kotlin">Kotlin</button>
+		<button class="language-tab active" data-lang="python">Python</button>
+	</div>
+
+	<div class="language-content" data-lang="matlab">
+		<div class="code-block">
+		<button class="copy-button">Copy</button>
+		<pre><code class="language-matlab">% Response time distribution and percentiles
+model = Network('Model');
+
+% Block 1: nodes
+node{1} = Delay(model, 'Delay');
+node{2} = Queue(model, 'Queue1', SchedStrategy.PS);
+
+% Block 2: classes
+jobclass{1} = ClosedClass(model, 'Class1', 5, node{1}, 0);
+node{1}.setService(jobclass{1}, Exp(1.0));
+node{2}.setService(jobclass{1}, Exp(0.5));
+
+% Block 3: topology
+model.link(Network.serialRouting(node{1},node{2}));
+
+% Block 4: solution
+RDfluid = FLD(model,'seed',23000).getCdfRespT();
+RDsim = JMT(model,'seed',23000,'samples',1e4).getCdfRespT();
+
+%% Plot results
+if ~isempty(RDsim{2,1})
+    semilogx(RDsim{2,1}(:,2),1-RDsim{2,1}(:,1),'r'); hold on;
+    semilogx(RDfluid{2,1}(:,2),1-RDfluid{2,1}(:,1),'k--');
+    legend('jmt-transient','fluid-steady','Location','Best');
+    ylabel('Pr(T > t)'); xlabel('time t');
+end</code></pre>
+		</div>
+	</div>
+
+	<div class="language-content" data-lang="kotlin">
+		<div class="code-block">
+		<button class="copy-button">Copy</button>
+		<pre><code class="language-kotlin">// Response time distribution and percentiles
+val model = Network("Model")
+
+// Block 1: nodes
+val delay = Delay(model, "Delay")
+val queue = Queue(model, "Queue1", SchedStrategy.PS)
+
+// Block 2: classes
+val jobclass = ClosedClass(model, "Class1", 5, delay, 0)
+delay.setService(jobclass, Exp(1.0))
+queue.setService(jobclass, Exp(0.5))
+
+// Block 3: topology
+model.link(Network.serialRouting(delay, queue))
+
+// Block 4: solution
+val RDfluid = FLD(model, "seed", 23000).cdfRespT
+val RDsim = JMT(model, "seed", 23000, "samples", 10000).cdfRespT
+
+// Results can be plotted using external tools</code></pre>
+		</div>
+	</div>
+
+	<div class="language-content active" data-lang="python">
+		<div class="code-block">
+		<button class="copy-button">Copy</button>
+		<pre><code class="language-python">from line_solver import *
+import matplotlib.pyplot as plt
+
+model = Network('Model')
+
+# Block 1: nodes
+delay = Delay(model, 'Delay')
+queue = Queue(model, 'Queue1', SchedStrategy.PS)
+
+# Block 2: classes
+jobclass = ClosedClass(model, 'Class1', 5, delay, 0)
+delay.set_service(jobclass, Exp(1.0))
+queue.set_service(jobclass, Exp(0.5))
+
+# Block 3: topology
+model.link(Network.serial_routing(delay, queue))
+
+# Block 4: solution
+RDfluid = FLD(model).cdf_resp_t()
+RDsim = JMT(model, seed=23000, samples=10000).cdf_resp_t()
+
+# Plot results
+if RDsim[1][0] is not None:
+    plt.semilogx(RDsim[1][0][:, 1], 1 - RDsim[1][0][:, 0], 'r-', label='jmt-transient')
+    plt.semilogx(RDfluid[1][0][:, 1], 1 - RDfluid[1][0][:, 0], 'k--', label='fluid-steady')
+    plt.legend()
+    plt.ylabel('Pr(T > t)')
+    plt.xlabel('time t')
+    plt.show()</code></pre>
+		</div>
+	</div>
+	</div>
+
+	<div class="output-block">
+		<h4>Expected Output</h4>
+		<p>The plot shows the complementary CDF of response times comparing JMT simulation (transient) with Fluid solver (steady-state):</p>
+		<img src="img/tut07_respt_cdf.png" alt="Response Time Distribution" style="max-width: 400px; display: block; margin: 15px auto;">
+	</div>
+	</div>
+
+	<div class="tutorial-nav">
+		<a href="tutorials.html">&larr; Back to Tutorials</a>
+		<span class="nav-prev"><a href="tutorial-06.html">Prev: Tutorial 06</a></span>
+		<span class="nav-next"><a href="tutorial-08.html">Next: Tutorial 08</a></span>
+	</div>
+
+	<div id="footer">
+		<p>&copy; 2016-2025 LINE Project. Released under BSD-3 license.
+		<a href="https://github.com/imperial-qore/line-solver">GitHub</a> |
+		<a href="https://sourceforge.net/projects/line-solver/">SourceForge</a></p>
+	</div>
+</div>
+
+</div>
+</body>
+</html>

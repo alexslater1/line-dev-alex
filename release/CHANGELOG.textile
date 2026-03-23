@@ -1,0 +1,128 @@
+- docs: add advanced features test coverage list
+- docs: hide MCP sidebar and manual until 3.0.4
+- j feat: add --maxevents CLI option and total event tracking
+- j feat: add FCFSPR FCFSPI LPS scheduling to LDES
+- j feat: add Heidelberger-Welch spectral CI to LDES
+- j feat: add LDES solver and solve subcommand to CLI
+- j feat: add LN solver phase-2 forwarding support
+- j feat: add dedicated LdesCLI for standalone ldes.jar
+- j feat: close JAR solver gaps from GAPS.md
+- j fix: LN convergence check it>2 to it>iter_min
+- j fix: M2M parser handles decimal firing weights and missing routing targets
+- j fix: atomic firing and mode map ordering for SPN
+- j fix: enabling memory for non-exponential SPN transitions
+- j fix: exclude FCR-blocked jobs from station QLen
+- j fix: replygraph populated before activity hashnames available
+- j fix: revert SSA/MVA regressions from routing and priority changes
+- j perf: dense matrix storage in Fluid ODE trajectory handlers
+- j refactor: harmonize test tolerances onto TestTools constants
+- j refactor: replace special chars in CLI help text
+- j test: add 100 solver coverage tests
+- j test: add MAM solver coverage tests (63 tests)
+- j test: remove slow Fluid sub-solver from LayeredTest
+- j test: update LN buildModel4 QLen expected precision
+- j test: update LN buildModel4 expected to MATLAB ground truth
+- j test: update LN test values for relax_factor=0.5
+- j,m fix: LDES LJD/LJCD state-dependent rate re-scaling
+- j,m fix: MATLAB-wrapper FCFSPRIO and solver lang support
+- j,m,p feat: add DMAP process and fix LDES utilization
+- j,m,p feat: add MAP and DMAP distance measures
+- j,m,p feat: add modelView with line-viewer and MCP docs
+- j,m,p feat: close remaining API gaps across codebases
+- j,m,p feat: port missing APIs across all codebases
+- j,m,p fix: CTMC stochcomp singularity and MW solver gaps
+- j,m,p fix: LDES utilization MSER truncation and routing fixes
+- j,m,p fix: add LCFSPRPRIO/FCFSPRPRIO to SolverCTMC feature sets
+- j,m,p fix: priority scheduling policies in afterEvent
+- j,p feat: LN phase-2 support and LQNX parser fixes
+- j,p feat: add GraalVM native-image build for LDES
+- j,p feat: add LCFSPRPRIO/FCFSPRPRIO to Java and Python
+- j,p feat: add jsimg file input to LDES solver
+- j,p feat: add linear admission constraints to FCR
+- j,p feat: port LQNS V5 interlocking to JAR and Python native
+- j,p fix,perf: FES LJCD scaling and ENV ODE step
+- j,p fix: LDES PSPRIO multiserver hang, JSON routing artifacts
+- j,p fix: LN convergence check and MVA LCFS dispatch
+- j,p fix: LN iter_min convergence and ENV MaxStep accuracy
+- j,p fix: disable Fluid hide_immediate default to fix LN accuracy
+- m feat: add LINEDefaultLang global for solver lang override
+- m feat: add LQNS V5-style interlock analysis to LN solver
+- m feat: add MATLAB ports of mapqn bnd functions
+- m feat: add SolverORIS for ORIS Docker SPN analysis
+- m feat: add mexify.m scripts for 92 new functions
+- m feat: close MATLAB solver and I/O gaps from GAPS.md
+- m fix,perf: fluid router routing and MAM CDF speedup
+- m fix: FCFSPRPRIO/LCFSPRPRIO buffer priority indexing
+- m fix: FLD solver NaN rate and init_sol size handling
+- m fix: LN convergence check and callservt growth cap
+- m fix: RoutingMatrix subsasgn, refreshRates, LN set_state
+- m fix: disable Fluid hide_immediate default to fix LN accuracy
+- m fix: gate QRF verbose output on solver verbosity
+- m fix: improve per-class queue length from FCFS distribution
+- m fix: refresh sn.routing after setProbRouting in link
+- m fix: rename DESOptions to LDESOptions in LDES solver
+- m fix: rename LDES constructor to match class name
+- m fix: replace nodevisits check with BFS reachability in mmt
+- m fix: skip immediate elimination when ≤1 timed state remains
+- m fix: stop RAND-to-PROB routing conversion in from_line_links
+- m perf: add codegen MEX binaries for aoi and cache
+- m perf: add codegen MEX binaries for fj, mam, mc, pfqn, qsys, sn, util
+- m perf: add codegen MEX support for 145 functions
+- m refactor: remove SolverORIS
+- m,j feat: enable LN interlocking by default
+- m,j fix: JNetwork java-lang solver and LQN loop edges
+- m,j fix: JSON round-trip for Zipf, Prior, MMPP2, precedences
+- m,j fix: MNA closed bisection bug and remaining local tolerances
+- m,j fix: propagate solver verbose to global setting
+- m,j fix: silence qrf output and add tests
+- m,j,p docs: document spectral CI method in manuals
+- m,j,p docs: remove SimPy, rename DES to LDES everywhere
+- m,j,p feat: Add Non-Markovian and SPN support to CTMC, create solver examples
+- m,j,p feat: AoI analysis, LDES enhancements, LN Inf/NaN recovery
+- m,j,p feat: DES→LDES rename, solver DEBUG tracing
+- m,j,p feat: JSON save/load for advanced queue features
+- m,j,p feat: add FCR linear constraint examples and parity test
+- m,j,p feat: add LSODA MEX, REST API, toJsonObject
+- m,j,p feat: add linemodel save/load IO support
+- m,j,p feat: add retrial, immfeed, signals, AoI, rename MAPMsG
+- m,j,p feat: extend JSON IO and LDES result serialization
+- m,j,p feat: resolve remaining GAPS.md open items
+- m,j,p fix: JSON round-trip parity across codebases
+- m,j,p fix: LN relax_factor 0.9→0.5, remove Inf/NaN recovery
+- m,j,p fix: LN windowed averaging off-by-one loop index
+- m,j,p test: JSON round-trip tests for advanced features
+- m,p feat: add FES examples and NC convolution solver
+- m,p feat: add expolynomial distribution class and IO
+- m,p feat: add jsimg input and new schedules to LDES wrappers
+- m,p feat: add pfqn_conv and fix FES/MAM bugs
+- m,p feat: auto-download ldes.jar and fix LDES package path
+- m,p feat: extend JSON save/load for round-trip tests
+- m,p fix: restore AoI parity and update manual
+- m,p fix: restore python mam fld parity
+- p feat: add SPN analysis infrastructure and design SPN-to-QN conversion framework
+- p feat: add SPN detection and non-Markovian conversion to CTMC solver
+- p feat: add eventFilt and sympy symbolic CTMC support
+- p feat: add native LSODA ODE solver port from liblsoda
+- p feat: add sync-action-based CTMC Q builder
+- p feat: auto-download LDES native binary from SourceForge
+- p feat: bundle LDES native binary in PyPI wheel
+- p feat: close Python native gaps from GAPS.md
+- p feat: close Python wrapper gaps from GAPS.md
+- p fix: FLD HyperExp dict key mismatch and closing ODE
+- p fix: FLD passage time CDF match MATLAB integration
+- p fix: ItemEntry missing attrs and LDES typo
+- p fix: LN callservtproc initialization and growth-rate cap
+- p fix: LN cur_cls routing for callmean > nreplicas
+- p fix: LN host layer routing for atServer call classes
+- p fix: LN single-replica population and server selection
+- p fix: add SPN Transition firing support to CTMC handler
+- p fix: add missing fan_in/fan_out init in CacheTask
+- p fix: correct import path for ProcessType in linemodel_io
+- p fix: correct zero-indexed class and visit checks
+- p fix: replygraph off-by-one in multi-entry LN routing
+- p fix: restore PS queue linear indexing in AMVA
+- p perf: wire all orphaned numba JIT modules
+- p refactor: remove _convert_spn_to_qn method from SolverCTMC
+- p refactor: remove all numba JIT support
+- p refactor: remove redundant SPN transition extraction helpers
+- p refactor: replace LDES SimPy with subprocess/JSON backend

@@ -1,0 +1,267 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+<link rel="stylesheet" href="css/line-solver.css" />
+	<meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<meta name="description" content="LINE Solver - Tutorial 6: Queueing Network with Caching" />
+	<meta name="keywords" content="LINE solver, tutorials, queueing networks, caching, LRU" />
+	<meta name="author" content="Giuliano Casale" />
+	<title>Tutorial 6: Queueing Network with Caching - LINE Solver Documentation</title>
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" />
+	<script type="text/javascript" src="js/jquery-1.11.0.min.js"></script>
+	<script type="text/javascript" src="js/line-solver.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-matlab.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-java.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-kotlin.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+	<script type="text/javascript">
+		$(document).ready(function(){
+
+			$('.sidebar-nav .expandable > a').click(function(e){
+				e.preventDefault();
+				var parent = $(this).parent();
+				parent.toggleClass('open');
+			});
+
+			$('.language-tab').click(function(){
+				var lang = $(this).data('lang');
+				var section = $(this).closest('.tutorial-section');
+				section.find('.language-tab').removeClass('active');
+				section.find('.language-tab[data-lang="' + lang + '"]').addClass('active');
+				section.find('.language-content').removeClass('active');
+				section.find('.language-content[data-lang="' + lang + '"]').addClass('active');
+			});
+
+			$('.copy-button').click(function(){
+				var button = $(this);
+				var codeBlock = button.siblings('pre').find('code').length > 0
+					? button.siblings('pre').find('code').text()
+					: button.siblings('pre').text();
+
+				if (navigator.clipboard && navigator.clipboard.writeText) {
+					navigator.clipboard.writeText(codeBlock).then(function() {
+						button.text('Copied!').addClass('copied');
+						setTimeout(function(){
+							button.text('Copy').removeClass('copied');
+						}, 2000);
+					});
+				} else {
+					var textArea = document.createElement("textarea");
+					textArea.value = codeBlock;
+					document.body.appendChild(textArea);
+					textArea.select();
+					document.execCommand('copy');
+					document.body.removeChild(textArea);
+					button.text('Copied!').addClass('copied');
+					setTimeout(function(){
+						button.text('Copy').removeClass('copied');
+					}, 2000);
+				}
+			});
+
+			Prism.highlightAll();
+		});
+	</script>
+</head>
+<body>
+<div id="wrap">
+
+<div id="header">
+	<p id="toplinks"><a href="index.html">Home</a> | <a href="tutorials.html">Tutorials</a> | <a href="index.html#solvers">Solvers</a></p>
+
+	<h1><a href="index.html">LINE Solver</a></h1>
+	<p id="slogan">Queueing Theory Algorithms</p>
+</div>
+
+<div id="sidebar">
+<div id="sidebar-content">
+<h2>Navigate</h2>
+<ul class="sidebar-nav">
+<li><a href="index.html">Home</a></li>
+<li><a href="index.html#overview">Overview</a></li>
+<li><a href="index.html#papers">Documentation</a></li>
+<li><a href="tutorials.html">Tutorials</a></li>
+<!-- Re-enable when 3.0.4 is out: <li><a href="mcp.html">MCP Integration</a></li> -->
+<li><a href="index.html#solvers">Solvers</a></li>
+</ul>
+
+<h2>Support</h2>
+<ul class="sidebar-links">
+<li><a href="https://sourceforge.net/projects/line-solver/" target="_blank">Sourceforge site</a></li>
+<li><a href="https://github.com/imperial-qore/line-solver" target="_blank">Github repo</a></li>
+</ul>
+
+<h2>News</h2>
+<ul class="sidebar-news">
+<li><strong>2026</strong> - <a href="https://sourceforge.net/projects/line-solver/files/latest/download">LINE 3.0.4</a> is out!</li>
+<li><strong>2025</strong> - First release of LINE 3.0.0</li>
+<li><strong>2019</strong> - First release of LINE 2.0.0</li>
+<li><strong>2016</strong> - First release of LINE 1.0.0</li>
+</ul>
+</div>
+</div>
+
+<div id="content">
+	<div class="tutorial-nav">
+		<a href="tutorials.html">&larr; Back to Tutorials</a>
+		<span class="nav-prev"><a href="tutorial-05.html">Prev: Tutorial 05</a></span>
+		<span class="nav-next"><a href="tutorial-07.html">Next: Tutorial 07</a></span>
+	</div>
+
+	<div id="tutorial-06" class="tutorial-section">
+	<h2>Tutorial 6: Queueing Network with Caching</h2>
+	<p class="tutorial-subtitle">This example shows how to include a cache with Least Recently Used (LRU) replacement policy in a queueing network. Requests choose the item to read according to a Zipf popularity distribution, and the cache switches the resulting hit or miss into different classes (HitClass or MissClass) to keep track of the read outcome.</p>
+
+	<div class="network-diagram">
+		<img src="img/tut06_cache_network.png" alt="Caching Network Diagram" style="max-width: 400px; display: block; margin: 15px auto;">
+	</div>
+
+	<div class="example-section">
+	<div class="language-tabs">
+		<button class="language-tab active" data-lang="matlab">MATLAB</button>
+		<button class="language-tab" data-lang="kotlin">Kotlin</button>
+		<button class="language-tab" data-lang="python">Python</button>
+	</div>
+
+	<div class="language-content active" data-lang="matlab">
+		<div class="code-block">
+		<button class="copy-button">Copy</button>
+		<pre><code class="language-matlab">% Example 6: A queueing network with caching
+model = Network('Model');
+
+nItems = 1000;
+cacheSize = 50;
+% Block 1: nodes
+clientDelay = Delay(model, 'Client');
+cacheNode = Cache(model, 'Cache', nItems, cacheSize, ReplacementStrategy.LRU());
+cacheDelay = Delay(model, 'CacheDelay');
+
+% Block 2: classes
+clientClass = ClosedClass(model, 'ClientClass', 1, clientDelay, 0);
+hitClass = ClosedClass(model, 'HitClass', 0, clientDelay, 0);
+missClass = ClosedClass(model, 'MissClass', 0, clientDelay, 0);
+
+clientDelay.setService(clientClass, Immediate());
+cacheDelay.setService(hitClass, Exp.fitMean(0.2));
+cacheDelay.setService(missClass, Exp.fitMean(1));
+
+cacheNode.setRead(clientClass, Zipf(1.4,nItems));
+cacheNode.setHitClass(clientClass, hitClass);
+cacheNode.setMissClass(clientClass, missClass);
+
+% Block 3: topology
+P = model.initRoutingMatrix;
+P{clientClass, clientClass}(clientDelay, cacheNode)=1;
+P{hitClass, hitClass}(cacheNode, cacheDelay)=1;
+P{missClass, missClass}(cacheNode, cacheDelay)=1;
+P{hitClass, clientClass}(cacheDelay, clientDelay)=1;
+P{missClass, clientClass}(cacheDelay, clientDelay)=1;
+model.link(P);
+
+% Block 4: solution
+ssaAvgTable = SSA(model,'samples',2e4,'seed',23000).avgNodeTable()</code></pre>
+		</div>
+	</div>
+
+	<div class="language-content" data-lang="kotlin">
+		<div class="code-block">
+		<button class="copy-button">Copy</button>
+		<pre><code class="language-kotlin">// Example 6: A queueing network with caching
+val model = Network("Model")
+
+val nItems = 1000
+val cacheSize = 50
+
+// Block 1: nodes
+val clientDelay = Delay(model, "Client")
+val cacheNode = Cache(model, "Cache", nItems, cacheSize, ReplacementStrategy.LRU)
+val cacheDelay = Delay(model, "CacheDelay")
+
+// Block 2: classes
+val clientClass = ClosedClass(model, "ClientClass", 1, clientDelay, 0)
+val hitClass = ClosedClass(model, "HitClass", 0, clientDelay, 0)
+val missClass = ClosedClass(model, "MissClass", 0, clientDelay, 0)
+
+clientDelay.setService(clientClass, Immediate())
+cacheDelay.setService(hitClass, Exp.fitMean(0.2))
+cacheDelay.setService(missClass, Exp.fitMean(1.0))
+
+cacheNode.setRead(clientClass, Zipf(1.4, nItems))
+cacheNode.setHitClass(clientClass, hitClass)
+cacheNode.setMissClass(clientClass, missClass)
+
+// Block 3: topology
+val P = model.initRoutingMatrix()
+P.set(clientClass, clientClass, clientDelay, cacheNode, 1.0)
+P.set(hitClass, hitClass, cacheNode, cacheDelay, 1.0)
+P.set(missClass, missClass, cacheNode, cacheDelay, 1.0)
+P.set(hitClass, clientClass, cacheDelay, clientDelay, 1.0)
+P.set(missClass, clientClass, cacheDelay, clientDelay, 1.0)
+model.link(P)
+
+// Block 4: solution
+SSA(model, "samples", 20000, "seed", 23000).avgTable.print()</code></pre>
+		</div>
+	</div>
+
+	<div class="language-content" data-lang="python">
+		<div class="code-block">
+		<button class="copy-button">Copy</button>
+		<pre><code class="language-python">from line_solver import *
+
+model = Network('Model')
+
+nItems = 1000
+cacheSize = 50
+# Block 1: nodes
+clientDelay = Delay(model, 'Client')
+cacheNode = Cache(model, 'Cache', nItems, cacheSize, ReplacementStrategy.LRU)
+cacheDelay = Delay(model, 'CacheDelay')
+
+# Block 2: classes
+clientClass = ClosedClass(model, 'ClientClass', 1, clientDelay, 0)
+hitClass = ClosedClass(model, 'HitClass', 0, clientDelay, 0)
+missClass = ClosedClass(model, 'MissClass', 0, clientDelay, 0)
+
+clientDelay.set_service(clientClass, Immediate())
+cacheDelay.set_service(hitClass, Exp.fit_mean(0.2))
+cacheDelay.set_service(missClass, Exp.fit_mean(1.0))
+
+cacheNode.set_read(clientClass, Zipf(1.4, nItems))
+cacheNode.set_hit_class(clientClass, hitClass)
+cacheNode.set_miss_class(clientClass, missClass)
+
+# Block 3: topology
+P = model.init_routing_matrix()
+P.set(clientClass, clientClass, clientDelay, cacheNode, 1.0)
+P.set(hitClass, hitClass, cacheNode, cacheDelay, 1.0)
+P.set(missClass, missClass, cacheNode, cacheDelay, 1.0)
+P.set(hitClass, clientClass, cacheDelay, clientDelay, 1.0)
+P.set(missClass, clientClass, cacheDelay, clientDelay, 1.0)
+model.link(P)
+
+# Block 4: solution
+ssaAvgTable = SSA(model, samples=20000, seed=23000).avg_table()</code></pre>
+		</div>
+	</div>
+	</div>
+	</div>
+
+	<div class="tutorial-nav">
+		<a href="tutorials.html">&larr; Back to Tutorials</a>
+		<span class="nav-prev"><a href="tutorial-05.html">Prev: Tutorial 05</a></span>
+		<span class="nav-next"><a href="tutorial-07.html">Next: Tutorial 07</a></span>
+	</div>
+
+	<div id="footer">
+		<p>&copy; 2016-2025 LINE Project. Released under BSD-3 license.
+		<a href="https://github.com/imperial-qore/line-solver">GitHub</a> |
+		<a href="https://sourceforge.net/projects/line-solver/">SourceForge</a></p>
+	</div>
+</div>
+
+</div>
+</body>
+</html>

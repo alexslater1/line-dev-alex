@@ -1,0 +1,420 @@
+\documentclass[9pt,landscape,a4paper]{extarticle}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[sfdefault]{noto-sans}  % Noto Sans font
+\usepackage[ttdefault=true]{sourcecodepro}  % Source Code Pro for monospace (straight quotes)
+\usepackage{upquote}  % Straight quotes in verbatim/ttfamily
+\usepackage{tikz}
+\usetikzlibrary{positioning,arrows.meta,shapes.geometric,fit}
+\usepackage[landscape,margin=0.3cm]{geometry}
+\usepackage{multicol}
+\usepackage{amsmath}
+\usepackage{array}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{titlesec}
+\usepackage{fancyhdr}
+\usepackage[hidelinks]{hyperref}
+\usepackage{tcolorbox}
+\tcbuselibrary{listings,skins}
+
+% Formatting with balanced spacing
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0pt}
+\setlength{\columnsep}{0.4cm}
+\setlist[itemize]{noitemsep, topsep=0pt, leftmargin=1.2em, parsep=0pt}
+
+% Reduce verbatim spacing
+\usepackage{etoolbox}
+\makeatletter
+\preto{\@verbatim}{\topsep=0pt \partopsep=0pt}
+\makeatother
+
+% Colors
+\definecolor{sectioncolor}{RGB}{0,102,204}
+\definecolor{codebg}{RGB}{245,245,245}
+\definecolor{codeframe}{RGB}{200,200,200}
+\definecolor{tipbg}{RGB}{232,245,233}
+\definecolor{tipframe}{RGB}{76,175,80}
+
+% Code box style
+\newtcolorbox{codebox}{
+  colback=codebg,
+  colframe=codeframe,
+  boxrule=0.3pt,
+  arc=1pt,
+  left=2pt,right=2pt,top=1pt,bottom=1pt,
+  fontupper=\ttfamily\scriptsize,
+  before skip=1pt,
+  after skip=1pt
+}
+
+% Tip/note box style
+\newtcolorbox{tipbox}{
+  colback=tipbg,
+  colframe=tipframe,
+  boxrule=0.3pt,
+  arc=1pt,
+  left=2pt,right=2pt,top=1pt,bottom=1pt,
+  fontupper=\scriptsize,
+  before skip=1pt,
+  after skip=1pt
+}
+
+% Section formatting
+\titleformat{\section}{\normalfont\bfseries\small\color{sectioncolor}}{\thesection}{0.3em}{}
+\titlespacing*{\section}{0pt}{0.5ex}{0.1ex}
+
+% Header colors
+\definecolor{headerblue}{RGB}{0,102,204}
+
+% Header/footer
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0pt}
+\fancyfoot[C]{\small LINE v3.0 -- \url{http://line-solver.sf.net}}
+
+\begin{document}
+
+% Title
+\begin{center}
+{\Large\bfseries\color{headerblue} LINE Solver Cheatsheet}\\[-0.2em]
+{\small\url{http://line-solver.sf.net}}
+\end{center}
+
+\vspace{-0.2em}
+
+% Model Structure - full width box with 4 language columns aligned to cheatsheet columns
+\newlength{\colwidth}
+\setlength{\colwidth}{0.2425\textwidth}
+\begin{tcolorbox}[colback=codebg, colframe=codeframe, boxrule=0.3pt, arc=1pt,
+  left=2pt, right=2pt, top=1pt, bottom=1pt, title={\small\textbf{Model Structure}},
+  coltitle=black, colbacktitle=codebg]
+\ttfamily\tiny\setlength{\tabcolsep}{0pt}
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}p{\colwidth}p{\colwidth}@{\hspace{5mm}}p{\colwidth}@{\hspace{5mm}}p{\colwidth}@{}}
+\textbf{\textsf{\scriptsize MATLAB}} & \textbf{\textsf{\scriptsize Java}} & \textbf{\textsf{\scriptsize Kotlin}} & \textbf{\textsf{\scriptsize Python}} \\[1pt]
+model = Network('name'); &
+model = new Network("name"); &
+val model = Network("name") &
+model = Network("name") \\
+source = Source(model,'Src'); &
+source = new Source(model,"Src"); &
+val source = Source(model,"Src") &
+source = Source(model,"Src") \\
+queue = Queue(model,'Q', &
+queue = new Queue(model,"Q", &
+val queue = Queue(model,"Q", &
+queue = Queue(model,"Q", \\
+\ \ SchedStrategy.FCFS); &
+\ \ SchedStrategy.FCFS); &
+\ \ SchedStrategy.FCFS) &
+\ \ SchedStrategy.FCFS) \\
+sink = Sink(model,'Snk'); &
+sink = new Sink(model,"Snk"); &
+val sink = Sink(model,"Snk") &
+sink = Sink(model,"Snk") \\
+oclass = OpenClass(model,'C1'); &
+oclass = new OpenClass(model,"C1"); &
+val oclass = OpenClass(model,"C1") &
+oclass = OpenClass(model,"C1") \\
+source.setArrival(oclass,Exp(1)); &
+source.setArrival(oclass,new Exp(1)); &
+source.setArrival(oclass,Exp(1.0)) &
+source.setArrival(oclass,Exp(1)) \\
+queue.setService(oclass,Exp(2)); &
+queue.setService(oclass,new Exp(2)); &
+queue.setService(oclass,Exp(2.0)) &
+queue.setService(oclass,Exp(2)) \\
+model.link(Network.serialRouting( &
+model.link(Network.serialRouting( &
+model.link(Network.serialRouting( &
+model.link(Network.serialRouting( \\
+\ \ source,queue,sink)); &
+\ \ source,queue,sink)); &
+\ \ source,queue,sink)) &
+\ \ source,queue,sink)) \\
+MVA(model).avgTable() &
+new SolverMVA(model).getAvgTable() &
+SolverMVA(model).avgTable() &
+SolverMVA(model).getAvgTable() \\
+\end{tabular*}
+\end{tcolorbox}
+
+\vspace{0.1em}
+
+\begin{multicols}{4}
+
+\section*{Node Types}
+\begin{tabular}{@{}ll@{}}
+\texttt{Cache} & Caching station \\
+\texttt{ClassSwitch} & Class switching \\
+\texttt{Delay} & Infinite server \\
+\texttt{Fork} & Forks jobs \\
+\texttt{Join} & Joins jobs \\
+\texttt{Place} & Petri net place \\
+\texttt{Queue} & Queueing station \\
+\texttt{Router} & Routing node \\
+\texttt{Sink} & Job departures (open) \\
+\texttt{Source} & Job arrivals (open) \\
+\texttt{Transition} & Petri net transition \\
+\end{tabular}
+
+\section*{Job Classes}
+\texttt{ClosedClass(model, 'name', N, refStat)}\\
+\texttt{OpenClass(model, 'name')}\\
+\texttt{SelfLoopingClass(model, 'name', N, ref)}
+
+\begin{tipbox}
+\textbf{Tip:} The reference station (refStat/ref) is where response time and throughput are measured for closed classes. For SelfLoopingClass, jobs remain at the reference station.
+\end{tipbox}
+
+\section*{Distributions}
+\begin{tabular}{@{}ll@{}}
+\texttt{APH($\boldsymbol{\alpha}$, T)} & Acyclic PH \\
+\texttt{Coxian($\boldsymbol{\mu}$, $\boldsymbol{\phi}$)} & Coxian \\
+\texttt{Det(v)} & Deterministic \\
+\texttt{Disabled} & None \\
+\texttt{Erlang($\lambda$, k)} & Erlang-k \\
+\texttt{Exp($\lambda$)} & Exponential \\
+\texttt{Gamma($\alpha$, $\beta$)} & Gamma \\
+\texttt{HyperExp(p, $\lambda_1$, $\lambda_2$)} & Hyper-exp \\
+\texttt{Lognormal($\mu$, $\sigma$)} & Log-normal \\
+\texttt{MAP(D0, D1)} & MAP \\
+\texttt{MMPP2($\lambda_1$, $\lambda_2$, $\sigma_1$, $\sigma_2$)} & MMPP(2) \\
+\texttt{Pareto($\alpha$, k)} & Pareto \\
+\texttt{PH($\boldsymbol{\alpha}$, T)} & Phase-type \\
+\texttt{Replayer(trace)} & Trace replay \\
+\texttt{Uniform(a, b)} & Uniform \\
+\texttt{Weibull($\alpha$, $\beta$)} & Weibull \\
+\end{tabular}
+
+\begin{tipbox}
+\textbf{Tip:} Fit distributions to moments: \texttt{Exp.fitMean(m)}, \texttt{Erlang.fitMeanAndSCV(m,scv)}, \texttt{APH.fit(mean,scv,skew)}.
+\end{tipbox}
+
+\section*{Scheduling Strategies}
+\begin{tabular}{@{}ll@{}}
+\texttt{DPS} & Discriminatory PS \\
+\texttt{DPSPRIO} & DPS with Priority \\
+\texttt{FB} & Feedback (LAS) \\
+\texttt{FCFS} & First-Come First-Served \\
+\texttt{FCFSPRIO} & FCFS with Priority \\
+\texttt{GPS} & Generalized PS \\
+\texttt{GPSPRIO} & GPS with Priority \\
+\texttt{HOL} & Head-of-Line Priority \\
+\texttt{INF} & Infinite Servers \\
+\texttt{LCFS} & Last-Come First-Served \\
+\texttt{LCFSPRIO} & LCFS with Priority \\
+\texttt{LCFSPR} & LCFS Preemptive \\
+\texttt{LEPT} & Longest Expected PT \\
+\texttt{LJF} & Longest Job First \\
+\texttt{LRPT} & Longest Remaining PT \\
+\texttt{PS} & Processor Sharing \\
+\texttt{PSJF} & Preemptive SJF \\
+\texttt{PSPRIO} & PS with Priority \\
+\texttt{SEPT} & Shortest Expected PT \\
+\texttt{SETF} & Shortest Elapsed Time First \\
+\texttt{SIRO} & Random (SIRO) \\
+\texttt{SJF} & Shortest Job First \\
+\texttt{SRPT} & Shortest Remaining PT \\
+\end{tabular}
+
+\begin{tipbox}
+\textbf{Tip:} Set DPS/GPS weights with \texttt{queue.setService(class, dist, weight)}. Set priorities via \texttt{ClosedClass(..., priority)} or \texttt{class.setPriority(p)}. Only \texttt{*PRIO} policies are sensitive to priorities.
+\end{tipbox}
+
+\section*{Solvers}
+\begin{tabular}{@{}ll@{}}
+\texttt{AUTO} & Auto-select best \\
+\texttt{CTMC} & CTMC (exact, small) \\
+\texttt{LDES} & Discrete Event Sim \\
+\texttt{ENV} & Random environments \\
+\texttt{FLD} & Fluid/mean-field ODEs \\
+\texttt{JMT} & JMT simulator \\
+\texttt{LN} & Layered networks \\
+\texttt{LQNS} & LQNS interface \\
+\texttt{MAM} & Matrix Analytic Methods \\
+\texttt{MVA} & Mean Value Analysis \\
+\texttt{NC} & Normalizing Constant Methods \\
+\texttt{QNS} & LQNS product-form solver \\
+\texttt{SSA} & Stochastic simulation \\
+\end{tabular}
+
+\begin{tipbox}
+\textbf{Tip:} Use \texttt{listMethods()} to see available methods for each solver. Use \texttt{MVA} for product-form networks (fastest), \texttt{CTMC} for exact small models, \texttt{JMT}/\texttt{SSA} for general simulation.
+\end{tipbox}
+
+\section*{Solver Options}
+\begin{codebox}
+MVA(model, 'method', 'exact')\\
+JMT(model, 'seed', 123,\\
+\quad 'samples', 10000)\\
+SSA(model, 'samples', 5000,\\
+\quad 'method', 'para')
+\end{codebox}
+
+\section*{Output Metrics}
+\begin{tabular}{@{}ll@{}}
+\texttt{ArvR} & Arrival rate \\
+\texttt{QLen} & Mean queue length \\
+\texttt{ResidT} & Residence time (total across visits) \\
+\texttt{RespT} & Response time (per visit) \\
+\texttt{Tput} & Throughput \\
+\texttt{Util} & Server utilization \\
+\end{tabular}
+
+\section*{Analysis Methods}
+\begin{codebox}
+solver.avgTable()  \% alias: aT\\
+solver.avgQLen(), avgUtil()\\
+solver.avgRespT(), avgTput()\\
+solver.avgSysRespT()\\
+solver.avgSysTput()\\
+solver.avgChainQLen()
+\end{codebox}
+
+\section*{Method Aliases}
+\begin{tabular}{@{}ll@{}}
+\texttt{aCT} & \texttt{getAvgChainTable} \\
+\texttt{aNT} & \texttt{getAvgNodeTable} \\
+\texttt{aST} & \texttt{getAvgSysTable} \\
+\texttt{aT} & \texttt{getAvgTable} \\
+\end{tabular}
+
+\section*{Routing}
+\begin{codebox}
+model.link(Network.serialRouting(\\
+\quad n1,n2,n3));\\
+n1.setProbRouting(class, n2, 0.7);\\
+n1.setRouting(class,\\
+\quad RoutingStrategy.RROBIN);
+\end{codebox}
+
+\section*{Multi-Server \& Finite Capacity}
+\begin{codebox}
+queue.setNumServers(k);\\
+queue.setCapacity(bufferSize);
+\end{codebox}
+
+\section*{Class Switching}
+\begin{codebox}
+cs = ClassSwitch(model, 'CS');\\
+P = [0.3 0.7; 0.5 0.5];\\
+cs.setClassSwitching(P);
+\end{codebox}
+
+\section*{Fork-Join Networks}
+\begin{codebox}
+fork = Fork(model, 'Fork');\\
+join = Join(model, 'Join', fork);
+\end{codebox}
+
+\section*{Layered Networks}
+\begin{codebox}
+lqn = LayeredNetwork('name');\\
+P = Processor(lqn,'P',1,\\
+\quad SchedStrategy.PS);\\
+T = Task(lqn,'T',1,\\
+\quad SchedStrategy.REF).on(P);\\
+E = Entry(lqn,'E').on(T);\\
+A = Activity(lqn,'A').on(T)\\
+\quad .boundTo(E).setHostDemand(Exp(1));
+\end{codebox}
+
+\section*{Caching}
+\begin{codebox}
+cache = Cache(model,'Cache',\\
+\quad nItems,cap,ReplacementStrategy.LRU);\\
+cache.setPopularity(Zipf(1.4));
+\end{codebox}
+
+\section*{Model Import/Export}
+\begin{codebox}
+model.view()  \% Open in JMT\\
+model.save('file.jsimg')\\
+Network.load('file.jsimg')
+\end{codebox}
+
+\begin{tipbox}
+\textbf{Tip:} Check model properties: \texttt{model.hasProductFormSolution()} (exact MVA possible), \texttt{model.getNumStations()}, \texttt{model.getNumClasses()}, \texttt{model.getStruct()} (internal representation).
+\end{tipbox}
+
+\section*{Routing Strategies}
+\begin{tabular}{@{}ll@{}}
+\texttt{JSQ} & Join shortest queue \\
+\texttt{KCHOICES} & Power of k choices \\
+\texttt{PROB} & Probabilistic routing \\
+\texttt{RAND} & Random selection \\
+\texttt{RROBIN} & Round-robin \\
+\end{tabular}
+
+\end{multicols}
+
+% QN diagram at bottom right - outside multicols (COMMENTED OUT)
+% \begin{tikzpicture}[remember picture, overlay]
+% \node[anchor=south east, xshift=-0.3cm, yshift=0.5cm] at (current page.south east) {
+% \begin{tikzpicture}[
+%   xscale=0.84,
+%   yscale=0.87,
+%   % Disk queues and servers (blue)
+%   queue/.style={draw, thick, fill=headerblue!15, minimum width=0.5cm, minimum height=0.25cm, rounded corners=1pt},
+%   server/.style={draw, thick, fill=headerblue!30, circle, minimum size=0.2cm},
+%   % CPU queue and server (orange/red)
+%   cpuqueue/.style={draw, thick, fill=orange!20, minimum width=0.5cm, minimum height=0.25cm, rounded corners=1pt},
+%   cpuserver/.style={draw, thick, fill=orange!40, circle, minimum size=0.2cm},
+%   % Delay servers (green)
+%   delayserver/.style={draw, semithick, fill=green!30, circle, minimum size=0.03cm},
+%   arr/.style={-{Stealth[length=1.5mm]}, semithick, headerblue!70},
+% ]
+%   % Delay/Think station (left) - two vertical lines with 3 stacked circles (green), shifted up 5mm
+%   \draw[thick, green!50!black] (-3.25,0.05) -- (-3.25,0.95);
+%   \draw[thick, green!50!black] (-2.55,0.05) -- (-2.55,0.95);
+%   \node[delayserver] (t1) at (-2.80,0.83) {};
+%   \node[delayserver] (t2) at (-2.80,0.5) {};
+%   \node[delayserver] (t3) at (-2.80,0.17) {};
+%   \coordinate (think-in) at (-2.80,0.05);
+%   \coordinate (think-out) at (-2.55,0.5);
+%   \node[above=0.12cm of t1, font=\tiny, green!50!black] {Delay};
+%
+%   % Central CPU (orange)
+%   \node[cpuqueue] (cpuq) at (0,0) {};
+%   \node[cpuserver, right=0.05cm of cpuq] (cpus) {};
+%   \node[below=0.15cm of cpuq, font=\tiny\bfseries, orange!70!black] {CPU};
+%
+%   % Disk 1 (top right) - blue
+%   \node[queue] (d1q) at (3.2,1.3) {};
+%   \node[server, right=0.05cm of d1q] (d1s) {};
+%   \node[below=0.15cm of d1q, font=\tiny, headerblue] {D1};
+%
+%   % Disk 2 (right) - blue - aligned with D1, D3
+%   \node[queue] (d2q) at (3.2,0) {};
+%   \node[server, right=0.05cm of d2q] (d2s) {};
+%   \node[below=0.15cm of d2q, font=\tiny, headerblue] {D2};
+%
+%   % Disk 3 (bottom right) - blue
+%   \node[queue] (d3q) at (3.2,-1.3) {};
+%   \node[server, right=0.05cm of d3q] (d3s) {};
+%   \node[below=0.15cm of d3q, font=\tiny, headerblue] {D3};
+%
+%   % Arrows - Think to CPU (from middle circle height)
+%   \draw[arr] (-2.55,0.5) -- (-0.3,0.5) -- (-0.3,0) -- (cpuq.west);
+%
+%   % Arrows - CPU to Disks (going above/below to avoid overlap)
+%   \draw[arr] (cpus.east) -- ++(0.3,0) |- (d1q.west);
+%   \draw[arr] (cpus.east) -- (d2q.west);
+%   \draw[arr] (cpus.east) -- ++(0.3,0) |- (d3q.west);
+%
+%   % Arrows - Disks back to CPU (looping back, entering middle of queue)
+%   \draw[arr] (d1s.east) -- ++(0.6,0) |- (-0.15,2.0) -- (-0.15,0.2);
+%   \draw[arr] (d2s.east) -- ++(0.9,0) |- (-0.15,-2.3) -- (-0.15,-0.2);
+%   \draw[arr] (d3s.east) -- ++(0.6,0) |- (-0.15,-2.0) -- (-0.15,-0.2);
+%
+%   % Arrow - CPU back to Think (enters from below, going up into middle of delay)
+%   \draw[arr] (cpuq.south) -- ++(0,-0.8) -- (-2.80,-0.8) -- (-2.80,0.05);
+%
+%   % LINE label
+%   \node[font=\tiny\bfseries, headerblue] at (1.2,-2.8) {LINE};
+% \end{tikzpicture}
+% };
+% \end{tikzpicture}
+\end{document}

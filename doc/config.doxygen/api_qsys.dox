@@ -1,0 +1,508 @@
+/**
+@page api_qsys Queueing Systems
+@brief Single-station queueing system analysis
+
+The qsys module provides exact and approximate formulas for single-station queueing systems,
+including M/M/1, M/M/k, M/G/1, G/I/G/1 approximations, and finite buffer loss models.
+
+@subsection alg_qsys_list Function List
+
+<b>Basic Queueing Models:</b>
+
+- @ref qsys_mm1 "qsys_mm1" - M/M/1 queue: mean waiting time
+- @ref qsys_mmk "qsys_mmk" - M/M/k queue: mean waiting time with Erlang-C formula
+- @ref qsys_mg1 "qsys_mg1" - M/G/1 queue: Pollaczek-Khinchine formula
+- @ref qsys_gm1 "qsys_gm1" - G/M/1 queue: mean waiting time
+
+<b>G/I/G/1 Approximations:</b>
+
+- @ref qsys_gig1_ubnd_kingman "qsys_gig1_ubnd_kingman" - Kingman's upper bound for G/I/G/1
+- @ref qsys_gig1_approx_allencunneen "qsys_gig1_approx_allencunneen" - Allen-Cunneen approximation
+- @ref qsys_gig1_approx_gelenbe "qsys_gig1_approx_gelenbe" - Gelenbe approximation
+- @ref qsys_gig1_approx_heyman "qsys_gig1_approx_heyman" - Heyman approximation
+- @ref qsys_gig1_approx_kimura "qsys_gig1_approx_kimura" - Kimura approximation
+- @ref qsys_gig1_approx_klb "qsys_gig1_approx_klb" - Kramer-Langenbach-Belz approximation
+- @ref qsys_gig1_approx_kobayashi "qsys_gig1_approx_kobayashi" - Kobayashi approximation
+- @ref qsys_gig1_approx_marchal "qsys_gig1_approx_marchal" - Marchal approximation
+- @ref qsys_gig1_approx_myskja "qsys_gig1_approx_myskja" - Myskja approximation
+- @ref qsys_gig1_approx_myskja2 "qsys_gig1_approx_myskja2" - Myskja improved approximation
+
+<b>G/I/G/k Approximations:</b>
+
+- @ref qsys_gigk_approx "qsys_gigk_approx" - G/I/G/k multiserver approximation
+- @ref qsys_gigk_approx_kingman "qsys_gigk_approx_kingman" - Kingman approximation for G/I/G/k
+
+<b>Finite Buffer Loss Models:</b>
+
+- @ref qsys_mm1k_loss "qsys_mm1k_loss" - M/M/1/K loss probability
+- @ref qsys_mg1k_loss "qsys_mg1k_loss" - M/G/1/K loss probability (Niu-Cooper)
+- @ref qsys_mg1k_loss_mgs "qsys_mg1k_loss_mgs" - M/G/1/K loss probability (MacGregor Smith)
+
+@anchor qsys_mm1
+### qsys_mm1
+  <b>Description:</b> M/M/1 queue mean waiting time.
+
+  <b>Syntax:</b>
+  @code
+  [W, rho] = qsys_mm1(lambda, mu)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>lambda</td><td>Arrival rate</td></tr>
+  <tr><td>mu</td><td>Service rate</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>W</td><td>Mean waiting time (including service)</td></tr>
+  <tr><td>rho</td><td>Utilization</td></tr>
+  </table>
+
+@anchor qsys_mmk
+### qsys_mmk
+  <b>Description:</b> M/M/k queue mean waiting time using Erlang-C formula.
+
+  <b>Syntax:</b>
+  @code
+  [W, rho] = qsys_mmk(lambda, mu, k)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>lambda</td><td>Arrival rate</td></tr>
+  <tr><td>mu</td><td>Service rate per server</td></tr>
+  <tr><td>k</td><td>Number of servers</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>W</td><td>Mean waiting time (including service)</td></tr>
+  <tr><td>rho</td><td>Utilization per server</td></tr>
+  </table>
+
+@anchor qsys_mg1
+### qsys_mg1
+  <b>Description:</b> M/G/1 queue using the Pollaczek-Khinchine formula.
+
+  <b>Syntax:</b>
+  @code
+  [W, rhohat] = qsys_mg1(lambda, mu, cs)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>lambda</td><td>Arrival rate</td></tr>
+  <tr><td>mu</td><td>Service rate</td></tr>
+  <tr><td>cs</td><td>Coefficient of variation of service time</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>W</td><td>Mean waiting time (including service)</td></tr>
+  <tr><td>rhohat</td><td>Effective utilization for M/M/1 equivalence</td></tr>
+  </table>
+
+@anchor qsys_gm1
+### qsys_gm1
+  <b>Description:</b> G/M/1 queue mean waiting time.
+
+  <b>Syntax:</b>
+  @code
+  W = qsys_gm1(sigma, mu)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>sigma</td><td>Load at arrival instants (Laplace transform of inter-arrival times)</td></tr>
+  <tr><td>mu</td><td>Service rate</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>W</td><td>Mean waiting time (including service)</td></tr>
+  </table>
+
+@anchor qsys_gig1_ubnd_kingman
+### qsys_gig1_ubnd_kingman
+  <b>Description:</b> Kingman's upper bound for G/I/G/1 queue.
+
+  <b>Syntax:</b>
+  @code
+  [W, rhohat] = qsys_gig1_ubnd_kingman(lambda, mu, ca, cs)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>lambda</td><td>Arrival rate</td></tr>
+  <tr><td>mu</td><td>Service rate</td></tr>
+  <tr><td>ca</td><td>Coefficient of variation of inter-arrival times</td></tr>
+  <tr><td>cs</td><td>Coefficient of variation of service times</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>W</td><td>Upper bound on mean waiting time</td></tr>
+  <tr><td>rhohat</td><td>Effective utilization</td></tr>
+  </table>
+
+@anchor qsys_gig1_approx_allencunneen
+### qsys_gig1_approx_allencunneen
+  <b>Description:</b> Allen-Cunneen approximation for G/I/G/1 queue.
+
+  <b>Syntax:</b>
+  @code
+  [W, rhohat] = qsys_gig1_approx_allencunneen(lambda, mu, ca, cs)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>lambda</td><td>Arrival rate</td></tr>
+  <tr><td>mu</td><td>Service rate</td></tr>
+  <tr><td>ca</td><td>Coefficient of variation of inter-arrival times</td></tr>
+  <tr><td>cs</td><td>Coefficient of variation of service times</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>W</td><td>Approximate mean waiting time</td></tr>
+  <tr><td>rhohat</td><td>Effective utilization</td></tr>
+  </table>
+
+@anchor qsys_gig1_approx_gelenbe
+### qsys_gig1_approx_gelenbe
+  <b>Description:</b> Gelenbe approximation for G/I/G/1 queue.
+
+  <b>Syntax:</b>
+  @code
+  W = qsys_gig1_approx_gelenbe(lambda, mu, ca, cs)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>lambda</td><td>Arrival rate</td></tr>
+  <tr><td>mu</td><td>Service rate</td></tr>
+  <tr><td>ca</td><td>Coefficient of variation of inter-arrival times</td></tr>
+  <tr><td>cs</td><td>Coefficient of variation of service times</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>W</td><td>Approximate mean waiting time</td></tr>
+  </table>
+
+@anchor qsys_gig1_approx_heyman
+### qsys_gig1_approx_heyman
+  <b>Description:</b> Heyman approximation for G/I/G/1 queue.
+
+  <b>Syntax:</b>
+  @code
+  [W, rhohat] = qsys_gig1_approx_heyman(lambda, mu, ca, cs)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>lambda</td><td>Arrival rate</td></tr>
+  <tr><td>mu</td><td>Service rate</td></tr>
+  <tr><td>ca</td><td>Coefficient of variation of inter-arrival times</td></tr>
+  <tr><td>cs</td><td>Coefficient of variation of service times</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>W</td><td>Approximate mean waiting time</td></tr>
+  <tr><td>rhohat</td><td>Effective utilization</td></tr>
+  </table>
+
+@anchor qsys_gig1_approx_kimura
+### qsys_gig1_approx_kimura
+  <b>Description:</b> Kimura approximation for G/I/G/1 queue.
+
+  <b>Syntax:</b>
+  @code
+  W = qsys_gig1_approx_kimura(sigma, mu, ca, cs)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>sigma</td><td>Load parameter</td></tr>
+  <tr><td>mu</td><td>Service rate</td></tr>
+  <tr><td>ca</td><td>Coefficient of variation of inter-arrival times</td></tr>
+  <tr><td>cs</td><td>Coefficient of variation of service times</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>W</td><td>Approximate mean waiting time</td></tr>
+  </table>
+
+@anchor qsys_gig1_approx_klb
+### qsys_gig1_approx_klb
+  <b>Description:</b> Kramer-Langenbach-Belz (KLB) approximation for G/I/G/1 queue.
+
+  <b>Syntax:</b>
+  @code
+  [W, rhohat] = qsys_gig1_approx_klb(lambda, mu, ca, cs)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>lambda</td><td>Arrival rate</td></tr>
+  <tr><td>mu</td><td>Service rate</td></tr>
+  <tr><td>ca</td><td>Coefficient of variation of inter-arrival times</td></tr>
+  <tr><td>cs</td><td>Coefficient of variation of service times</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>W</td><td>Approximate mean waiting time</td></tr>
+  <tr><td>rhohat</td><td>Effective utilization</td></tr>
+  </table>
+
+@anchor qsys_gig1_approx_kobayashi
+### qsys_gig1_approx_kobayashi
+  <b>Description:</b> Kobayashi approximation for G/I/G/1 queue.
+
+  <b>Syntax:</b>
+  @code
+  [W, rhohat] = qsys_gig1_approx_kobayashi(lambda, mu, ca, cs)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>lambda</td><td>Arrival rate</td></tr>
+  <tr><td>mu</td><td>Service rate</td></tr>
+  <tr><td>ca</td><td>Coefficient of variation of inter-arrival times</td></tr>
+  <tr><td>cs</td><td>Coefficient of variation of service times</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>W</td><td>Approximate mean waiting time</td></tr>
+  <tr><td>rhohat</td><td>Effective utilization</td></tr>
+  </table>
+
+@anchor qsys_gig1_approx_marchal
+### qsys_gig1_approx_marchal
+  <b>Description:</b> Marchal approximation for G/I/G/1 queue.
+
+  <b>Syntax:</b>
+  @code
+  [W, rhohat] = qsys_gig1_approx_marchal(lambda, mu, ca, cs)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>lambda</td><td>Arrival rate</td></tr>
+  <tr><td>mu</td><td>Service rate</td></tr>
+  <tr><td>ca</td><td>Coefficient of variation of inter-arrival times</td></tr>
+  <tr><td>cs</td><td>Coefficient of variation of service times</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>W</td><td>Approximate mean waiting time</td></tr>
+  <tr><td>rhohat</td><td>Effective utilization</td></tr>
+  </table>
+
+@anchor qsys_gig1_approx_myskja
+### qsys_gig1_approx_myskja
+  <b>Description:</b> Myskja approximation for G/I/G/1 queue.
+
+  <b>Syntax:</b>
+  @code
+  W = qsys_gig1_approx_myskja(lambda, mu, ca, cs, q0, qa)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>lambda</td><td>Arrival rate</td></tr>
+  <tr><td>mu</td><td>Service rate</td></tr>
+  <tr><td>ca</td><td>Coefficient of variation of inter-arrival times</td></tr>
+  <tr><td>cs</td><td>Coefficient of variation of service times</td></tr>
+  <tr><td>q0</td><td>Lowest value of the relative third moment</td></tr>
+  <tr><td>qa</td><td>Third relative moment E[X^3]/6/E[X]^3</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>W</td><td>Approximate mean waiting time</td></tr>
+  </table>
+
+@anchor qsys_gig1_approx_myskja2
+### qsys_gig1_approx_myskja2
+  <b>Description:</b> Myskja improved approximation for G/I/G/1 queue.
+
+  <b>Syntax:</b>
+  @code
+  W = qsys_gig1_approx_myskja2(lambda, mu, ca, cs, q0, qa)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>lambda</td><td>Arrival rate</td></tr>
+  <tr><td>mu</td><td>Service rate</td></tr>
+  <tr><td>ca</td><td>Coefficient of variation of inter-arrival times</td></tr>
+  <tr><td>cs</td><td>Coefficient of variation of service times</td></tr>
+  <tr><td>q0</td><td>Lowest value of the relative third moment</td></tr>
+  <tr><td>qa</td><td>Third relative moment E[X^3]/6/E[X]^3</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>W</td><td>Approximate mean waiting time</td></tr>
+  </table>
+
+@anchor qsys_gigk_approx
+### qsys_gigk_approx
+  <b>Description:</b> G/I/G/k multiserver approximation.
+
+  <b>Syntax:</b>
+  @code
+  [W, rhohat] = qsys_gigk_approx(lambda, mu, ca, cs, k)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>lambda</td><td>Arrival rate</td></tr>
+  <tr><td>mu</td><td>Service rate per server</td></tr>
+  <tr><td>ca</td><td>Coefficient of variation of inter-arrival times</td></tr>
+  <tr><td>cs</td><td>Coefficient of variation of service times</td></tr>
+  <tr><td>k</td><td>Number of servers</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>W</td><td>Approximate mean waiting time</td></tr>
+  <tr><td>rhohat</td><td>Effective utilization</td></tr>
+  </table>
+
+@anchor qsys_gigk_approx_kingman
+### qsys_gigk_approx_kingman
+  <b>Description:</b> Kingman approximation for G/I/G/k multiserver queue.
+
+  <b>Syntax:</b>
+  @code
+  [W, rhohat] = qsys_gigk_approx_kingman(lambda, mu, ca, cs, k)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>lambda</td><td>Arrival rate</td></tr>
+  <tr><td>mu</td><td>Service rate per server</td></tr>
+  <tr><td>ca</td><td>Coefficient of variation of inter-arrival times</td></tr>
+  <tr><td>cs</td><td>Coefficient of variation of service times</td></tr>
+  <tr><td>k</td><td>Number of servers</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>W</td><td>Approximate mean waiting time</td></tr>
+  <tr><td>rhohat</td><td>Effective utilization</td></tr>
+  </table>
+
+@anchor qsys_mm1k_loss
+### qsys_mm1k_loss
+  <b>Description:</b> M/M/1/K finite buffer loss probability.
+
+  <b>Syntax:</b>
+  @code
+  [lossprob, rho] = qsys_mm1k_loss(lambda, mu, K)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>lambda</td><td>Arrival rate</td></tr>
+  <tr><td>mu</td><td>Service rate</td></tr>
+  <tr><td>K</td><td>Buffer capacity (including server)</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>lossprob</td><td>Blocking/loss probability</td></tr>
+  <tr><td>rho</td><td>Utilization</td></tr>
+  </table>
+
+@anchor qsys_mg1k_loss
+### qsys_mg1k_loss
+  <b>Description:</b> M/G/1/K finite buffer loss probability using Niu-Cooper method.
+
+  <b>Syntax:</b>
+  @code
+  [lossprob, rho] = qsys_mg1k_loss(lambda, svc_density, K)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>lambda</td><td>Arrival rate</td></tr>
+  <tr><td>svc_density</td><td>Service time probability density function handle</td></tr>
+  <tr><td>K</td><td>Buffer capacity</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>lossprob</td><td>Blocking/loss probability</td></tr>
+  <tr><td>rho</td><td>Utilization</td></tr>
+  </table>
+
+@anchor qsys_mg1k_loss_mgs
+### qsys_mg1k_loss_mgs
+  <b>Description:</b> M/G/1/K finite buffer loss probability using MacGregor Smith approximation.
+
+  <b>Syntax:</b>
+  @code
+  [lossprob, rho] = qsys_mg1k_loss_mgs(lambda, mu, mu_scv, K)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>lambda</td><td>Arrival rate</td></tr>
+  <tr><td>mu</td><td>Service rate</td></tr>
+  <tr><td>mu_scv</td><td>Squared coefficient of variation of service time</td></tr>
+  <tr><td>K</td><td>Buffer capacity</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>lossprob</td><td>Blocking/loss probability</td></tr>
+  <tr><td>rho</td><td>Utilization</td></tr>
+  </table>
+*/

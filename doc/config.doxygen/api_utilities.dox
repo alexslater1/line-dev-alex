@@ -1,0 +1,250 @@
+/**
+@page api_utilities Utilities and Constants
+@brief Constants and enumerations
+
+These modules provide utility functions, constants, and enumerations.
+
+@section util_constants Constants and Enumerations (matlab/src/lang/constant/)
+
+The constants module defines enumerations and global constants used throughout
+the LINE Solver package.
+
+@subsection util_constants_sched Scheduling Strategies (SchedStrategy)
+
+| Constant | Description |
+|----------|-------------|
+| FCFS | First-Come First-Served |
+| LCFS | Last-Come First-Served (non-preemptive) |
+| LCFSPR | Last-Come First-Served Preemptive-Resume |
+| LCFSPI | Last-Come First-Served Preemptive-Independent |
+| PS | Processor Sharing (egalitarian) |
+| DPS | Discriminatory Processor Sharing |
+| GPS | Generalized Processor Sharing |
+| INF | Infinite Server (delay station) |
+| HOL | Head-of-Line priority (non-preemptive) |
+| SJF | Shortest Job First |
+| LJF | Longest Job First |
+| SEPT | Shortest Expected Processing Time |
+| LEPT | Longest Expected Processing Time |
+| SIRO | Service In Random Order |
+| POLLING | Polling-based service |
+| EXT | External (arrivals from outside) |
+| FORK | Fork behavior |
+| REF | Reference (for reference stations) |
+
+@subsection util_constants_routing Routing Strategies (RoutingStrategy)
+
+| Constant | Description |
+|----------|-------------|
+| DISABLED | Routing disabled |
+| FIRING | Petri net transition firing |
+| JSQ | Join Shortest Queue |
+| KCHOICES | Power of k choices |
+| PROB | Probabilistic routing |
+| RAND | Random (uniform) routing |
+| RL | Reinforcement learning routing |
+| RROBIN | Round-robin routing |
+| WRROBIN | Weighted round-robin |
+
+@subsection util_constants_process Process Types (ProcessType)
+
+| Constant | Description |
+|----------|-------------|
+| EXP | Exponential |
+| ERLANG | Erlang |
+| HYPEREXP | Hyperexponential |
+| APH | Acyclic Phase-Type |
+| PH | Phase-Type |
+| COXIAN | Coxian |
+| DET | Deterministic |
+| UNIFORM | Uniform |
+| GAMMA | Gamma |
+| PARETO | Pareto |
+| WEIBULL | Weibull |
+| LOGNORMAL | Log-normal |
+| MAP | Markovian Arrival Process |
+| MMPP2 | Two-state MMPP |
+| REPLAYER | Trace replayer |
+| TRACE | Generic trace |
+| DISABLED | Disabled process |
+| IMMEDIATE | Instantaneous |
+
+@subsection util_constants_nodetype Node Types (NodeType)
+
+| Constant | Description |
+|----------|-------------|
+| SOURCE | Arrival source |
+| SINK | Departure sink |
+| QUEUE | Service queue |
+| DELAY | Infinite server station |
+| ROUTER | Routing node |
+| FORK | Fork node |
+| JOIN | Join node |
+| CACHE | Cache station |
+| CLASSSWITCH | Class-switching node |
+| LOGGER | Logging node |
+| PLACE | Petri net place |
+| TRANSITION | Petri net transition |
+
+@subsection util_constants_jobclass Job Class Types (JobClassType)
+
+| Constant | Description |
+|----------|-------------|
+| OPEN | Open class (external arrivals) |
+| CLOSED | Closed class (fixed population) |
+| DISABLED | Disabled class |
+
+@subsection util_constants_service Service Strategies (ServiceStrategy)
+
+| Constant | Description |
+|----------|-------------|
+| LI | Load-Independent service |
+| LD | Load-Dependent service |
+
+@subsection util_constants_solver Solver Types (SolverType)
+
+| Constant | Description |
+|----------|-------------|
+| MVA | Mean Value Analysis |
+| CTMC | Continuous-Time Markov Chain |
+| FLUID | Fluid approximation |
+| MAM | Matrix-Analytic Methods |
+| NC | Normalizing Constant |
+| SSA | Stochastic Simulation Algorithm |
+| JMT | Java Modelling Tools |
+| AUTO | Automatic selection |
+| LQNS | Layered QN Solver |
+| QNS | QN Solver |
+| LN | Layered Network |
+| ENV | Random Environment |
+
+@subsection util_constants_metric Metric Types (MetricType)
+
+| Constant | Description |
+|----------|-------------|
+| ArvR | Arrival rate |
+| DropRate | Drop rate |
+| FCRMemOcc | FCR memory occupation |
+| FCRWeight | FCR total weight |
+| FJQLen | Fork-join number of customers |
+| FJRespT | Fork-join response time |
+| QLen | Number of customers (queue length) |
+| QueueT | Queue time |
+| ResidT | Residence time |
+| RespT | Response time |
+| RespTSink | Response time per sink |
+| SysQLen | System number of customers |
+| SysRespT | System response time |
+| SysTput | System throughput |
+| Tput | Throughput |
+| TputSink | Throughput per sink |
+| TranQLen | Transient number of customers |
+| TranRespT | Transient response time |
+| TranTput | Transient throughput |
+| TranUtil | Transient utilization |
+| Util | Utilization |
+
+@subsection util_constants_drop Drop Strategies (DropStrategy)
+
+| Constant | Description |
+|----------|-------------|
+| WAITQ | Waiting queue (infinite buffer) |
+| DROP | Drop arriving customers when full |
+| BAS | Blocking after service |
+
+@subsection util_constants_replacement Replacement Strategies (ReplacementStrategy)
+
+| Constant | Description |
+|----------|-------------|
+| LRU | Least Recently Used |
+| FIFO | First-In First-Out |
+| RR | Random Replacement |
+| SFIFO | Static FIFO |
+| MRU | Most Recently Used |
+| LFU | Least Frequently Used |
+
+@subsection util_constants_join Join Strategies (JoinStrategy)
+
+| Constant | Description |
+|----------|-------------|
+| STD | Standard join (wait for all) |
+| PARTIAL | Partial join (k-of-n) |
+| GUARD | Guarded join |
+
+@subsection util_constants_call Call Types (CallType)
+
+| Constant | Description |
+|----------|-------------|
+| SYNC | Synchronous call |
+| ASYNC | Asynchronous call |
+
+@subsection util_constants_precedence Activity Precedence Types (ActivityPrecedenceType)
+
+| Constant | Description |
+|----------|-------------|
+| PRE_SEQ | Sequential precedence |
+| PRE_AND | AND split/join |
+| PRE_OR | OR split/join |
+| POST_SEQ | Post-sequential |
+| POST_AND | Post-AND |
+| POST_OR | Post-OR |
+| POST_LOOP | Post-loop |
+
+@subsection util_constants_polling Polling Types (PollingType)
+
+| Constant | Description |
+|----------|-------------|
+| EXHAUSTIVE | Exhaustive polling |
+| GATED | Gated polling |
+| KLIMITED | K-limited polling |
+
+@subsection util_constants_verbose Verbose Levels (VerboseLevel)
+
+| Constant | Description |
+|----------|-------------|
+| SILENT | No output |
+| STD | Standard output |
+| DEBUG | Debug output |
+
+@section util_global GlobalConstants
+
+The GlobalConstants class provides global configuration options:
+
+| Property | Description |
+|----------|-------------|
+| CoarseTol | Coarse tolerance for comparisons (default: 1e-3) |
+| FineTol | Fine tolerance for comparisons (default: 1e-6) |
+| Zero | Near-zero threshold (default: 1e-14) |
+| Immediate | Immediate service rate (default: Inf) |
+| MaxInt | Maximum integer value (default: 2147483647) |
+
+
+@section util_usage Usage Examples
+
+@subsection util_usage_sched Setting Scheduling Strategy
+
+@code{.m}
+model = Network('Example');
+queue = Queue(model, 'Queue1', SchedStrategy.PS);  % Processor Sharing
+@endcode
+
+@subsection util_usage_routing Setting Routing Strategy
+
+@code{.m}
+model.link(Network.serialRouting(source, queue, sink));
+% or use probabilistic routing
+P = model.initRoutingMatrix();
+P{class1}(source, queue) = 1.0;
+P{class1}(queue, sink) = 1.0;
+model.link(P);
+@endcode
+
+@subsection util_usage_dist Setting Distribution Type
+
+@code{.m}
+queue.setService(jobclass, Exp(1.0));       % Exponential
+queue.setService(jobclass, Erlang(2, 0.5)); % Erlang
+queue.setService(jobclass, HyperExp([0.5 0.5], [1.0 2.0])); % Hyperexponential
+@endcode
+
+*/

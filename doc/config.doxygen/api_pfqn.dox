@@ -1,0 +1,1728 @@
+/**
+@page api_pfqn Product-Form Queueing Networks
+@brief MVA, convolution, and normalizing constant methods
+
+The pfqn module contains algorithms for product-form queueing networks, including
+Mean Value Analysis (MVA), convolution, and normalizing constant methods.
+
+@subsection product-form_queueing_networks_matlab_src_api_pfqn__list Function List
+
+- @ref pfqn_aql "pfqn_aql" - Approximate Queue Length (AQL) algorithm for product-form networks.
+- @ref pfqn_bsfcfs "pfqn_bsfcfs" - Bard-Schweitzer approximate MVA for FCFS scheduling with weighted priorities.
+- @ref pfqn_bs "pfqn_bs" - Bard-Schweitzer Approximate Mean Value Analysis (MVA).
+- @ref pfqn_ca "pfqn_ca" - Convolution Algorithm for exact normalizing constant computation.
+- @ref pfqn_cdfun "pfqn_cdfun" - AMVA-QD class-dependence function for queue-dependent scaling.
+- @ref pfqn_comom "pfqn_comom" - CoMoM algorithm for computing the normalizing constant.
+- @ref pfqn_comomrm_ld "pfqn_comomrm_ld" - CoMoM for repairman model with load-dependent service rates.
+- @ref pfqn_comomrm "pfqn_comomrm" - CoMoM (Convolution Method of Moments) for finite repairman model.
+- @ref pfqn_comomrm_ms "pfqn_comomrm_ms" - CoMoM for multiserver repairman model.
+- @ref pfqn_comomrm_orig "pfqn_comomrm_orig" - Original CoMoM implementation for finite repairman model.
+- @ref pfqn_conwayms "pfqn_conwayms" - Multiserver Linearizer approximation (Conway 1989).
+- @ref pfqn_cub "pfqn_cub" - Cubature method for normalizing constant using Grundmann-Moeller rules.
+- @ref pfqn_egflinearizer "pfqn_egflinearizer" - Extended generalized fixed-point Linearizer approximation.
+- @ref pfqn_fnc "pfqn_fnc" - Generate load-dependent rates for functional server model f(n)=n+c.
+- @ref pfqn_gflinearizer "pfqn_gflinearizer" - Generalized fixed-point Linearizer with uniform scaling exponent.
+- @ref pfqn_gld "pfqn_gld" - Exact normalizing constant for load-dependent queueing networks.
+- @ref pfqn_gldsingle "pfqn_gldsingle" - Exact normalizing constant for single-class load-dependent models.
+- @ref pfqn_grnmol "pfqn_grnmol" - Normalizing constant using Grundmann-Moeller quadrature.
+- @ref pfqn_joint "pfqn_joint" - Compute joint queue-length probability distribution.
+- @ref pfqn_kt "pfqn_kt" - Knessl-Tier asymptotic expansion for normalizing constant.
+- @ref pfqn_lap "pfqn_lap" - Laplace approximation for normalizing constant.
+- @ref pfqn_lcfsqn_ca "pfqn_lcfsqn_ca" - Convolution algorithm for 2-station LCFS queueing networks
+- @ref pfqn_lcfsqn_mva "pfqn_lcfsqn_mva" - Exact MVA for 2-station LCFS queueing networks.
+- @ref pfqn_le "pfqn_le" - Logistic expansion (LE) asymptotic approximation for normalizing constant.
+- @ref pfqn_linearizer "pfqn_linearizer" - Linearizer approximation for single-server stations.
+- @ref pfqn_linearizerms "pfqn_linearizerms" - Multiserver Linearizer (Krzesinski/Conway/De Souza-Muntz).
+- @ref pfqn_linearizermx "pfqn_linearizermx" - Linearizer for mixed open/closed queueing networks.
+- @ref pfqn_lldfun "pfqn_lldfun" - AMVA-QD load and queue-dependent scaling function.
+- @ref pfqn_ls "pfqn_ls" - Logistic sampling approximation for normalizing constant.
+- @ref pfqn_mci "pfqn_mci" - Monte Carlo Integration (MCI) for normalizing constant.
+- @ref pfqn_mmint2_gausslaguerre "pfqn_mmint2_gausslaguerre" - McKenna-Mitra integral with Gauss-Laguerre quadrature.
+- @ref pfqn_mmint2_gausslegendre "pfqn_mmint2_gausslegendre" - McKenna-Mitra integral with Gauss-Legendre quadrature.
+- @ref pfqn_mmint2 "pfqn_mmint2" - McKenna-Mitra integral form for repairman models using MATLAB integral.
+- @ref pfqn_mmsample2 "pfqn_mmsample2" - Monte Carlo sampling for repairman models using McKenna-Mitra form.
+- @ref pfqn_mu_ms "pfqn_mu_ms" - Compute load-dependent rates for m identical c-server FCFS stations.
+- @ref pfqn_mushift "pfqn_mushift" - Shift load-dependent service rate vector by removing first element.
+- @ref pfqn_mvald "pfqn_mvald" - Exact MVA for load-dependent closed queueing networks.
+- @ref pfqn_mvaldms "pfqn_mvaldms" - Load-dependent MVA for multiserver mixed networks (wrapper for pfqn_mvaldmx).
+- @ref pfqn_mvaldmx_ec "pfqn_mvaldmx_ec" - Compute effective capacity terms for MVALDMX solver.
+- @ref pfqn_mvaldmx "pfqn_mvaldmx" - Load-dependent MVA for mixed open/closed networks with limited load dependence.
+- @ref pfqn_mva "pfqn_mva" - Exact Mean Value Analysis (MVA) for product-form queueing networks.
+- @ref pfqn_mvams "pfqn_mvams" - General-purpose MVA for mixed networks with multiserver nodes.
+- @ref pfqn_mvamx "pfqn_mvamx" - Exact MVA for mixed open/closed single-server networks.
+- @ref pfqn_lcfsqn_nc "pfqn_lcfsqn_nc" - Normalizing constant for LCFS queueing networks
+- @ref pfqn_ncld "pfqn_ncld" - Normalizing constant for load-dependent closed networks.
+- @ref pfqn_nc "pfqn_nc" - Computes the normalizing constant of a product-form queueing network.
+- @ref pfqn_nc_sanitize "pfqn_nc_sanitize" - Sanitize and preprocess network parameters for NC solvers.
+- @ref pfqn_nrl "pfqn_nrl" - Normalizing constant via Normal Radius-Logistic (NRL) approximation.
+- @ref pfqn_nrp "pfqn_nrp" - Normalizing constant via Normal Radius-Probit (NRP) approximation.
+- @ref pfqn_panacea "pfqn_panacea" - PANACEA (PAth-based Normal Approximation for Closed networks Estimation Algorithm).
+- @ref pfqn_procomom2 "pfqn_procomom2" - Product-form CoMoM for 2-station repairman model (queue + delay).
+- @ref pfqn_propfair "pfqn_propfair" - Proportionally fair allocation approximation (Walton 2009).
+- @ref pfqn_qd "pfqn_qd" - Queue-Dependent (QD) approximate MVA solver.
+- @ref pfqn_qzgblow "pfqn_qzgblow" - Lower asymptotic bound on queue length (Zahorjan-Gittelsohn-Bryant).
+- @ref pfqn_qzgbup "pfqn_qzgbup" - Upper asymptotic bound on queue length (Zahorjan-Gittelsohn-Bryant).
+- @ref pfqn_rd "pfqn_rd" - Reduced Decomposition (RD) method for load-dependent networks.
+- @ref pfqn_recal "pfqn_recal" - RECAL (REcursive CALculation) method for normalizing constant.
+- @ref pfqn_schmidt "pfqn_schmidt" - Schmidt's exact MVA for networks with general scheduling disciplines.
+- @ref pfqn_sqni "pfqn_sqni" - Single Queue Network Iteration (SQNI) approximate solver.
+- @ref pfqn_stdf_heur "pfqn_stdf_heur" - Heuristic sojourn time distribution for multiserver FCFS nodes (McKenna 1987 variant).
+- @ref pfqn_stdf "pfqn_stdf" - Sojourn time distribution for multiserver FCFS nodes (McKenna 1987).
+- @ref pfqn_xzabalow "pfqn_xzabalow" - Lower asymptotic bound on throughput (Zahorjan-Balanced).
+- @ref pfqn_xzabaup "pfqn_xzabaup" - Upper asymptotic bound on throughput (Zahorjan-Balanced).
+- @ref pfqn_xzgsblow "pfqn_xzgsblow" - Lower asymptotic bound on throughput (Zahorjan-Gittelsohn-Schweitzer-Bryant).
+- @ref pfqn_xzgsbup "pfqn_xzgsbup" - Upper asymptotic bound on throughput (Zahorjan-Gittelsohn-Schweitzer-Bryant).
+
+@anchor pfqn_aql
+### pfqn_aql
+  <b>Description:</b> Approximate Queue Length (AQL) algorithm for product-form networks.
+
+  <b>Syntax:</b>
+  @code
+  [XN, QN, UN, RN, numIters, AN] = pfqn_aql(L, N, Z, TOL, MAXITER, QN0)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>L</td><td>Service demand matrix.</td></tr>
+  <tr><td>N</td><td>Population vector.</td></tr>
+  <tr><td>Z</td><td>Think time vector.</td></tr>
+  <tr><td>TOL</td><td>Tolerance for convergence.</td></tr>
+  <tr><td>MAXITER</td><td>Maximum number of iterations.</td></tr>
+  <tr><td>QN0</td><td>Initial guess for queue lengths.</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>XN</td><td>System throughput.</td></tr>
+  <tr><td>QN</td><td>Mean queue lengths.</td></tr>
+  <tr><td>UN</td><td>Utilization.</td></tr>
+  <tr><td>RN</td><td>Residence times.</td></tr>
+  <tr><td>numIters</td><td>Number of iterations.</td></tr>
+  <tr><td>AN</td><td>Average arrival rate at nodes.</td></tr>
+  </table>
+
+@anchor pfqn_bsfcfs
+### pfqn_bsfcfs
+  <b>Description:</b> Bard-Schweitzer approximate MVA for FCFS scheduling with weighted priorities.
+
+  <b>Syntax:</b>
+  @code
+  [XN, QN, UN, RN, it] = pfqn_bsfcfs(L, N, Z, tol, maxiter, QN, weight)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>L</td><td>Service demand matrix.</td></tr>
+  <tr><td>N</td><td>Population vector.</td></tr>
+  <tr><td>Z</td><td>Think time vector (default: zeros).</td></tr>
+  <tr><td>tol</td><td>Convergence tolerance (default: 1e-6).</td></tr>
+  <tr><td>maxiter</td><td>Maximum number of iterations (default: 1000).</td></tr>
+  <tr><td>QN</td><td>Initial queue length matrix (default: uniform distribution).</td></tr>
+  <tr><td>weight</td><td>Weight matrix for relative priorities (default: ones).</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>XN</td><td>System throughput.</td></tr>
+  <tr><td>QN</td><td>Mean queue lengths.</td></tr>
+  <tr><td>UN</td><td>Utilization.</td></tr>
+  <tr><td>RN</td><td>Residence times.</td></tr>
+  <tr><td>it</td><td>Number of iterations performed.</td></tr>
+  </table>
+
+@anchor pfqn_bs
+### pfqn_bs
+  <b>Description:</b> Bard-Schweitzer Approximate Mean Value Analysis (MVA).
+
+  <b>Syntax:</b>
+  @code
+  [XN, QN, UN, RN, it] = pfqn_bs(L, N, Z, tol, maxiter, QN0, type)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>L</td><td>Service demand matrix.</td></tr>
+  <tr><td>N</td><td>Population vector.</td></tr>
+  <tr><td>Z</td><td>Think time vector.</td></tr>
+  <tr><td>tol</td><td>Tolerance for convergence.</td></tr>
+  <tr><td>maxiter</td><td>Maximum number of iterations.</td></tr>
+  <tr><td>QN0</td><td>Initial guess for queue lengths.</td></tr>
+  <tr><td>type</td><td>Scheduling strategy type (default: PS).</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>XN</td><td>System throughput.</td></tr>
+  <tr><td>QN</td><td>Mean queue lengths.</td></tr>
+  <tr><td>UN</td><td>Utilization.</td></tr>
+  <tr><td>RN</td><td>Residence times.</td></tr>
+  <tr><td>it</td><td>Number of iterations performed.</td></tr>
+  </table>
+
+@anchor pfqn_ca
+### pfqn_ca
+  <b>Description:</b> Convolution Algorithm for exact normalizing constant computation.
+
+  <b>Syntax:</b>
+  @code
+  [Gn, lGn] = pfqn_ca(L, N, Z)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>L</td><td>Service demand matrix.</td></tr>
+  <tr><td>N</td><td>Population vector.</td></tr>
+  <tr><td>Z</td><td>Think time vector.</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>Gn</td><td>Normalizing constant.</td></tr>
+  <tr><td>lGn</td><td>Logarithm of the normalizing constant.</td></tr>
+  </table>
+
+@anchor pfqn_cdfun
+### pfqn_cdfun
+  <b>Description:</b> AMVA-QD class-dependence function for queue-dependent scaling.
+
+  <b>Syntax:</b>
+  @code
+  pfqn_cdfun(...)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  </table>
+
+@anchor pfqn_comom
+### pfqn_comom
+  <b>Description:</b> CoMoM algorithm for computing the normalizing constant.
+
+  <b>Syntax:</b>
+  @code
+  pfqn_comom(...)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  </table>
+
+@anchor pfqn_comomrm_ld
+### pfqn_comomrm_ld
+  <b>Description:</b> CoMoM for repairman model with load-dependent service rates.
+
+  <b>Syntax:</b>
+  @code
+  [G, lG, prob] = pfqn_comomrm_ld(L, N, Z, mu, options)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>L</td><td>Service demand matrix.</td></tr>
+  <tr><td>N</td><td>Population vector.</td></tr>
+  <tr><td>Z</td><td>Think time vector.</td></tr>
+  <tr><td>mu</td><td>Load-dependent rate matrix (MxNt matrix).</td></tr>
+  <tr><td>options</td><td>Solver options.</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>G</td><td>Normalizing constant.</td></tr>
+  <tr><td>lG</td><td>Logarithm of normalizing constant.</td></tr>
+  <tr><td>prob</td><td>State probability distribution.</td></tr>
+  </table>
+
+@anchor pfqn_comomrm
+### pfqn_comomrm
+  <b>Description:</b> CoMoM (Convolution Method of Moments) for finite repairman model.
+
+  <b>Syntax:</b>
+  @code
+  [lG, lGbasis] = pfqn_comomrm(L, N, Z, m, atol)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>L</td><td>Service demand matrix.</td></tr>
+  <tr><td>N</td><td>Population vector.</td></tr>
+  <tr><td>Z</td><td>Think time vector.</td></tr>
+  <tr><td>m</td><td>Replication factor (default: 1).</td></tr>
+  <tr><td>atol</td><td>Absolute tolerance for numerical computations.</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>lG</td><td>Logarithm of normalizing constant.</td></tr>
+  <tr><td>lGbasis</td><td>Logarithm of basis functions.</td></tr>
+  </table>
+
+@anchor pfqn_comomrm_ms
+### pfqn_comomrm_ms
+  <b>Description:</b> CoMoM for multiserver repairman model.
+
+  <b>Syntax:</b>
+  @code
+  [G, lG, prob] = pfqn_comomrm_ms(L, N, Z, m, S)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>L</td><td>Service demand matrix.</td></tr>
+  <tr><td>N</td><td>Population vector.</td></tr>
+  <tr><td>Z</td><td>Think time vector.</td></tr>
+  <tr><td>m</td><td>Replication factor (default: 1).</td></tr>
+  <tr><td>S</td><td>Number of servers at queueing stations.</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>G</td><td>Normalizing constant.</td></tr>
+  <tr><td>lG</td><td>Logarithm of normalizing constant.</td></tr>
+  <tr><td>prob</td><td>State probability distribution.</td></tr>
+  </table>
+
+@anchor pfqn_comomrm_orig
+### pfqn_comomrm_orig
+  <b>Description:</b> Original CoMoM implementation for finite repairman model.
+
+  <b>Syntax:</b>
+  @code
+  pfqn_comomrm_orig(...)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  </table>
+
+@anchor pfqn_conwayms
+### pfqn_conwayms
+  <b>Description:</b> Multiserver Linearizer approximation (Conway 1989).
+
+  <b>Syntax:</b>
+  @code
+  [Q, U, R, C, X, totiter] = pfqn_conwayms(L, N, Z, nservers, type, tol, maxiter)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>L</td><td>Service demand matrix.</td></tr>
+  <tr><td>N</td><td>Population vector.</td></tr>
+  <tr><td>Z</td><td>Think time vector.</td></tr>
+  <tr><td>nservers</td><td>Number of servers per station.</td></tr>
+  <tr><td>type</td><td>Scheduling strategy type per station (default: FCFS).</td></tr>
+  <tr><td>tol</td><td>Convergence tolerance (default: 1e-8).</td></tr>
+  <tr><td>maxiter</td><td>Maximum number of iterations (default: 1000).</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>Q</td><td>Mean queue lengths.</td></tr>
+  <tr><td>U</td><td>Utilization.</td></tr>
+  <tr><td>R</td><td>Residence times.</td></tr>
+  <tr><td>C</td><td>Cycle times.</td></tr>
+  <tr><td>X</td><td>System throughput.</td></tr>
+  <tr><td>totiter</td><td>Total number of iterations.</td></tr>
+  </table>
+
+@anchor pfqn_cub
+### pfqn_cub
+  <b>Description:</b> Cubature method for normalizing constant using Grundmann-Moeller rules.
+
+  <b>Syntax:</b>
+  @code
+  [Gn, lGn] = pfqn_cub(L, N, Z, order, atol)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>L</td><td>Service demand matrix (MxR).</td></tr>
+  <tr><td>N</td><td>Population vector (1xR).</td></tr>
+  <tr><td>Z</td><td>Think time vector (1xR).</td></tr>
+  <tr><td>order</td><td>Degree of cubature rule (default: ceil((sum(N)-1)/2)).</td></tr>
+  <tr><td>atol</td><td>Absolute tolerance (default: 1e-8).</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>Gn</td><td>Estimated normalizing constant.</td></tr>
+  <tr><td>lGn</td><td>Logarithm of normalizing constant.</td></tr>
+  </table>
+
+@anchor pfqn_egflinearizer
+### pfqn_egflinearizer
+  <b>Description:</b> Extended generalized fixed-point Linearizer approximation.
+
+  <b>Syntax:</b>
+  @code
+  [Q, U, W, C, X, totiter] = pfqn_egflinearizer(L, N, Z, type, tol, maxiter, alpha)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>L</td><td>Service demand matrix.</td></tr>
+  <tr><td>N</td><td>Population vector.</td></tr>
+  <tr><td>Z</td><td>Think time vector.</td></tr>
+  <tr><td>type</td><td>Scheduling strategy type per station.</td></tr>
+  <tr><td>tol</td><td>Convergence tolerance (default: 1e-8).</td></tr>
+  <tr><td>maxiter</td><td>Maximum number of iterations (default: 1000).</td></tr>
+  <tr><td>alpha</td><td>Per-class scaling exponent vector.</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>Q</td><td>Mean queue lengths.</td></tr>
+  <tr><td>U</td><td>Utilization.</td></tr>
+  <tr><td>W</td><td>Waiting times.</td></tr>
+  <tr><td>C</td><td>Cycle times.</td></tr>
+  <tr><td>X</td><td>System throughput.</td></tr>
+  <tr><td>totiter</td><td>Total iterations performed.</td></tr>
+  </table>
+
+@anchor pfqn_fnc
+### pfqn_fnc
+  <b>Description:</b> Generate load-dependent rates for functional server model f(n)=n+c.
+
+  <b>Syntax:</b>
+  @code
+  [mu, c] = pfqn_fnc(alpha, c)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>alpha</td><td>Rate parameters (Mx N matrix).</td></tr>
+  <tr><td>c</td><td>Constant offset parameter (default: auto-determined).</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>mu</td><td>Load-dependent service rates.</td></tr>
+  <tr><td>c</td><td>Determined offset constant.</td></tr>
+  </table>
+
+@anchor pfqn_gflinearizer
+### pfqn_gflinearizer
+  <b>Description:</b> Generalized fixed-point Linearizer with uniform scaling exponent.
+
+  <b>Syntax:</b>
+  @code
+  [Q, U, W, C, X, totiter] = pfqn_gflinearizer(L, N, Z, type, tol, maxiter, alpha)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>L</td><td>Service demand matrix.</td></tr>
+  <tr><td>N</td><td>Population vector.</td></tr>
+  <tr><td>Z</td><td>Think time vector.</td></tr>
+  <tr><td>type</td><td>Scheduling strategy type per station.</td></tr>
+  <tr><td>tol</td><td>Convergence tolerance.</td></tr>
+  <tr><td>maxiter</td><td>Maximum number of iterations.</td></tr>
+  <tr><td>alpha</td><td>Uniform scaling exponent for all classes.</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>Q</td><td>Mean queue lengths.</td></tr>
+  <tr><td>U</td><td>Utilization.</td></tr>
+  <tr><td>W</td><td>Waiting times.</td></tr>
+  <tr><td>C</td><td>Cycle times.</td></tr>
+  <tr><td>X</td><td>System throughput.</td></tr>
+  <tr><td>totiter</td><td>Total iterations performed.</td></tr>
+  </table>
+
+@anchor pfqn_gld
+### pfqn_gld
+  <b>Description:</b> Exact normalizing constant for load-dependent queueing networks.
+
+  <b>Syntax:</b>
+  @code
+  [G, lG] = pfqn_gld(L, N, mu, options)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>L</td><td>Service demand matrix (MxR).</td></tr>
+  <tr><td>N</td><td>Population vector (1xR).</td></tr>
+  <tr><td>mu</td><td>Load-dependent rate matrix (Mx sum(N)).</td></tr>
+  <tr><td>options</td><td>Solver options.</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>G</td><td>Normalizing constant.</td></tr>
+  <tr><td>lG</td><td>Logarithm of normalizing constant.</td></tr>
+  </table>
+
+@anchor pfqn_gldsingle
+### pfqn_gldsingle
+  <b>Description:</b> Exact normalizing constant for single-class load-dependent models.
+
+  <b>Syntax:</b>
+  @code
+  [lG, G] = pfqn_gldsingle(L, N, mu, options)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>L</td><td>Service demand vector (Mx1).</td></tr>
+  <tr><td>N</td><td>Population (scalar).</td></tr>
+  <tr><td>mu</td><td>Load-dependent rate matrix (MxN).</td></tr>
+  <tr><td>options</td><td>Solver options.</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>lG</td><td>Logarithm of normalizing constant.</td></tr>
+  <tr><td>G</td><td>Normalizing constant.</td></tr>
+  </table>
+
+@anchor pfqn_grnmol
+### pfqn_grnmol
+  <b>Description:</b> Normalizing constant using Grundmann-Moeller quadrature.
+
+  <b>Syntax:</b>
+  @code
+  pfqn_grnmol(...)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  </table>
+
+@anchor pfqn_joint
+### pfqn_joint
+  <b>Description:</b> Compute joint queue-length probability distribution.
+
+  <b>Syntax:</b>
+  @code
+  [F, A] = pfqn_joint(L, N, m)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>L</td><td>Service demand matrix.</td></tr>
+  <tr><td>N</td><td>Population vector.</td></tr>
+  <tr><td>m</td><td>Cache capacity</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>F</td><td>Flow or throughput values</td></tr>
+  <tr><td>A</td><td>Absorption matrix or aggregate matrix</td></tr>
+  </table>
+
+@anchor pfqn_kt
+### pfqn_kt
+  <b>Description:</b> Knessl-Tier asymptotic expansion for normalizing constant.
+
+  <b>Syntax:</b>
+  @code
+  [G, lG, X, Q] = pfqn_kt(L, N, Z)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>L</td><td>Service demand matrix.</td></tr>
+  <tr><td>N</td><td>Population vector.</td></tr>
+  <tr><td>Z</td><td>Think time vector (default: zeros).</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>G</td><td>Normalizing constant.</td></tr>
+  <tr><td>lG</td><td>Logarithm of normalizing constant.</td></tr>
+  <tr><td>X</td><td>System throughput.</td></tr>
+  <tr><td>Q</td><td>Mean queue lengths.</td></tr>
+  </table>
+
+@anchor pfqn_lap
+### pfqn_lap
+  <b>Description:</b> Laplace approximation for normalizing constant.
+
+  <b>Syntax:</b>
+  @code
+  logI = pfqn_lap(L, N, Z)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>L</td><td>Service demand matrix.</td></tr>
+  <tr><td>N</td><td>Population vector.</td></tr>
+  <tr><td>Z</td><td>Think time vector.</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>logI</td><td>Logarithm of normalizing constant approximation.</td></tr>
+  </table>
+
+@anchor pfqn_lcfsqn_ca
+### pfqn_lcfsqn_ca
+  <b>Description:</b> Convolution algorithm for 2-station LCFS queueing networks
+
+  <b>Syntax:</b>
+  @code
+  [G, V] = pfqn_lcfsqn_ca(alpha, beta, N)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>alpha</td><td>Service rates at LCFS station (1xR vector).</td></tr>
+  <tr><td>beta</td><td>Service rates at LCFS-PR station (1xR vector).</td></tr>
+  <tr><td>N</td><td>Population vector (default: ones(1,R)).</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>G</td><td>Normalizing constant.</td></tr>
+  <tr><td>V</td><td>Auxiliary normalization term.</td></tr>
+  </table>
+
+@anchor pfqn_lcfsqn_mva
+### pfqn_lcfsqn_mva
+  <b>Description:</b> Exact MVA for 2-station LCFS queueing networks.
+
+  <b>Syntax:</b>
+  @code
+  [T, Q, U, B] = pfqn_lcfsqn_mva(alpha, beta, N)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>alpha</td><td>Service rates at LCFS station (1xR vector).</td></tr>
+  <tr><td>beta</td><td>Service rates at LCFS-PR station (1xR vector).</td></tr>
+  <tr><td>N</td><td>Population vector (default: ones(1,R)).</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>T</td><td>Throughput vector.</td></tr>
+  <tr><td>Q</td><td>Mean queue lengths (2xR matrix).</td></tr>
+  <tr><td>U</td><td>Utilization (2xR matrix).</td></tr>
+  <tr><td>B</td><td>Back probability matrix (2xR).</td></tr>
+  </table>
+
+@anchor pfqn_le
+### pfqn_le
+  <b>Description:</b> Logistic expansion (LE) asymptotic approximation for normalizing constant.
+
+  <b>Syntax:</b>
+  @code
+  [Gn, lGn] = pfqn_le(L, N, Z)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>L</td><td>Service demand matrix (MxR).</td></tr>
+  <tr><td>N</td><td>Population vector (1xR).</td></tr>
+  <tr><td>Z</td><td>Think time vector (1xR).</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>Gn</td><td>Estimated normalizing constant.</td></tr>
+  <tr><td>lGn</td><td>Logarithm of normalizing constant.</td></tr>
+  </table>
+
+@anchor pfqn_linearizer
+### pfqn_linearizer
+  <b>Description:</b> Linearizer approximation for single-server stations.
+
+  <b>Syntax:</b>
+  @code
+  [Q, U, W, C, X, totiter] = pfqn_linearizer(L, N, Z, type, tol, maxiter)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>L</td><td>Service demand matrix.</td></tr>
+  <tr><td>N</td><td>Population vector.</td></tr>
+  <tr><td>Z</td><td>Think time vector.</td></tr>
+  <tr><td>type</td><td>Scheduling strategy type per station.</td></tr>
+  <tr><td>tol</td><td>Convergence tolerance.</td></tr>
+  <tr><td>maxiter</td><td>Maximum number of iterations.</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>Q</td><td>Mean queue lengths.</td></tr>
+  <tr><td>U</td><td>Utilization.</td></tr>
+  <tr><td>W</td><td>Waiting times.</td></tr>
+  <tr><td>C</td><td>Cycle times.</td></tr>
+  <tr><td>X</td><td>System throughput.</td></tr>
+  <tr><td>totiter</td><td>Total iterations performed.</td></tr>
+  </table>
+
+@anchor pfqn_linearizerms
+### pfqn_linearizerms
+  <b>Description:</b> Multiserver Linearizer (Krzesinski/Conway/De Souza-Muntz).
+
+  <b>Syntax:</b>
+  @code
+  [Q, U, R, C, X, totiter] = pfqn_linearizerms(L, N, Z, nservers, type, tol, maxiter)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>L</td><td>Service demand matrix.</td></tr>
+  <tr><td>N</td><td>Population vector.</td></tr>
+  <tr><td>Z</td><td>Think time vector.</td></tr>
+  <tr><td>nservers</td><td>Number of servers per station.</td></tr>
+  <tr><td>type</td><td>Scheduling strategy per station (default: PS).</td></tr>
+  <tr><td>tol</td><td>Convergence tolerance (default: 1e-8).</td></tr>
+  <tr><td>maxiter</td><td>Maximum number of iterations (default: 1000).</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>Q</td><td>Mean queue lengths.</td></tr>
+  <tr><td>U</td><td>Utilization.</td></tr>
+  <tr><td>R</td><td>Residence times.</td></tr>
+  <tr><td>C</td><td>Cycle times.</td></tr>
+  <tr><td>X</td><td>System throughput.</td></tr>
+  <tr><td>totiter</td><td>Total iterations performed.</td></tr>
+  </table>
+
+@anchor pfqn_linearizermx
+### pfqn_linearizermx
+  <b>Description:</b> Linearizer for mixed open/closed queueing networks.
+
+  <b>Syntax:</b>
+  @code
+  [QN, UN, WN, CN, XN, totiter] = pfqn_linearizermx(lambda, L, N, Z, nservers, type, tol, maxiter, method)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>lambda</td><td>Arrival rate vector (inf for closed classes).</td></tr>
+  <tr><td>L</td><td>Service demand matrix.</td></tr>
+  <tr><td>N</td><td>Population vector (inf for open classes).</td></tr>
+  <tr><td>Z</td><td>Think time vector.</td></tr>
+  <tr><td>nservers</td><td>Number of servers per station.</td></tr>
+  <tr><td>type</td><td>Scheduling strategy per station.</td></tr>
+  <tr><td>tol</td><td>Convergence tolerance (default: 1e-8).</td></tr>
+  <tr><td>maxiter</td><td>Maximum iterations (default: 1000).</td></tr>
+  <tr><td>method</td><td>Linearizer variant ('lin', 'gflin', 'egflin', default: 'egflin').</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>QN</td><td>Mean queue lengths.</td></tr>
+  <tr><td>UN</td><td>Utilization.</td></tr>
+  <tr><td>WN</td><td>Waiting times.</td></tr>
+  <tr><td>CN</td><td>Cycle times.</td></tr>
+  <tr><td>XN</td><td>System throughput.</td></tr>
+  <tr><td>totiter</td><td>Total iterations.</td></tr>
+  </table>
+
+@anchor pfqn_lldfun
+### pfqn_lldfun
+  <b>Description:</b> AMVA-QD load and queue-dependent scaling function.
+
+  <b>Syntax:</b>
+  @code
+  pfqn_lldfun(...)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  </table>
+
+@anchor pfqn_ls
+### pfqn_ls
+  <b>Description:</b> Logistic sampling approximation for normalizing constant.
+
+  <b>Syntax:</b>
+  @code
+  [Gn, lGn] = pfqn_ls(L, N, Z, I)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>L</td><td>Service demand matrix (MxR).</td></tr>
+  <tr><td>N</td><td>Population vector (1xR).</td></tr>
+  <tr><td>Z</td><td>Think time vector (1xR).</td></tr>
+  <tr><td>I</td><td>Number of samples (default: 1e5).</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>Gn</td><td>Estimated normalizing constant.</td></tr>
+  <tr><td>lGn</td><td>Logarithm of normalizing constant.</td></tr>
+  </table>
+
+@anchor pfqn_mci
+### pfqn_mci
+  <b>Description:</b> Monte Carlo Integration (MCI) for normalizing constant.
+
+  <b>Syntax:</b>
+  @code
+  [G, lG, lZ] = pfqn_mci(D, N, Z, I, variant)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>D</td><td>Service demand matrix.</td></tr>
+  <tr><td>N</td><td>Population vector.</td></tr>
+  <tr><td>Z</td><td>Think time vector.</td></tr>
+  <tr><td>I</td><td>Number of samples (default: 1e5).</td></tr>
+  <tr><td>variant</td><td>MCI variant ('mci', 'imci', 'rm', default: 'imci').</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>G</td><td>Normalizing constant estimate.</td></tr>
+  <tr><td>lG</td><td>Logarithm of normalizing constant.</td></tr>
+  <tr><td>lZ</td><td>Individual random sample log values.</td></tr>
+  </table>
+
+@anchor pfqn_mmint2_gausslaguerre
+### pfqn_mmint2_gausslaguerre
+  <b>Description:</b> McKenna-Mitra integral with Gauss-Laguerre quadrature.
+
+  <b>Syntax:</b>
+  @code
+  [G, lG] = pfqn_mmint2_gausslaguerre(L, N, Z, m)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>L</td><td>Service demand vector.</td></tr>
+  <tr><td>N</td><td>Population vector.</td></tr>
+  <tr><td>Z</td><td>Think time vector.</td></tr>
+  <tr><td>m</td><td>Replication factor (default: 1).</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>G</td><td>Normalizing constant.</td></tr>
+  <tr><td>lG</td><td>Logarithm of normalizing constant.</td></tr>
+  </table>
+
+@anchor pfqn_mmint2_gausslegendre
+### pfqn_mmint2_gausslegendre
+  <b>Description:</b> McKenna-Mitra integral with Gauss-Legendre quadrature.
+
+  <b>Syntax:</b>
+  @code
+  [G, lG] = pfqn_mmint2_gausslegendre(L, N, Z, m)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>L</td><td>Service demand vector.</td></tr>
+  <tr><td>N</td><td>Population vector.</td></tr>
+  <tr><td>Z</td><td>Think time vector.</td></tr>
+  <tr><td>m</td><td>Replication factor (default: 1).</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>G</td><td>Normalizing constant.</td></tr>
+  <tr><td>lG</td><td>Logarithm of normalizing constant.</td></tr>
+  </table>
+
+@anchor pfqn_mmint2
+### pfqn_mmint2
+  <b>Description:</b> McKenna-Mitra integral form for repairman models using MATLAB integral.
+
+  <b>Syntax:</b>
+  @code
+  [G, lG] = pfqn_mmint2(L, N, Z)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>L</td><td>Service demand vector.</td></tr>
+  <tr><td>N</td><td>Population vector.</td></tr>
+  <tr><td>Z</td><td>Think time vector.</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>G</td><td>Normalizing constant.</td></tr>
+  <tr><td>lG</td><td>Logarithm of normalizing constant.</td></tr>
+  </table>
+
+@anchor pfqn_mmsample2
+### pfqn_mmsample2
+  <b>Description:</b> Monte Carlo sampling for repairman models using McKenna-Mitra form.
+
+  <b>Syntax:</b>
+  @code
+  [G, lG] = pfqn_mmsample2(L, N, Z, samples)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>L</td><td>Service demand vector.</td></tr>
+  <tr><td>N</td><td>Population vector.</td></tr>
+  <tr><td>Z</td><td>Think time vector.</td></tr>
+  <tr><td>samples</td><td>Number of samples.</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>G</td><td>Normalizing constant estimate.</td></tr>
+  <tr><td>lG</td><td>Logarithm of normalizing constant.</td></tr>
+  </table>
+
+@anchor pfqn_mu_ms
+### pfqn_mu_ms
+  <b>Description:</b> Compute load-dependent rates for m identical c-server FCFS stations.
+
+  <b>Syntax:</b>
+  @code
+  pfqn_mu_ms(...)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  </table>
+
+@anchor pfqn_mushift
+### pfqn_mushift
+  <b>Description:</b> Shift load-dependent service rate vector by removing first element.
+
+  <b>Syntax:</b>
+  @code
+  pfqn_mushift(...)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  </table>
+
+@anchor pfqn_mvald
+### pfqn_mvald
+  <b>Description:</b> Exact MVA for load-dependent closed queueing networks.
+
+  <b>Syntax:</b>
+  @code
+  [XN, QN, UN, CN, lGN, isNumStable, pi] = pfqn_mvald(L, N, Z, mu, stabilize)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>L</td><td>Service demand matrix.</td></tr>
+  <tr><td>N</td><td>Population vector.</td></tr>
+  <tr><td>Z</td><td>Think time vector.</td></tr>
+  <tr><td>mu</td><td>Load-dependent rate matrix (MxNt).</td></tr>
+  <tr><td>stabilize</td><td>Force non-negative probabilities (default: true).</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>XN</td><td>System throughput.</td></tr>
+  <tr><td>QN</td><td>Mean queue lengths.</td></tr>
+  <tr><td>UN</td><td>Utilization.</td></tr>
+  <tr><td>CN</td><td>Cycle times.</td></tr>
+  <tr><td>lGN</td><td>Logarithm of normalizing constant evolution.</td></tr>
+  <tr><td>isNumStable</td><td>Numerical stability flag.</td></tr>
+  <tr><td>pi</td><td>Marginal queue-length probabilities.</td></tr>
+  </table>
+
+@anchor pfqn_mvaldms
+### pfqn_mvaldms
+  <b>Description:</b> Load-dependent MVA for multiserver mixed networks (wrapper for pfqn_mvaldmx).
+
+  <b>Syntax:</b>
+  @code
+  [XN, QN, UN, CN, lGN] = pfqn_mvaldms(lambda, D, N, Z, S)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>lambda</td><td>Arrival rate vector.</td></tr>
+  <tr><td>D</td><td>Service demand matrix.</td></tr>
+  <tr><td>N</td><td>Population vector.</td></tr>
+  <tr><td>Z</td><td>Think time vector.</td></tr>
+  <tr><td>S</td><td>Number of servers per station.</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>XN</td><td>System throughput.</td></tr>
+  <tr><td>QN</td><td>Mean queue lengths.</td></tr>
+  <tr><td>UN</td><td>Utilization (adjusted for multiservers).</td></tr>
+  <tr><td>CN</td><td>Cycle times.</td></tr>
+  <tr><td>lGN</td><td>Logarithm of normalizing constant.</td></tr>
+  </table>
+
+@anchor pfqn_mvaldmx_ec
+### pfqn_mvaldmx_ec
+  <b>Description:</b> Compute effective capacity terms for MVALDMX solver.
+
+  <b>Syntax:</b>
+  @code
+  [EC, E, Eprime, Lo] = pfqn_mvaldmx_ec(lambda, D, mu)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>lambda</td><td>Arrival rate vector.</td></tr>
+  <tr><td>D</td><td>Service demand matrix.</td></tr>
+  <tr><td>mu</td><td>Load-dependent rate matrix.</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>EC</td><td>Effective capacity matrix.</td></tr>
+  <tr><td>E</td><td>E-function values.</td></tr>
+  <tr><td>Eprime</td><td>E-prime function values.</td></tr>
+  <tr><td>Lo</td><td>Open class load vector.</td></tr>
+  </table>
+
+@anchor pfqn_mvaldmx
+### pfqn_mvaldmx
+  <b>Description:</b> Load-dependent MVA for mixed open/closed networks with limited load dependence.
+
+  <b>Syntax:</b>
+  @code
+  [XN, QN, UN, CN, lGN, Pc] = pfqn_mvaldmx(lambda, D, N, Z, mu, S)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>lambda</td><td>Arrival rate vector.</td></tr>
+  <tr><td>D</td><td>Service demand matrix.</td></tr>
+  <tr><td>N</td><td>Population vector.</td></tr>
+  <tr><td>Z</td><td>Think time vector.</td></tr>
+  <tr><td>mu</td><td>Load-dependent rate matrix.</td></tr>
+  <tr><td>S</td><td>Number of servers per station.</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>XN</td><td>System throughput.</td></tr>
+  <tr><td>QN</td><td>Mean queue lengths.</td></tr>
+  <tr><td>UN</td><td>Utilization.</td></tr>
+  <tr><td>CN</td><td>Cycle times.</td></tr>
+  <tr><td>lGN</td><td>Logarithm of normalizing constant.</td></tr>
+  <tr><td>Pc</td><td>Marginal queue-length probabilities.</td></tr>
+  </table>
+
+@anchor pfqn_mva
+### pfqn_mva
+  <b>Description:</b> Exact Mean Value Analysis (MVA) for product-form queueing networks.
+
+  <b>Syntax:</b>
+  @code
+  [XN, QN, UN, CN, lGN] = pfqn_mva(L, N, Z, mi)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>L</td><td>Service demand matrix (M x R).</td></tr>
+  <tr><td>N</td><td>Population vector (1 x R).</td></tr>
+  <tr><td>Z</td><td>Think time vector (1 x R).</td></tr>
+  <tr><td>mi</td><td>(Optional) Server multiplicity vector (1 x M). Default: single servers.</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>XN</td><td>System throughput (1 x R).</td></tr>
+  <tr><td>QN</td><td>Mean queue length (M x R).</td></tr>
+  <tr><td>UN</td><td>Utilization (M x R).</td></tr>
+  <tr><td>CN</td><td>Residence time (M x R).</td></tr>
+  <tr><td>lGN</td><td>Logarithm of the normalizing constant.</td></tr>
+  </table>
+
+@anchor pfqn_mvams
+### pfqn_mvams
+  <b>Description:</b> General-purpose MVA for mixed networks with multiserver nodes.
+
+  <b>Syntax:</b>
+  @code
+  [XN, QN, UN, CN, lG] = pfqn_mvams(lambda, L, N, Z, mi, S)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>lambda</td><td>Arrival rate vector.</td></tr>
+  <tr><td>L</td><td>Service demand matrix.</td></tr>
+  <tr><td>N</td><td>Population vector.</td></tr>
+  <tr><td>Z</td><td>Think time vector.</td></tr>
+  <tr><td>mi</td><td>Queue replication factors (default: ones).</td></tr>
+  <tr><td>S</td><td>Number of servers per station (default: ones).</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>XN</td><td>System throughput.</td></tr>
+  <tr><td>QN</td><td>Mean queue lengths.</td></tr>
+  <tr><td>UN</td><td>Utilization.</td></tr>
+  <tr><td>CN</td><td>Cycle times.</td></tr>
+  <tr><td>lG</td><td>Logarithm of normalizing constant.</td></tr>
+  </table>
+
+@anchor pfqn_mvamx
+### pfqn_mvamx
+  <b>Description:</b> Exact MVA for mixed open/closed single-server networks.
+
+  <b>Syntax:</b>
+  @code
+  [XN, QN, UN, CN, lGN] = pfqn_mvamx(lambda, D, N, Z, mi)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>lambda</td><td>Arrival rate vector.</td></tr>
+  <tr><td>D</td><td>Service demand matrix.</td></tr>
+  <tr><td>N</td><td>Population vector.</td></tr>
+  <tr><td>Z</td><td>Think time vector.</td></tr>
+  <tr><td>mi</td><td>Queue replication factors (default: ones).</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>XN</td><td>System throughput.</td></tr>
+  <tr><td>QN</td><td>Mean queue lengths.</td></tr>
+  <tr><td>UN</td><td>Utilization.</td></tr>
+  <tr><td>CN</td><td>Cycle times.</td></tr>
+  <tr><td>lGN</td><td>Logarithm of normalizing constant.</td></tr>
+  </table>
+
+@anchor pfqn_lcfsqn_nc
+### pfqn_lcfsqn_nc
+  <b>Description:</b> Normalizing constant for LCFS queueing networks
+
+  <b>Syntax:</b>
+  @code
+  [G, Ax] = pfqn_lcfsqn_nc(alpha, beta, N)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>alpha</td><td>Service rates at LCFS station (1xR vector).</td></tr>
+  <tr><td>beta</td><td>Service rates at LCFS-PR station (1xR vector).</td></tr>
+  <tr><td>N</td><td>Population vector (default: ones(1,R)).</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>G</td><td>Normalizing constant.</td></tr>
+  <tr><td>Ax</td><td>Cell array of A matrices for each state.</td></tr>
+  </table>
+
+@anchor pfqn_ncld
+### pfqn_ncld
+  <b>Description:</b> Normalizing constant for load-dependent closed networks.
+
+  <b>Syntax:</b>
+  @code
+  [lG, G, method] = pfqn_ncld(L, N, Z, mu, varargin)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>L</td><td>Service demand matrix.</td></tr>
+  <tr><td>N</td><td>Population vector.</td></tr>
+  <tr><td>Z</td><td>Think time vector.</td></tr>
+  <tr><td>mu</td><td>Load-dependent rate matrix.</td></tr>
+  <tr><td>options</td><td>Optional solver parameters.</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>lG</td><td>Logarithm of normalizing constant.</td></tr>
+  <tr><td>G</td><td>Normalizing constant.</td></tr>
+  <tr><td>method</td><td>Method used for computation.</td></tr>
+  </table>
+
+@anchor pfqn_nc
+### pfqn_nc
+  <b>Description:</b> Computes the normalizing constant of a product-form queueing network.
+
+  <b>Syntax:</b>
+  @code
+  [lG, X, Q, method] = pfqn_nc(lambda, L, N, Z, varargin)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>lambda</td><td>Arrival rates for open classes.</td></tr>
+  <tr><td>L</td><td>Service demand matrix.</td></tr>
+  <tr><td>N</td><td>Population vector.</td></tr>
+  <tr><td>Z</td><td>Think time vector.</td></tr>
+  <tr><td>options</td><td>Optional arguments for solver options (NC.defaultOptions).</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>lG</td><td>Logarithm of the normalizing constant.</td></tr>
+  <tr><td>X</td><td>System throughputs.</td></tr>
+  <tr><td>Q</td><td>Mean queue lengths.</td></tr>
+  <tr><td>method</td><td>The specific method used for computation (e.g., 'exact', 'ca', 'recal').</td></tr>
+  </table>
+
+@anchor pfqn_nc_sanitize
+### pfqn_nc_sanitize
+  <b>Description:</b> Sanitize and preprocess network parameters for NC solvers.
+
+  <b>Syntax:</b>
+  @code
+  [lambda, L, N, Z, lGremaind] = pfqn_nc_sanitize(lambda, L, N, Z, atol)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>lambda</td><td>Arrival rate vector.</td></tr>
+  <tr><td>L</td><td>Service demand matrix.</td></tr>
+  <tr><td>N</td><td>Population vector.</td></tr>
+  <tr><td>Z</td><td>Think time vector.</td></tr>
+  <tr><td>atol</td><td>Absolute tolerance.</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>lambda</td><td>Sanitized arrival rates.</td></tr>
+  <tr><td>L</td><td>Sanitized service demands (rescaled).</td></tr>
+  <tr><td>N</td><td>Sanitized populations.</td></tr>
+  <tr><td>Z</td><td>Sanitized think times (rescaled).</td></tr>
+  <tr><td>lGremaind</td><td>Log normalization factor from removed classes.</td></tr>
+  </table>
+
+@anchor pfqn_nrl
+### pfqn_nrl
+  <b>Description:</b> Normalizing constant via Normal Radius-Logistic (NRL) approximation.
+
+  <b>Syntax:</b>
+  @code
+  lG = pfqn_nrl(L, N, Z, alpha, options)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>L</td><td>Service demand matrix.</td></tr>
+  <tr><td>N</td><td>Population vector.</td></tr>
+  <tr><td>Z</td><td>Think time vector.</td></tr>
+  <tr><td>alpha</td><td>Load-dependent rate matrix.</td></tr>
+  <tr><td>options</td><td>Solver options.</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>lG</td><td>Logarithm of normalizing constant.</td></tr>
+  </table>
+
+@anchor pfqn_nrp
+### pfqn_nrp
+  <b>Description:</b> Normalizing constant via Normal Radius-Probit (NRP) approximation.
+
+  <b>Syntax:</b>
+  @code
+  lG = pfqn_nrp(L, N, Z, alpha, options)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>L</td><td>Service demand matrix.</td></tr>
+  <tr><td>N</td><td>Population vector.</td></tr>
+  <tr><td>Z</td><td>Think time vector.</td></tr>
+  <tr><td>alpha</td><td>Load-dependent rate matrix.</td></tr>
+  <tr><td>options</td><td>Solver options.</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>lG</td><td>Logarithm of normalizing constant.</td></tr>
+  </table>
+
+@anchor pfqn_panacea
+### pfqn_panacea
+  <b>Description:</b> PANACEA (PAth-based Normal Approximation for Closed networks Estimation Algorithm).
+
+  <b>Syntax:</b>
+  @code
+  [Gn, lGn] = pfqn_panacea(L, N, Z)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>L</td><td>Service demand matrix.</td></tr>
+  <tr><td>N</td><td>Population vector.</td></tr>
+  <tr><td>Z</td><td>Think time vector.</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>Gn</td><td>Normalizing constant.</td></tr>
+  <tr><td>lGn</td><td>Logarithm of normalizing constant.</td></tr>
+  </table>
+
+@anchor pfqn_procomom2
+### pfqn_procomom2
+  <b>Description:</b> Product-form CoMoM for 2-station repairman model (queue + delay).
+
+  <b>Syntax:</b>
+  @code
+  [pk, lG, G, T, F, B] = pfqn_procomom2(L, N, Z, mu, m)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>L</td><td>Service demand vector.</td></tr>
+  <tr><td>N</td><td>Population vector.</td></tr>
+  <tr><td>Z</td><td>Think time vector.</td></tr>
+  <tr><td>mu</td><td>Load-dependent rates (optional).</td></tr>
+  <tr><td>m</td><td>Replication factor (default: 1).</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>pk</td><td>Marginal state probabilities.</td></tr>
+  <tr><td>lG</td><td>Logarithm of normalizing constant.</td></tr>
+  <tr><td>G</td><td>Normalizing constant.</td></tr>
+  <tr><td>T</td><td>Transfer matrices.</td></tr>
+  <tr><td>F</td><td>Product transfer matrix.</td></tr>
+  <tr><td>B</td><td>Combined transfer matrix.</td></tr>
+  </table>
+
+@anchor pfqn_propfair
+### pfqn_propfair
+  <b>Description:</b> Proportionally fair allocation approximation (Walton 2009).
+
+  <b>Syntax:</b>
+  @code
+  [G, lG, Xasy] = pfqn_propfair(L, N, Z)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>L</td><td>Service demand matrix.</td></tr>
+  <tr><td>N</td><td>Population vector.</td></tr>
+  <tr><td>Z</td><td>Think time vector.</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>G</td><td>Normalizing constant estimate.</td></tr>
+  <tr><td>lG</td><td>Logarithm of normalizing constant.</td></tr>
+  <tr><td>Xasy</td><td>Asymptotic throughput vector.</td></tr>
+  </table>
+
+@anchor pfqn_qd
+### pfqn_qd
+  <b>Description:</b> Queue-Dependent (QD) approximate MVA solver.
+
+  <b>Syntax:</b>
+  @code
+  [Q, X, U, iter] = pfqn_qd(L, N, ga, be, Q0)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>L</td><td>Service demand matrix.</td></tr>
+  <tr><td>N</td><td>Population vector.</td></tr>
+  <tr><td>ga</td><td>Gamma scaling function (default: ones).</td></tr>
+  <tr><td>be</td><td>Beta scaling function (default: ones).</td></tr>
+  <tr><td>Q0</td><td>Initial queue length estimate (optional).</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>Q</td><td>Mean queue lengths.</td></tr>
+  <tr><td>X</td><td>System throughput.</td></tr>
+  <tr><td>U</td><td>Utilization.</td></tr>
+  <tr><td>iter</td><td>Number of iterations performed.</td></tr>
+  </table>
+
+@anchor pfqn_qzgblow
+### pfqn_qzgblow
+  <b>Description:</b> Lower asymptotic bound on queue length (Zahorjan-Gittelsohn-Bryant).
+
+  <b>Syntax:</b>
+  @code
+  pfqn_qzgblow(...)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  </table>
+
+@anchor pfqn_qzgbup
+### pfqn_qzgbup
+  <b>Description:</b> Upper asymptotic bound on queue length (Zahorjan-Gittelsohn-Bryant).
+
+  <b>Syntax:</b>
+  @code
+  pfqn_qzgbup(...)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  </table>
+
+@anchor pfqn_rd
+### pfqn_rd
+  <b>Description:</b> Reduced Decomposition (RD) method for load-dependent networks.
+
+  <b>Syntax:</b>
+  @code
+  [lGN, Cgamma] = pfqn_rd(L, N, Z, mu, options)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>L</td><td>Service demand matrix.</td></tr>
+  <tr><td>N</td><td>Population vector.</td></tr>
+  <tr><td>Z</td><td>Think time vector.</td></tr>
+  <tr><td>mu</td><td>Load-dependent rate matrix.</td></tr>
+  <tr><td>options</td><td>Solver options.</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>lGN</td><td>Logarithm of normalizing constant.</td></tr>
+  <tr><td>Cgamma</td><td>Gamma correction factor.</td></tr>
+  </table>
+
+@anchor pfqn_recal
+### pfqn_recal
+  <b>Description:</b> RECAL (REcursive CALculation) method for normalizing constant.
+
+  <b>Syntax:</b>
+  @code
+  [G, lG] = pfqn_recal(L, N, Z, m0)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>L</td><td>Service demand matrix.</td></tr>
+  <tr><td>N</td><td>Population vector.</td></tr>
+  <tr><td>Z</td><td>Think time vector (default: zeros).</td></tr>
+  <tr><td>m0</td><td>Initial multiplicity vector (default: ones).</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>G</td><td>Normalizing constant.</td></tr>
+  <tr><td>lG</td><td>Logarithm of normalizing constant.</td></tr>
+  </table>
+
+@anchor pfqn_schmidt
+### pfqn_schmidt
+  <b>Description:</b> Schmidt's exact MVA for networks with general scheduling disciplines.
+
+  <b>Syntax:</b>
+  @code
+  [XN, QN, UN, CN, T] = pfqn_schmidt(D, N, S, sched)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>D</td><td>Service demand matrix.</td></tr>
+  <tr><td>N</td><td>Population vector.</td></tr>
+  <tr><td>S</td><td>Number of servers per station (matrix or vector).</td></tr>
+  <tr><td>sched</td><td>Scheduling discipline per station.</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>XN</td><td>System throughput.</td></tr>
+  <tr><td>QN</td><td>Mean queue lengths.</td></tr>
+  <tr><td>UN</td><td>Utilization.</td></tr>
+  <tr><td>CN</td><td>Cycle times.</td></tr>
+  <tr><td>T</td><td>Results table.</td></tr>
+  </table>
+
+@anchor pfqn_sqni
+### pfqn_sqni
+  <b>Description:</b> Single Queue Network Iteration (SQNI) approximate solver.
+
+  <b>Syntax:</b>
+  @code
+  [Q, U, X] = pfqn_sqni(N, L, Z)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>N</td><td>Population vector.</td></tr>
+  <tr><td>L</td><td>Service demand vector.</td></tr>
+  <tr><td>Z</td><td>Think time vector.</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>Q</td><td>Mean queue lengths.</td></tr>
+  <tr><td>U</td><td>Utilization.</td></tr>
+  <tr><td>X</td><td>System throughput.</td></tr>
+  </table>
+
+@anchor pfqn_stdf_heur
+### pfqn_stdf_heur
+  <b>Description:</b> Heuristic sojourn time distribution for multiserver FCFS nodes (McKenna 1987 variant).
+
+  <b>Syntax:</b>
+  @code
+  pfqn_stdf_heur(...)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  </table>
+
+@anchor pfqn_stdf
+### pfqn_stdf
+  <b>Description:</b> Sojourn time distribution for multiserver FCFS nodes (McKenna 1987).
+
+  <b>Syntax:</b>
+  @code
+  pfqn_stdf(...)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  </table>
+
+@anchor pfqn_xzabalow
+### pfqn_xzabalow
+  <b>Description:</b> Lower asymptotic bound on throughput (Zahorjan-Balanced).
+
+  <b>Syntax:</b>
+  @code
+  XN = pfqn_xzabalow(L, N, Z)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>L</td><td>Service demand vector.</td></tr>
+  <tr><td>N</td><td>Population.</td></tr>
+  <tr><td>Z</td><td>Think time.</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>XN</td><td>Lower bound on throughput.</td></tr>
+  </table>
+
+@anchor pfqn_xzabaup
+### pfqn_xzabaup
+  <b>Description:</b> Upper asymptotic bound on throughput (Zahorjan-Balanced).
+
+  <b>Syntax:</b>
+  @code
+  XN = pfqn_xzabaup(L, N, Z)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>L</td><td>Service demand vector.</td></tr>
+  <tr><td>N</td><td>Population.</td></tr>
+  <tr><td>Z</td><td>Think time.</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>XN</td><td>Upper bound on throughput.</td></tr>
+  </table>
+
+@anchor pfqn_xzgsblow
+### pfqn_xzgsblow
+  <b>Description:</b> Lower asymptotic bound on throughput (Zahorjan-Gittelsohn-Schweitzer-Bryant).
+
+  <b>Syntax:</b>
+  @code
+  pfqn_xzgsblow(...)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  </table>
+
+@anchor pfqn_xzgsbup
+### pfqn_xzgsbup
+  <b>Description:</b> Upper asymptotic bound on throughput (Zahorjan-Gittelsohn-Schweitzer-Bryant).
+
+  <b>Syntax:</b>
+  @code
+  pfqn_xzgsbup(...)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  </table>
+*/

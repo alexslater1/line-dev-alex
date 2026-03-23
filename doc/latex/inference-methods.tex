@@ -1,0 +1,42 @@
+{\centering
+\begin{longtable}{|p{1.2cm}|p{3.2cm}|p{0.42\linewidth}|p{2.8cm}|}
+\caption{Estimation methods for \texttt{ParamEstimator}.}\label{TAB_infer_methods}\\
+\hline
+\textbf{Method}	&\textbf{Required Data}	& \textbf{Description} & \textbf{Refs.} \\
+\hline
+\endfirsthead
+\multicolumn{4}{c}%
+{\tablename\ \thetable\ -- Estimation methods.\textit{ Continued from previous page}} \\
+\hline
+\textbf{Method}	&\textbf{Required Data}	& \textbf{Description} & \textbf{Refs.} \\
+\hline
+	\endhead
+\hline \multicolumn{4}{r}{\textit{Continued on next page}} \\
+\endfoot
+\hline
+\endlastfoot
+\hline
+\texttt{ubr} & ArvR, Util & Utilization-based non-negative least squares regression & \cite{SpinnerCBK15}\\
+\hline
+\texttt{ubo} & ArvR, RespT, Util & Utilization-based constrained quadratic optimization & \cite{LiuHCA06}\\
+\hline
+\texttt{erps} & RespT (trace), QLen (cond.) & Extended regression for processor sharing stations & \cite{PerezCPS15}\\
+\hline
+\texttt{ekf} & ArvR, RespT, Util & Sequential estimation via Extended Kalman Filter & \cite{SpinnerCBK15}\\
+\hline
+\texttt{mle} & ArvR, RespT, Util & Maximum likelihood via bounded optimization with forward solver & \cite{PerezCPS15}\\
+\hline
+\texttt{mcmc} & QLen (aggregate) & Gibbs sampling with product-form queueing network likelihood & \cite{WangCS16}\\
+\hline
+\texttt{qmle} & QLen (per-class) & Closed-form quick maximum likelihood estimation & \cite{WangCKN16}\\
+\hline
+\texttt{mlps} & ArvR (trace), RespT (trace) & Exact CTMC-based maximum likelihood for PS stations & \cite{PerezCPS15}\\
+\hline
+\texttt{fmlps} & ArvR (trace), RespT (trace) & Fluid-limit maximum likelihood for PS stations & \cite{PerezCPS15}\\
+\hline
+\texttt{gibbs} & ArvR (trace), RespT (trace), Tput & Gibbs sampling from individual job trace data & \cite{WangCS16}\\
+\hline
+\texttt{rnn} & QLen (per-class, trace) & Physics-informed recurrent neural network & \cite{GarbiIT20}\\
+\hline
+\end{longtable}
+} % centering

@@ -1,0 +1,33 @@
+/**
+@page matlab_api API Documentation
+@brief Detailed API reference for all LINE Solver MATLAB modules
+
+This section provides detailed API documentation for all LINE Solver MATLAB modules.
+
+@section api_overview Overview
+
+The LINE Solver MATLAB API is organized into several categories:
+
+- @subpage api_core - Essential classes for building queueing models: networks, nodes, job classes,
+  distributions, solvers, and layered networks.
+
+- @subpage api_utilities - Helper functions, constants, and enumerations.
+
+<b>Algorithm Modules:</b>
+
+- @subpage api_pfqn - MVA, convolution, and normalizing constant methods
+- @subpage api_cache - Cache performance analysis
+- @subpage api_mam - QBD processes and matrix-analytic solutions
+- @subpage api_qsys - Single-station queueing system analysis
+- @subpage api_sn - Network analysis and transformation utilities
+- @subpage api_mc - CTMC and DTMC analysis tools
+
+<b>Specialized Modules:</b>
+
+- @subpage api_polling - Analysis of gated, exhaustive, and k-limited polling
+- @subpage api_npfqn - Approximations for intractable queueing networks
+- @subpage api_lossn - Analysis of networks with blocking
+- @subpage api_lsn - Layered queueing network analysis
+- @subpage api_rl - RL utilities for queueing control
+
+*/

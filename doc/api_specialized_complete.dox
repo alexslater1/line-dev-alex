@@ -1,0 +1,203 @@
+/**
+@page api_specialized Specialized Modules
+@brief Polling, loss networks, LQNs, non-product-form networks
+
+These modules provide domain-specific functionality for specialized queueing applications.
+
+@section spec_polling Polling Systems (matlab/src/api/polling/)
+
+The polling module implements algorithms for polling systems with various
+polling strategies (gated, exhaustive, k-limited).
+
+@subsection spec_polling_functions Key Functions
+
+- @ref polling_qsys_1limited.m "polling_qsys_1limited" - W=polling_qsys_1limited(arvMAPs,svcMAPs,switchMAPs)
+
+  <b>Syntax:</b>
+  @code
+  polling_qsys_1limited(...)
+  @endcode
+
+  <b>Description:</b> W=polling_qsys_1limited(arvMAPs,svcMAPs,switchMAPs)
+
+- @ref polling_qsys_exhaustive.m "polling_qsys_exhaustive" - W=polling_qsys_exhaustive(arvMAPs,svcMAPs,switchMAPs)
+
+  <b>Syntax:</b>
+  @code
+  polling_qsys_exhaustive(...)
+  @endcode
+
+  <b>Description:</b> W=polling_qsys_exhaustive(arvMAPs,svcMAPs,switchMAPs)
+
+- @ref polling_qsys_gated.m "polling_qsys_gated" - W=polling_qsys_gated(arvMAPs,svcMAPs,switchMAPs)
+
+  <b>Syntax:</b>
+  @code
+  polling_qsys_gated(...)
+  @endcode
+
+  <b>Description:</b> W=polling_qsys_gated(arvMAPs,svcMAPs,switchMAPs)
+
+
+@section spec_npfqn Non-Product-Form Networks (matlab/src/api/npfqn/)
+
+The npfqn module provides approximation methods for non-product-form queueing
+networks that do not satisfy BCMP conditions.
+
+@subsection spec_npfqn_functions Key Functions
+
+- @ref npfqn_nonexp_approx.m "npfqn_nonexp_approx" - handler for non-exponential service and arrival processes
+
+  <b>Syntax:</b>
+  @code
+  [ST, gamma, nservers, rho, scva, scvs, eta] = npfqn_nonexp_approx(method, sn, ST, V, SCV, T, U, gamma, nservers)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>method</td><td>Parameter description</td></tr>
+  <tr><td>sn</td><td>Parameter description</td></tr>
+  <tr><td>ST</td><td>Parameter description</td></tr>
+  <tr><td>V</td><td>Parameter description</td></tr>
+  <tr><td>SCV</td><td>Parameter description</td></tr>
+  <tr><td>T</td><td>Parameter description</td></tr>
+  <tr><td>U</td><td>Parameter description</td></tr>
+  <tr><td>gamma</td><td>Parameter description</td></tr>
+  <tr><td>nservers</td><td>Parameter description</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>ST</td><td>Return value</td></tr>
+  <tr><td>gamma</td><td>Return value</td></tr>
+  <tr><td>nservers</td><td>Return value</td></tr>
+  <tr><td>rho</td><td>Return value</td></tr>
+  <tr><td>scva</td><td>Return value</td></tr>
+  <tr><td>scvs</td><td>Return value</td></tr>
+  <tr><td>eta</td><td>Return value</td></tr>
+  </table>
+
+  <b>Description:</b> handler for non-exponential service and arrival processes
+
+- @ref npfqn_traffic_merge_cs.m "npfqn_traffic_merge_cs" - Given a cell array of n MMAPs with arrivals of R classes, produces a new
+
+  <b>Syntax:</b>
+  @code
+  npfqn_traffic_merge_cs(...)
+  @endcode
+
+  <b>Description:</b> Given a cell array of n MMAPs with arrivals of R classes, produces a new
+
+- @ref npfqn_traffic_merge.m "npfqn_traffic_merge" - Given a cell array of n MMAPs with arrivals of R classes, produces a new
+
+  <b>Syntax:</b>
+  @code
+  npfqn_traffic_merge(...)
+  @endcode
+
+  <b>Description:</b> Given a cell array of n MMAPs with arrivals of R classes, produces a new
+
+- @ref npfqn_traffic_split_cs.m "npfqn_traffic_split_cs" - Given a MMAP, produces a new array after split and class switching
+
+  <b>Syntax:</b>
+  @code
+  npfqn_traffic_split_cs(...)
+  @endcode
+
+  <b>Description:</b> Given a MMAP, produces a new array after split and class switching
+
+
+@section spec_lossn Loss Networks (matlab/src/api/lossn/)
+
+The lossn module implements algorithms for loss networks where arrivals can
+be blocked when resources are unavailable.
+
+@subsection spec_lossn_functions Key Functions
+
+- @ref lossn_erlangfp.m "lossn_erlangfp" - Erlang fixed point approximation for loss networks
+
+  <b>Syntax:</b>
+  @code
+  [QLen, Loss, E, niter] = lossn_erlangfp(nu, A, C)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>nu</td><td>Parameter description</td></tr>
+  <tr><td>A</td><td>Parameter description</td></tr>
+  <tr><td>C</td><td>Parameter description</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>QLen</td><td>Return value</td></tr>
+  <tr><td>Loss</td><td>Return value</td></tr>
+  <tr><td>E</td><td>Return value</td></tr>
+  <tr><td>niter</td><td>Return value</td></tr>
+  </table>
+
+  <b>Description:</b> Erlang fixed point approximation for loss networks
+
+
+@section spec_lsn Layered Stochastic Networks (matlab/src/api/lsn/)
+
+The lsn module provides algorithms for layered stochastic networks and
+layered queueing networks (LQNs).
+
+@subsection spec_lsn_functions Key Functions
+
+- @ref lsn_max_multiplicity.m "lsn_max_multiplicity" - Computes the maximum multiplicity of nodes in a Layered Software Network
+
+  <b>Syntax:</b>
+  @code
+  lsn_max_multiplicity(...)
+  @endcode
+
+  <b>Description:</b> Computes the maximum multiplicity of nodes in a Layered Software Network
+
+
+@section spec_rl Reinforcement Learning (matlab/src/api/rl/)
+
+The rl module provides reinforcement learning utilities for queueing control
+and optimization problems.
+
+@subsection spec_rl_functions Key Functions
+
+- @ref rl_env_general.m "rl_env_general" - 
+
+  <b>Syntax:</b>
+  @code
+  rl_env_general(...)
+  @endcode
+
+
+- @ref rl_env.m "rl_env" - 
+
+  <b>Syntax:</b>
+  @code
+  rl_env(...)
+  @endcode
+
+
+- @ref rl_td_agent_general.m "rl_td_agent_general" - 
+
+  <b>Syntax:</b>
+  @code
+  rl_td_agent_general(...)
+  @endcode
+
+
+- @ref rl_td_agent.m "rl_td_agent" - 
+
+  <b>Syntax:</b>
+  @code
+  rl_td_agent(...)
+  @endcode
+
+
+
+*/

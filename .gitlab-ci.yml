@@ -1,0 +1,44 @@
+image: maven:3.9-eclipse-temurin-17
+
+cache:
+  paths:
+    - .m2/repository
+
+variables:
+  MAVEN_OPTS: "-Dmaven.repo.local=.m2/repository"
+  TERM: xterm-256color
+
+stages:
+  - test
+  - build
+
+before_script:
+  - echo "Building LINE solver repository"
+  - mvn --version
+  - java -version
+
+test:
+  stage: test
+  script:
+    - cd jar
+    - mvn clean test -DtrimStackTrace=false -Dstyle.color=always -P ci
+  artifacts:
+    reports:
+      junit: jar/target/surefire-reports/TEST-*.xml
+    when: always
+  timeout: 30 minutes
+  interruptible: true
+
+build:
+  stage: build
+  script:
+    - cd jar
+    - mvn clean package -DskipTests -Dstyle.color=always
+  artifacts:
+    paths:
+      - jar/target/*.jar
+    expire_in: 1 week
+  only:
+    - master
+  timeout: 15 minutes
+  interruptible: true

@@ -1,0 +1,85 @@
+/**
+@page matlab_choosing_solver Choosing the Right Solver
+
+@section selection_guidelines Selection Guidelines
+
+Use <b>AUTO</b> when:
+- You want LINE to automatically select the best solver for your model
+- You are not sure which solver is most appropriate
+- The model may change and you want adaptive solver selection
+
+Use <b>CTMC</b> when:
+- You need exact solutions for a Markovian model
+- The model is small to medium-sized (<6000 states)
+- You need detailed state probabilities or transient analysis
+- Precision is more important than speed
+
+Use <b>FLUID</b> when:
+- You have a large-scale model where CTMC would have too many states
+- The model has many jobs or uses PS/INF scheduling
+- Approximate solutions with fast computation are acceptable
+- You need transient analysis for large models
+
+Use <b>JMT</b> when:
+- Your model uses non-Markovian distributions (Pareto, deterministic, traces)
+- You need comprehensive feature support (JMT supports virtually everything)
+- You want simulation-based validation or sample paths
+- CTMC state space is too large and FLUID/MVA do not support your features
+
+Use <b>MAM</b> when:
+- You have open Markovian systems with MAP/PH arrivals
+- You need exact solutions for infinite state-space models
+- The model exhibits QBD structure
+
+Use <b>MVA</b> when:
+- You have a closed or mixed product-form queueing network
+- You need fast approximate solutions for medium to large models
+- Single-server FCFS stations dominate your model
+- Mean performance metrics are sufficient (no distributions needed)
+
+Use <b>NC</b> when:
+- You need state probabilities for closed networks
+- You want normalizing constant computations
+- The model is product-form and you prefer exact or sampling-based methods
+
+Use <b>SSA</b> when:
+- You need sample paths with detailed phase information
+- You want flexible parallelization of stochastic simulation
+- You need to track service phase evolution
+- CTMC is too large but you prefer simulation over FLUID approximation
+
+@section performance_considerations Performance Considerations
+
+<b>Speed (fastest to slowest):</b>
+
+1. MVA (approximate methods)
+2. NC (sampling methods), FLUID
+3. MAM (for QBD models)
+4. CTMC (small models)
+5. JMT, SSA (simulation)
+
+<b>Accuracy (most accurate to approximate):</b>
+
+1. CTMC (exact for Markovian models)
+2. MAM (exact for QBD models)
+3. NC with exact methods
+4. MVA with exact methods
+5. NC with sampling, MVA approximations
+6. FLUID approximations
+7. JMT/SSA (simulation - statistical accuracy)
+
+<b>Scalability (supports largest models):</b>
+
+1. JMT, SSA (simulation)
+2. FLUID, MVA
+3. NC (with sampling)
+4. MAM (for QBD structure)
+5. CTMC (limited by state space)
+
+@section see_also See Also
+
+- @ref matlab_solver_reference "Solver Reference" - Complete solver method reference
+- @ref matlab_quickstart "Quick Start" - Getting started with LINE solvers
+- @ref matlab_examples "Examples" - Example models using different solvers
+
+*/

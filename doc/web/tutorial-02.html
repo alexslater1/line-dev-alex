@@ -1,0 +1,260 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+<link rel="stylesheet" href="css/line-solver.css" />
+	<meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<meta name="description" content="LINE Solver - Tutorial 2: Multiclass M/G/1 Queue" />
+	<meta name="keywords" content="LINE solver, tutorials, queueing networks, M/G/1" />
+	<meta name="author" content="Giuliano Casale" />
+	<title>Tutorial 2: Multiclass M/G/1 Queue - LINE Solver Documentation</title>
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" />
+	<script type="text/javascript" src="js/jquery-1.11.0.min.js"></script>
+	<script type="text/javascript" src="js/line-solver.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-matlab.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-java.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-kotlin.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+	<script type="text/javascript">
+		$(document).ready(function(){
+
+			$('.sidebar-nav .expandable > a').click(function(e){
+				e.preventDefault();
+				var parent = $(this).parent();
+				parent.toggleClass('open');
+			});
+
+			$('.language-tab').click(function(){
+				var lang = $(this).data('lang');
+				var section = $(this).closest('.tutorial-section');
+				section.find('.language-tab').removeClass('active');
+				section.find('.language-tab[data-lang="' + lang + '"]').addClass('active');
+				section.find('.language-content').removeClass('active');
+				section.find('.language-content[data-lang="' + lang + '"]').addClass('active');
+			});
+
+			$('.copy-button').click(function(){
+				var button = $(this);
+				var codeBlock = button.siblings('pre').find('code').length > 0
+					? button.siblings('pre').find('code').text()
+					: button.siblings('pre').text();
+
+				if (navigator.clipboard && navigator.clipboard.writeText) {
+					navigator.clipboard.writeText(codeBlock).then(function() {
+						button.text('Copied!').addClass('copied');
+						setTimeout(function(){
+							button.text('Copy').removeClass('copied');
+						}, 2000);
+					});
+				} else {
+					var textArea = document.createElement("textarea");
+					textArea.value = codeBlock;
+					document.body.appendChild(textArea);
+					textArea.select();
+					document.execCommand('copy');
+					document.body.removeChild(textArea);
+					button.text('Copied!').addClass('copied');
+					setTimeout(function(){
+						button.text('Copy').removeClass('copied');
+					}, 2000);
+				}
+			});
+
+			Prism.highlightAll();
+		});
+	</script>
+</head>
+<body>
+<div id="wrap">
+
+<div id="header">
+	<p id="toplinks"><a href="index.html">Home</a> | <a href="tutorials.html">Tutorials</a> | <a href="index.html#solvers">Solvers</a></p>
+
+	<h1><a href="index.html">LINE Solver</a></h1>
+	<p id="slogan">Queueing Theory Algorithms</p>
+</div>
+
+<div id="sidebar">
+<div id="sidebar-content">
+<h2>Navigate</h2>
+<ul class="sidebar-nav">
+<li><a href="index.html">Home</a></li>
+<li><a href="index.html#overview">Overview</a></li>
+<li><a href="index.html#papers">Documentation</a></li>
+<li><a href="tutorials.html">Tutorials</a></li>
+<!-- Re-enable when 3.0.4 is out: <li><a href="mcp.html">MCP Integration</a></li> -->
+<li><a href="index.html#solvers">Solvers</a></li>
+</ul>
+
+<h2>Support</h2>
+<ul class="sidebar-links">
+<li><a href="https://sourceforge.net/projects/line-solver/" target="_blank">Sourceforge site</a></li>
+<li><a href="https://github.com/imperial-qore/line-solver" target="_blank">Github repo</a></li>
+</ul>
+
+<h2>News</h2>
+<ul class="sidebar-news">
+<li><strong>2026</strong> - <a href="https://sourceforge.net/projects/line-solver/files/latest/download">LINE 3.0.4</a> is out!</li>
+<li><strong>2025</strong> - First release of LINE 3.0.0</li>
+<li><strong>2019</strong> - First release of LINE 2.0.0</li>
+<li><strong>2016</strong> - First release of LINE 1.0.0</li>
+</ul>
+</div>
+</div>
+
+<div id="content">
+	<div class="tutorial-nav">
+		<a href="tutorials.html">&larr; Back to Tutorials</a>
+		<span class="nav-prev"><a href="tutorial-01.html">Prev: Tutorial 01</a></span>
+		<span class="nav-next"><a href="tutorial-03.html">Next: Tutorial 03</a></span>
+	</div>
+
+	<div id="tutorial-02" class="tutorial-section">
+	<h2>Tutorial 2: Multiclass M/G/1 Queue</h2>
+	<p class="tutorial-subtitle">This example considers a more challenging variant with two classes of incoming jobs with non-exponential service times. For the first class, service times are Erlang distributed; for the second class, they are read from a trace file. Both classes have exponentially distributed inter-arrival times.</p>
+
+	<div class="network-diagram">
+		<img src="img/tut02_mg1_network.png" alt="Multiclass M/G/1 Queue Network Diagram" style="max-width: 400px; display: block; margin: 15px auto;">
+	</div>
+
+	<div class="example-section">
+	<div class="language-tabs">
+		<button class="language-tab" data-lang="matlab">MATLAB</button>
+		<button class="language-tab" data-lang="kotlin">Kotlin</button>
+		<button class="language-tab active" data-lang="python">Python</button>
+	</div>
+
+	<div class="language-content" data-lang="matlab">
+		<div class="code-block">
+		<button class="copy-button">Copy</button>
+		<pre><code class="language-matlab">% Example 2: A multiclass M/G/1 queue
+model = Network('M/G/1');
+source = Source(model,'Source');
+queue = Queue(model, 'Queue', SchedStrategy.FCFS);
+sink = Sink(model,'Sink');
+
+jobclass1 = OpenClass(model, 'Class1');
+jobclass2 = OpenClass(model, 'Class2');
+
+source.setArrival(jobclass1, Exp(0.5));
+source.setArrival(jobclass2, Exp(0.5));
+
+queue.setService(jobclass1, Erlang.fitMeanAndSCV(1,1/3));
+queue.setService(jobclass2, Replayer(which('example_trace.txt')));
+
+P = model.initRoutingMatrix();
+P.set(jobclass1, Network.serialRouting(source,queue,sink));
+P.set(jobclass2, Network.serialRouting(source,queue,sink));
+model.link(P);
+
+jmtAvgTable = JMT(model,'seed',23000).avgTable()
+
+queue.setService(jobclass2, Replayer(which('example_trace.txt')).fitAPH());
+mamAvgTable = MAM(model).avgTable()</code></pre>
+		</div>
+	</div>
+
+	<div class="language-content" data-lang="kotlin">
+		<div class="code-block">
+		<button class="copy-button">Copy</button>
+		<pre><code class="language-kotlin">// Block 1: Create network and nodes
+val model = Network("M/G/1")
+val source = Source(model, "Source")
+val queue = Queue(model, "Queue", SchedStrategy.FCFS)
+val sink = Sink(model, "Sink")
+
+// Block 2: Create job classes
+val jobclass1 = OpenClass(model, "Class1")
+val jobclass2 = OpenClass(model, "Class2")
+
+// Set arrival processes
+source.setArrival(jobclass1, Exp(0.5))
+source.setArrival(jobclass2, Exp(0.5))
+
+// Set service processes
+queue.setService(jobclass1, Erlang.fitMeanAndSCV(1.0, 1.0/3.0))
+queue.setService(jobclass2, Replayer(fileName).fitAPH())
+
+// Block 3: Define topology using routing matrix
+val P = model.initRoutingMatrix()
+P.set(jobclass1, Network.serialRouting(source, queue, sink))
+P.set(jobclass2, Network.serialRouting(source, queue, sink))
+model.link(P)
+
+// Block 4: Solve using JMT solver
+val avgTable = JMT(model, "seed", 23000).avgTable
+avgTable.print()</code></pre>
+		</div>
+	</div>
+
+	<div class="language-content active" data-lang="python">
+		<div class="code-block">
+		<button class="copy-button">Copy</button>
+		<pre><code class="language-python">from line_solver import *
+
+model = Network('M/G/1')
+source = Source(model, 'Source')
+queue = Queue(model, 'Queue', SchedStrategy.FCFS)
+sink = Sink(model, 'Sink')
+
+jobclass1 = OpenClass(model, 'Class1')
+jobclass2 = OpenClass(model, 'Class2')
+
+source.set_arrival(jobclass1, Exp(0.5))
+source.set_arrival(jobclass2, Exp(0.5))
+
+queue.set_service(jobclass1, Erlang.fit_mean_and_scv(1.0, 1/3))
+queue.set_service(jobclass2, Replayer(lineRootFolder() +
+    "/examples/gettingstarted/example_trace.txt").fit_aph())
+
+P = model.init_routing_matrix()
+P.set(jobclass1, Network.serial_routing(source,queue,sink))
+P.set(jobclass2, Network.serial_routing(source,queue,sink))
+model.link(P)
+
+jmtAvgTable = JMT(model, seed=23000).avg_table()
+mamAvgTable = MAM(model).avg_table()</code></pre>
+		</div>
+	</div>
+	</div>
+
+	<div class="output-block">
+		<h4>Expected Output (JMT solver)</h4>
+		<pre>jmtAvgTable =
+    Station    JobClass     QLen        Util       RespT     ResidT      ArvR       Tput
+    _______    ________    _______    ________    _______    _______    _______    _______
+    Source      Class1           0           0          0          0          0    0.50017
+    Source      Class2           0           0          0          0          0    0.49114
+    Queue       Class1     0.86153      0.4984     1.7389     1.7389    0.50017    0.49953
+    Queue       Class2     0.43751    0.049184    0.85879    0.85879    0.49114    0.49064</pre>
+	</div>
+
+	<div class="output-block">
+		<h4>Expected Output (MAM solver)</h4>
+		<pre>mamAvgTable =
+    Station    JobClass     QLen        Util       RespT     ResidT     ArvR    Tput
+    _______    ________    _______    ________    _______    _______    ____    ____
+    Source      Class1           0           0          0          0      0     0.5
+    Source      Class2           0           0          0          0      0     0.5
+    Queue       Class1     0.87646         0.5     1.7529     1.7529    0.5     0.5
+    Queue       Class2       0.427    0.050536    0.85399    0.85399    0.5     0.5</pre>
+	</div>
+	</div>
+
+	<div class="tutorial-nav">
+		<a href="tutorials.html">&larr; Back to Tutorials</a>
+		<span class="nav-prev"><a href="tutorial-01.html">Prev: Tutorial 01</a></span>
+		<span class="nav-next"><a href="tutorial-03.html">Next: Tutorial 03</a></span>
+	</div>
+
+	<div id="footer">
+		<p>&copy; 2016-2025 LINE Project. Released under BSD-3 license.
+		<a href="https://github.com/imperial-qore/line-solver">GitHub</a> |
+		<a href="https://sourceforge.net/projects/line-solver/">SourceForge</a></p>
+	</div>
+</div>
+
+</div>
+</body>
+</html>

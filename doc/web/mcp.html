@@ -1,0 +1,388 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+<link rel="stylesheet" href="css/line-solver.css" />
+	<meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<meta name="description" content="LINE Solver - MCP Integration for LLM-driven Queueing Analysis" />
+	<meta name="keywords" content="LINE solver, MCP, Model Context Protocol, Claude, LLM, queueing analysis" />
+	<meta name="author" content="Giuliano Casale" />
+	<title>MCP Integration - LINE Solver Documentation</title>
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" />
+	<script type="text/javascript" src="js/jquery-1.11.0.min.js"></script>
+	<script type="text/javascript" src="js/line-solver.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+	<script type="text/javascript">
+		$(document).ready(function(){
+
+			$('.sidebar-nav .expandable > a').click(function(e){
+				e.preventDefault();
+				var parent = $(this).parent();
+				parent.toggleClass('open');
+			});
+
+			// Handle hash navigation for subsections
+			$('.sidebar-nav .submenu a[href^="#"]').click(function(e){
+				var hash = $(this).attr('href');
+				if (hash && $(hash).length) {
+					$('html, body').animate({
+						scrollTop: $(hash).offset().top - 20
+					}, 300);
+				}
+			});
+
+			// Copy button functionality
+			$('.copy-button').click(function(){
+				var button = $(this);
+				var codeBlock = button.siblings('pre').find('code').length > 0
+					? button.siblings('pre').find('code').text()
+					: button.siblings('pre').text();
+
+				if (navigator.clipboard && navigator.clipboard.writeText) {
+					navigator.clipboard.writeText(codeBlock).then(function() {
+						button.text('Copied!').addClass('copied');
+						setTimeout(function(){
+							button.text('Copy').removeClass('copied');
+						}, 2000);
+					});
+				} else {
+					var textArea = document.createElement("textarea");
+					textArea.value = codeBlock;
+					document.body.appendChild(textArea);
+					textArea.select();
+					document.execCommand('copy');
+					document.body.removeChild(textArea);
+					button.text('Copied!').addClass('copied');
+					setTimeout(function(){
+						button.text('Copy').removeClass('copied');
+					}, 2000);
+				}
+			});
+
+			// Apply syntax highlighting
+			Prism.highlightAll();
+		});
+	</script>
+</head>
+<body>
+<div id="wrap">
+
+<div id="header">
+	<p id="toplinks"><a href="index.html">Home</a> | <a href="index.html#solvers">Solvers</a></p>
+
+	<h1><a href="index.html">LINE Solver</a></h1>
+	<p id="slogan">Queueing Theory Algorithms</p>
+</div>
+
+<div id="sidebar">
+<div id="sidebar-content">
+<h2>Navigate</h2>
+<ul class="sidebar-nav">
+<li><a href="index.html">Home</a></li>
+<li><a href="index.html#overview">Overview</a></li>
+<li><a href="index.html#papers">Documentation</a></li>
+<li><a href="tutorials.html">Tutorials</a></li>
+<!-- Re-enable when 3.0.4 is out: <li><a href="mcp.html">MCP Integration</a></li> -->
+<li><a href="index.html#solvers">Solvers</a></li>
+</ul>
+
+<h2>Support</h2>
+<ul class="sidebar-links">
+<li><a href="https://sourceforge.net/projects/line-solver/" target="_blank">Sourceforge site</a></li>
+<li><a href="https://github.com/imperial-qore/line-solver" target="_blank">Github repo</a></li>
+</ul>
+
+<h2>News</h2>
+<ul class="sidebar-news">
+<li><strong>2026</strong> - <a href="https://sourceforge.net/projects/line-solver/files/latest/download">LINE 3.0.4</a> is out!</li>
+<li><strong>2025</strong> - First release of LINE 3.0.0</li>
+<li><strong>2019</strong> - First release of LINE 2.0.0</li>
+<li><strong>2016</strong> - First release of LINE 1.0.0</li>
+</ul>
+</div>
+</div>
+
+<div id="content">
+	<h2>MCP Integration</h2>
+
+	<div class="solver-section">
+	<p class="solver-subtitle">LINE exposes its queueing analysis capabilities as a <strong>Model Context Protocol (MCP)</strong> server, allowing Large Language Models (such as Claude) to build, solve, and analyze queueing models conversationally. Instead of writing code manually, you describe your system in natural language and the LLM calls LINE tools to produce quantitative results.</p>
+	</div>
+
+	<h3 id="setup">Setup</h3>
+
+	<h4>Installation</h4>
+	<p>Install the LINE solver Python package:</p>
+
+	<div class="code-block">
+	<button class="copy-button">Copy</button>
+	<pre><code class="language-bash">pip install line-solver</code></pre>
+	</div>
+
+	<p>Or clone the repository and install in development mode:</p>
+
+	<div class="code-block">
+	<button class="copy-button">Copy</button>
+	<pre><code class="language-bash">git clone https://github.com/imperial-qore/line-solver.git
+cd line-solver/python
+pip install -e .
+pip install mcp numpy pandas</code></pre>
+	</div>
+
+	<h4>Claude Desktop Configuration</h4>
+	<p>Add the following to your <code>claude_desktop_config.json</code>:</p>
+
+	<div class="code-block">
+	<button class="copy-button">Copy</button>
+	<pre><code class="language-json">{
+  "mcpServers": {
+    "line-solver": {
+      "command": "python",
+      "args": [
+        "/path/to/line-solver/python/mcp_server.py"
+      ]
+    }
+  }
+}</code></pre>
+	</div>
+
+	<h4>Claude Code Configuration</h4>
+	<p>For Claude Code (CLI), add to your <code>.claude/settings.json</code>:</p>
+
+	<div class="code-block">
+	<button class="copy-button">Copy</button>
+	<pre><code class="language-json">{
+  "mcpServers": {
+    "line-solver": {
+      "command": "python",
+      "args": [
+        "/path/to/line-solver/python/mcp_server.py"
+      ]
+    }
+  }
+}</code></pre>
+	</div>
+
+	<p>Replace <code>/path/to/line-solver</code> with the actual path to your LINE installation.</p>
+
+	<h3 id="tools">Available Tools</h3>
+
+	<table class="format-table">
+	<tr><th>Tool</th><th>Description</th><th>Code Required</th></tr>
+	<tr><td><code>analyze_queue</code></td><td>Quick M/M/k or M/M/k/N open-queue analysis</td><td>No</td></tr>
+	<tr><td><code>analyze_closed_network</code></td><td>Quick closed-network (think time + queue) analysis</td><td>No</td></tr>
+	<tr><td><code>sweep_parameter</code></td><td>Sweep one parameter over a range and collect metrics</td><td>No</td></tr>
+	<tr><td><code>solve_line_model</code></td><td>Execute arbitrary LINE Python code (sandboxed)</td><td>Yes</td></tr>
+	<tr><td><code>compare_solvers</code></td><td>Run the same model with multiple solvers side-by-side</td><td>Yes</td></tr>
+	<tr><td><code>visualize_model</code></td><td>Generate a Mermaid diagram of a queueing network</td><td>Yes</td></tr>
+	<tr><td><code>list_examples</code></td><td>Browse available example models by category</td><td>No</td></tr>
+	<tr><td><code>get_example_code</code></td><td>Retrieve source code of a named example</td><td>No</td></tr>
+	<tr><td><code>clear_session</code></td><td>Remove a persistent code session</td><td>No</td></tr>
+	</table>
+
+	<h3 id="quickstart">Quick-Start Examples</h3>
+	<p>These tools require no code. Just provide parameter values and the LLM handles the rest.</p>
+
+	<h4>Open Queue Analysis</h4>
+	<p><strong>Prompt:</strong> &ldquo;Analyze an M/M/1 queue with arrival rate 2 and service rate 5.&rdquo;</p>
+	<p>The LLM calls <code>analyze_queue(arrival_rate=2.0, service_rate=5.0)</code> and returns:</p>
+
+	<div class="code-block">
+	<button class="copy-button">Copy</button>
+	<pre><code class="language-bash">Model: M/M/1
+  arrival_rate (lambda) = 2.0
+  service_rate (mu)     = 5.0
+  servers (k)           = 1
+  utilization (rho)     = 0.400000
+  solver                = MVA
+
+  Station  Class  QLen   Tput  RespT  ResidT  ArvR  Util
+  Queue    Class1 0.667  2.0   0.333  0.333   2.0   0.4</code></pre>
+	</div>
+
+	<h4>Closed Network Analysis</h4>
+	<p><strong>Prompt:</strong> &ldquo;Analyze a closed system with 10 users, 5 seconds think time, and service rate 2.&rdquo;</p>
+
+	<div class="code-block">
+	<button class="copy-button">Copy</button>
+	<pre><code class="language-python"># The LLM calls:
+analyze_closed_network(population=10, think_time=5.0, service_rate=2.0)</code></pre>
+	</div>
+
+	<h4>Parameter Sweep</h4>
+	<p><strong>Prompt:</strong> &ldquo;How does queue length change as arrival rate goes from 0.5 to 4.5 in steps of 0.5, with service rate 5?&rdquo;</p>
+
+	<div class="code-block">
+	<button class="copy-button">Copy</button>
+	<pre><code class="language-python"># The LLM calls:
+sweep_parameter(param="arrival_rate", values="0.5:4.5:0.5", service_rate=5.0)</code></pre>
+	</div>
+
+	<h3 id="custom">Custom Models</h3>
+	<p>The <code>solve_line_model</code> tool executes arbitrary LINE Python code in a sandboxed environment with <code>from line_solver import *</code>, <code>numpy</code>, and <code>pandas</code> pre-loaded.</p>
+
+	<h4>Open Network</h4>
+	<div class="code-block">
+	<button class="copy-button">Copy</button>
+	<pre><code class="language-python">model = Network('M/M/1')
+source = Source(model, 'Source')
+queue = Queue(model, 'Queue', SchedStrategy.FCFS)
+sink = Sink(model, 'Sink')
+
+oclass = OpenClass(model, 'Class1')
+source.setArrival(oclass, Exp(1.0))
+queue.setService(oclass, Exp(2.0))
+
+model.link(Network.serial_routing([source, queue, sink]))
+avg_table = MVA(model).avg_table()
+print(avg_table)</code></pre>
+	</div>
+
+	<h4>Closed Network</h4>
+	<div class="code-block">
+	<button class="copy-button">Copy</button>
+	<pre><code class="language-python">model = Network('ClosedQN')
+delay = Delay(model, 'Think')
+queue = Queue(model, 'Queue', SchedStrategy.PS)
+
+cclass = ClosedClass(model, 'Users', 5, delay)
+delay.setService(cclass, Exp(1.0))
+queue.setService(cclass, Exp(3.0))
+
+model.link(Network.serial_routing([delay, queue]))
+avg_table = MVA(model).avg_table()
+print(avg_table)</code></pre>
+	</div>
+
+	<h4>Multiclass Network</h4>
+	<div class="code-block">
+	<button class="copy-button">Copy</button>
+	<pre><code class="language-python">model = Network('Multiclass')
+source = Source(model, 'Source')
+queue = Queue(model, 'Queue', SchedStrategy.FCFS)
+sink = Sink(model, 'Sink')
+
+class1 = OpenClass(model, 'Web')
+class2 = OpenClass(model, 'API')
+
+source.setArrival(class1, Exp(1.0))
+source.setArrival(class2, Exp(0.5))
+queue.setService(class1, Exp(4.0))
+queue.setService(class2, Exp(3.0))
+
+model.link(Network.serial_routing([source, queue, sink]))
+avg_table = MVA(model).avg_table()
+print(avg_table)</code></pre>
+	</div>
+
+	<h3 id="advanced">Advanced Tools</h3>
+
+	<h4>Solver Comparison</h4>
+	<p>Run the same model with multiple solvers and compare results:</p>
+
+	<div class="code-block">
+	<button class="copy-button">Copy</button>
+	<pre><code class="language-python"># Using compare_solvers tool with solvers="MVA,NC,MAM"
+model = Network('M/M/1')
+source = Source(model, 'Source')
+queue = Queue(model, 'Queue', SchedStrategy.FCFS)
+sink = Sink(model, 'Sink')
+oclass = OpenClass(model, 'Class1')
+source.setArrival(oclass, Exp(1.0))
+queue.setService(oclass, Exp(2.0))
+model.link(Network.serial_routing([source, queue, sink]))</code></pre>
+	</div>
+
+	<h4>Model Visualization</h4>
+	<p>Generate Mermaid diagrams showing network topology, node types, and class information:</p>
+
+	<div class="code-block">
+	<button class="copy-button">Copy</button>
+	<pre><code class="language-python"># Using visualize_model tool
+model = Network('WebApp')
+source = Source(model, 'Arrivals')
+lb = Queue(model, 'LoadBalancer', SchedStrategy.PS)
+app = Queue(model, 'AppServer', SchedStrategy.FCFS)
+sink = Sink(model, 'Departures')
+oclass = OpenClass(model, 'Requests')
+source.setArrival(oclass, Exp(5.0))
+lb.setService(oclass, Exp(100.0))
+app.setService(oclass, Exp(10.0))
+P = model.initRoutingMatrix()
+P[oclass, source, lb] = 1.0
+P[oclass, lb, app] = 1.0
+P[oclass, app, sink] = 1.0
+model.link(P)</code></pre>
+	</div>
+
+	<p>The output is a Mermaid diagram renderable by GitHub, Notion, Mermaid Live Editor, and other tools.</p>
+
+	<h4>Example Gallery</h4>
+	<p>Browse and retrieve LINE's built-in examples:</p>
+	<ul>
+		<li><code>list_examples()</code> &mdash; categorized list of all available examples</li>
+		<li><code>get_example_code("gallery_mm1")</code> &mdash; retrieve source code for a specific example</li>
+	</ul>
+
+	<p>Example categories include: open queues, closed networks, layered QN, fork-join, caches, and random environments.</p>
+
+	<h3 id="solvers">Solver Guide</h3>
+
+	<table class="solver-table">
+	<tr><th>Solver</th><th>Best For</th></tr>
+	<tr><td><strong>MVA</strong></td><td>Product-form networks with exponential service (fast, exact)</td></tr>
+	<tr><td><strong>NC</strong></td><td>Closed networks needing exact normalizing-constant analysis</td></tr>
+	<tr><td><strong>CTMC</strong></td><td>Small state-space models; supports non-product-form features</td></tr>
+	<tr><td><strong>MAM</strong></td><td>Phase-type / MAP service distributions (matrix analytic)</td></tr>
+	<tr><td><strong>SSA</strong></td><td>Stochastic simulation; works for any supported model</td></tr>
+	<tr><td><strong>FLD</strong></td><td>Fluid / ODE approximation for transient and large models</td></tr>
+	</table>
+
+	<h3 id="output">Output Formats</h3>
+
+	<p>All analysis tools accept a <code>format</code> parameter:</p>
+	<ul>
+		<li><strong><code>text</code></strong> (default) &mdash; Human-readable table with model summary header</li>
+		<li><strong><code>json</code></strong> &mdash; Structured JSON with <code>metadata</code> and <code>results</code> keys</li>
+	</ul>
+
+	<h4>JSON Output Example</h4>
+	<div class="code-block">
+	<button class="copy-button">Copy</button>
+	<pre><code class="language-json">{
+  "metadata": {
+    "model": "M/M/1",
+    "arrival_rate": 2.0,
+    "service_rate": 5.0,
+    "utilization": 0.4,
+    "solver": "MVA"
+  },
+  "results": [
+    {
+      "Station": "Queue",
+      "Class": "Class1",
+      "QLen": 0.6667,
+      "Tput": 2.0,
+      "RespT": 0.3333,
+      "Util": 0.4
+    }
+  ]
+}</code></pre>
+	</div>
+
+	<div class="back-link">
+		<a href="index.html">&larr; Back to Home</a>
+	</div>
+
+</div>
+
+<div id="footer">
+	<p>Copyright &copy; 2012-2026 Imperial College London. All rights reserved.</p>
+</div>
+
+</div>
+</body>
+</html>

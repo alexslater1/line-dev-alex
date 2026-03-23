@@ -1,0 +1,323 @@
+/**
+@page api_mc Markov Chain Utilities
+@brief CTMC and DTMC analysis tools
+
+Utilities for continuous-time and discrete-time Markov chains.
+
+@subsection markov_chain_utilities_matlab_lib_kpctoolbox_mc__list Function List
+
+- @ref mc_ctmc_makeinfgen "ctmc_makeinfgen" - Normalizes a matrix to be a valid infinitesimal generator
+- @ref mc_ctmc_rand "ctmc_rand" - Generates a random infinitesimal generator matrix
+- @ref mc_ctmc_randomization "ctmc_randomization" - Uniformization (randomization) of a continuous-time Markov chain
+- @ref mc_ctmc_relsolve "ctmc_relsolve" - Computes the equilibrium distribution relative to a reference state
+- @ref mc_ctmc_solve "ctmc_solve" - Equilibrium distribution of the continuous-time Markov chain
+- @ref mc_ctmc_timereverse "ctmc_timereverse" - Computes the time-reversed generator of a CTMC
+- @ref mc_ctmc_transient "ctmc_transient" - Transient analysis of a continuous-time Markov chain using ODE solvers
+- @ref mc_ctmc_uniformization "ctmc_uniformization" - Computes transient probabilities using uniformization
+- @ref mc_dtmc_isfeasible "dtmc_isfeasible" - Checks feasibility of a stochastic matrix
+- @ref mc_dtmc_makestochastic "dtmc_makestochastic" - Normalizes a matrix to be a valid stochastic matrix
+- @ref mc_dtmc_rand "dtmc_rand" - Generates a random stochastic transition matrix
+- @ref mc_dtmc_simulate "dtmc_simulate" - Simulates a trajectory of a discrete-time Markov chain
+- @ref mc_dtmc_solve "dtmc_solve" - Equilibrium distribution of the discrete-time Markov chain
+- @ref mc_dtmc_stochcomp "dtmc_stochcomp" - Computes the stochastic complement of a DTMC partition
+- @ref mc_dtmc_timereverse "dtmc_timereverse" - Computes the time-reversed transition matrix of a DTMC
+- @ref mc_dtmc_uniformization "dtmc_uniformization" - Computes transient probabilities for a DTMC using uniformization
+- @ref mc_weaklyconncomp "weaklyconncomp" - Finds weakly connected components in a directed graph
+
+@anchor mc_ctmc_makeinfgen
+### ctmc_makeinfgen
+  <b>Description:</b> Normalizes a matrix to be a valid infinitesimal generator
+
+  <b>Syntax:</b>
+  @code
+  ctmc_makeinfgen(...)
+  @endcode
+
+@anchor mc_ctmc_rand
+### ctmc_rand
+  <b>Description:</b> Generates a random infinitesimal generator matrix
+
+  <b>Syntax:</b>
+  @code
+  ctmc_rand(...)
+  @endcode
+
+@anchor mc_ctmc_randomization
+### ctmc_randomization
+  <b>Description:</b> Uniformization (randomization) of a continuous-time Markov chain
+
+  <b>Syntax:</b>
+  @code
+  [P, q] = ctmc_randomization(Q, q)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>Q</td><td>Infinitesimal generator matrix</td></tr>
+  <tr><td>q</td><td>Queue index or probability parameter</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>P</td><td>Transition probability matrix</td></tr>
+  <tr><td>q</td><td>Queue index or probabilities</td></tr>
+  </table>
+
+@anchor mc_ctmc_relsolve
+### ctmc_relsolve
+  <b>Description:</b> Computes the equilibrium distribution relative to a reference state
+
+  <b>Syntax:</b>
+  @code
+  [p, Q, nConnComp, connComp] = ctmc_relsolve(Q, refstate, options)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>Q</td><td>Infinitesimal generator matrix</td></tr>
+  <tr><td>refstate</td><td>Reference state for normalization</td></tr>
+  <tr><td>options</td><td>Solver options structure</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>p</td><td>Steady-state probability distribution</td></tr>
+  <tr><td>Q</td><td>Generator matrix or queue lengths</td></tr>
+  <tr><td>nConnComp</td><td>Number of connected components</td></tr>
+  <tr><td>connComp</td><td>Connected components</td></tr>
+  </table>
+
+@anchor mc_ctmc_solve
+### ctmc_solve
+  <b>Description:</b> Equilibrium distribution of the continuous-time Markov chain
+
+  <b>Syntax:</b>
+  @code
+  [p, Q, nConnComp, connComp] = ctmc_solve(Q, options)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>Q</td><td>Infinitesimal generator matrix</td></tr>
+  <tr><td>options</td><td>Solver options structure</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>p</td><td>Steady-state probability distribution</td></tr>
+  <tr><td>Q</td><td>Generator matrix or queue lengths</td></tr>
+  <tr><td>nConnComp</td><td>Number of connected components</td></tr>
+  <tr><td>connComp</td><td>Connected components</td></tr>
+  </table>
+
+@anchor mc_ctmc_timereverse
+### ctmc_timereverse
+  <b>Description:</b> Computes the time-reversed generator of a CTMC
+
+  <b>Syntax:</b>
+  @code
+  ctmc_timereverse(...)
+  @endcode
+
+@anchor mc_ctmc_transient
+### ctmc_transient
+  <b>Description:</b> Transient analysis of a continuous-time Markov chain using ODE solvers
+
+  <b>Syntax:</b>
+  @code
+  [pi, t] = ctmc_transient(Q, pi0, t0, t1, useStiff, reltol, timestep)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>Q</td><td>Infinitesimal generator matrix</td></tr>
+  <tr><td>pi0</td><td>Initial or per-item probabilities</td></tr>
+  <tr><td>t0</td><td>Start time</td></tr>
+  <tr><td>t1</td><td>End time</td></tr>
+  <tr><td>useStiff</td><td>Use stiff ODE solver flag</td></tr>
+  <tr><td>reltol</td><td>Relative tolerance</td></tr>
+  <tr><td>timestep</td><td>Time step size</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>pi</td><td>Steady-state probability distribution</td></tr>
+  <tr><td>t</td><td>Time values or transition matrix</td></tr>
+  </table>
+
+@anchor mc_ctmc_uniformization
+### ctmc_uniformization
+  <b>Description:</b> Computes transient probabilities using uniformization
+
+  <b>Syntax:</b>
+  @code
+  [pi, kmax] = ctmc_uniformization(pi0, Q, t, tol, maxiter)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>pi0</td><td>Initial or per-item probabilities</td></tr>
+  <tr><td>Q</td><td>Infinitesimal generator matrix</td></tr>
+  <tr><td>t</td><td>Time value or time vector</td></tr>
+  <tr><td>tol</td><td>Convergence tolerance</td></tr>
+  <tr><td>maxiter</td><td>Maximum number of iterations</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>pi</td><td>Steady-state probability distribution</td></tr>
+  <tr><td>kmax</td><td>Maximum population</td></tr>
+  </table>
+
+@anchor mc_dtmc_isfeasible
+### dtmc_isfeasible
+  <b>Description:</b> Checks feasibility of a stochastic matrix
+
+  <b>Syntax:</b>
+  @code
+  dtmc_isfeasible(...)
+  @endcode
+
+@anchor mc_dtmc_makestochastic
+### dtmc_makestochastic
+  <b>Description:</b> Normalizes a matrix to be a valid stochastic matrix
+
+  <b>Syntax:</b>
+  @code
+  dtmc_makestochastic(...)
+  @endcode
+
+@anchor mc_dtmc_rand
+### dtmc_rand
+  <b>Description:</b> Generates a random stochastic transition matrix
+
+  <b>Syntax:</b>
+  @code
+  dtmc_rand(...)
+  @endcode
+
+@anchor mc_dtmc_simulate
+### dtmc_simulate
+  <b>Description:</b> Simulates a trajectory of a discrete-time Markov chain
+
+  <b>Syntax:</b>
+  @code
+  sts = dtmc_simulate(P, pi0, n)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>P</td><td>Transition probability matrix</td></tr>
+  <tr><td>pi0</td><td>Initial or per-item probabilities</td></tr>
+  <tr><td>n</td><td>Number of items, nodes, or states</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>sts</td><td>Station indices or states</td></tr>
+  </table>
+
+@anchor mc_dtmc_solve
+### dtmc_solve
+  <b>Description:</b> Equilibrium distribution of the discrete-time Markov chain
+
+  <b>Syntax:</b>
+  @code
+  dtmc_solve(...)
+  @endcode
+
+@anchor mc_dtmc_stochcomp
+### dtmc_stochcomp
+  <b>Description:</b> Computes the stochastic complement of a DTMC partition
+
+  <b>Syntax:</b>
+  @code
+  [S, P11, P12, P21, P22] = dtmc_stochcomp(P, I)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>P</td><td>Transition probability matrix</td></tr>
+  <tr><td>I</td><td>Integral approximation or index set</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>S</td><td>Service time or state probabilities</td></tr>
+  <tr><td>P11</td><td>Block (1,1) of transition matrix</td></tr>
+  <tr><td>P12</td><td>Block (1,2) of transition matrix</td></tr>
+  <tr><td>P21</td><td>Block (2,1) of transition matrix</td></tr>
+  <tr><td>P22</td><td>Block (2,2) of transition matrix</td></tr>
+  </table>
+
+@anchor mc_dtmc_timereverse
+### dtmc_timereverse
+  <b>Description:</b> Computes the time-reversed transition matrix of a DTMC
+
+  <b>Syntax:</b>
+  @code
+  dtmc_timereverse(...)
+  @endcode
+
+@anchor mc_dtmc_uniformization
+### dtmc_uniformization
+  <b>Description:</b> Computes transient probabilities for a DTMC using uniformization
+
+  <b>Syntax:</b>
+  @code
+  [pi, kmax] = dtmc_uniformization(pi0, P, t, tol, maxiter)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>pi0</td><td>Initial or per-item probabilities</td></tr>
+  <tr><td>P</td><td>Transition probability matrix</td></tr>
+  <tr><td>t</td><td>Time value or time vector</td></tr>
+  <tr><td>tol</td><td>Convergence tolerance</td></tr>
+  <tr><td>maxiter</td><td>Maximum number of iterations</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>pi</td><td>Steady-state probability distribution</td></tr>
+  <tr><td>kmax</td><td>Maximum population</td></tr>
+  </table>
+
+@anchor mc_weaklyconncomp
+### weaklyconncomp
+  <b>Description:</b> Finds weakly connected components in a directed graph
+
+  <b>Syntax:</b>
+  @code
+  [S, C] = weaklyconncomp(G)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>G</td><td>Generator matrix or normalizing constant</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>S</td><td>Service time or state probabilities</td></tr>
+  <tr><td>C</td><td>Coefficient matrix or cost</td></tr>
+  </table>
+*/

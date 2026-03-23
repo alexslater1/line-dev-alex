@@ -1,0 +1,301 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+<link rel="stylesheet" href="css/line-solver.css" />
+	<meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<meta name="description" content="LINE Solver - NC Solver Documentation" />
+	<meta name="keywords" content="LINE solver, NC, Normalizing Constant" />
+	<meta name="author" content="Giuliano Casale" />
+	<title>NC Solver - LINE Solver Documentation</title>
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" />
+	<script type="text/javascript" src="js/jquery-1.11.0.min.js"></script>
+	<script type="text/javascript" src="js/line-solver.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-matlab.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-java.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+	<script type="text/javascript">
+		$(document).ready(function(){
+
+			$('.sidebar-nav .expandable > a').click(function(e){
+				e.preventDefault();
+				var parent = $(this).parent();
+				parent.toggleClass('open');
+			});
+			// Auto-expand Solvers menu on solver pages
+			$('.sidebar-nav .expandable').addClass('open');
+
+			$('.language-tab').click(function(){
+				var lang = $(this).data('lang');
+				$(this).siblings().removeClass('active');
+				$(this).addClass('active');
+				$(this).closest('.example-section').find('.language-content').removeClass('active');
+				$(this).closest('.example-section').find('.language-content[data-lang="' + lang + '"]').addClass('active');
+			});
+
+			// Copy button functionality
+			$('.copy-button').click(function(){
+				var button = $(this);
+				var codeBlock = button.siblings('pre').find('code').length > 0
+					? button.siblings('pre').find('code').text()
+					: button.siblings('pre').text();
+
+				if (navigator.clipboard && navigator.clipboard.writeText) {
+					navigator.clipboard.writeText(codeBlock).then(function() {
+						button.text('Copied!').addClass('copied');
+						setTimeout(function(){
+							button.text('Copy').removeClass('copied');
+						}, 2000);
+					});
+				} else {
+					// Fallback for older browsers
+					var textArea = document.createElement("textarea");
+					textArea.value = codeBlock;
+					document.body.appendChild(textArea);
+					textArea.select();
+					document.execCommand('copy');
+					document.body.removeChild(textArea);
+					button.text('Copied!').addClass('copied');
+					setTimeout(function(){
+						button.text('Copy').removeClass('copied');
+					}, 2000);
+				}
+			});
+
+			// Apply syntax highlighting
+			Prism.highlightAll();
+		});
+	</script>
+</head>
+<body>
+<div id="wrap">
+
+<div id="header">
+	<p id="toplinks"><a href="index.html">Home</a> | <a href="index.html#solvers">Solvers</a></p>
+	
+	<h1><a href="index.html">LINE Solver</a></h1>
+	<p id="slogan">Queueing Theory Algorithms</p>
+</div>
+
+<div id="sidebar">
+<div id="sidebar-content">
+<h2>Navigate</h2>
+<ul class="sidebar-nav">
+<li><a href="index.html">Home</a></li>
+<li><a href="index.html#overview">Overview</a></li>
+<li><a href="index.html#papers">Documentation</a></li>
+<li><a href="tutorials.html">Tutorials</a></li>
+<!-- Re-enable when 3.0.4 is out: <li><a href="mcp.html">MCP Integration</a></li> -->
+<li><a href="index.html#solvers">Solvers</a></li>
+</ul>
+
+<h2>Support</h2>
+<ul class="sidebar-links">
+<li><a href="https://sourceforge.net/projects/line-solver/" target="_blank">Sourceforge site</a></li>
+<li><a href="https://github.com/imperial-qore/line-solver" target="_blank">Github repo</a></li>
+</ul>
+
+<h2>News</h2>
+<ul class="sidebar-news">
+<li><strong>2026</strong> - <a href="https://sourceforge.net/projects/line-solver/files/latest/download">LINE 3.0.4</a> is out!</li>
+<li><strong>2025</strong> - First release of LINE 3.0.0</li>
+<li><strong>2019</strong> - First release of LINE 2.0.0</li>
+<li><strong>2016</strong> - First release of LINE 1.0.0</li>
+</ul>
+</div>
+</div>
+
+<div id="content">
+	<h2>NC (Normalizing Constant)</h2>
+
+	<div class="solver-section">
+	<p class="solver-subtitle">The NC solver implements algorithms based on the normalizing constant of product-form queueing networks. Unlike other solvers, NC is able to compute state and marginal probabilities in queueing networks without the need for simulation. It also offers the most accurate approximations for models including caches.</p>
+
+	<table class="algorithm-table">
+	<tr><th>Method</th><th>Algorithm</th><th>Reference</th></tr>
+	<tr><td><code>default</code></td><td>Automatic method selection</td><td>&mdash;</td></tr>
+	<tr><td><code>exact</code></td><td>Exact normalizing constant computation</td><td>&mdash;</td></tr>
+	<tr><td><code>ca</code></td><td>Multiclass convolution algorithm (exact)</td><td>&mdash;</td></tr>
+	<tr><td><code>comom</code></td><td>Class-oriented method of moments (exact)</td><td><a class="ref-link" href="#ref-casale2009">[1]</a></td></tr>
+	<tr><td><code>le</code></td><td>Logistic asymptotic expansion</td><td><a class="ref-link" href="#ref-casale2017">[3]</a></td></tr>
+	<tr><td><code>kt</code></td><td>Knessl-Tier asymptotic expansion</td><td><a class="ref-link" href="#ref-knessl1992">[4]</a></td></tr>
+	<tr><td><code>panacea</code></td><td>Panacea asymptotic expansion</td><td><a class="ref-link" href="#ref-mckenna1984">[5]</a>, <a class="ref-link" href="#ref-robertazzi2000">[6]</a></td></tr>
+	<tr><td><code>nrp</code></td><td>N&ouml;rlund-Rice integral (direct)</td><td><a class="ref-link" href="#ref-casale2021">[8]</a></td></tr>
+	<tr><td><code>nrl</code></td><td>N&ouml;rlund-Rice integral (Laplace)</td><td><a class="ref-link" href="#ref-casale2021">[8]</a></td></tr>
+	<tr><td><code>imci</code></td><td>Improved Monte Carlo integration</td><td><a class="ref-link" href="#ref-wang2016">[7]</a></td></tr>
+	<tr><td><code>ls</code></td><td>Logistic sampling (Monte Carlo)</td><td><a class="ref-link" href="#ref-casale2017">[3]</a></td></tr>
+	<tr><td><code>sampling</code></td><td>Generic sampling method</td><td>&mdash;</td></tr>
+	<tr><td><code>cub</code></td><td>Grundmann-Moeller cubature rules</td><td><a class="ref-link" href="#ref-casale2017">[3]</a></td></tr>
+	<tr><td><code>mmint2</code></td><td>Interpolation method</td><td>&mdash;</td></tr>
+	<tr><td><code>gleint</code></td><td>Gauss-Laguerre exponential interpolation</td><td>&mdash;</td></tr>
+	<tr><td><code>mem</code></td><td>Maximum Entropy Method for open queueing networks</td><td><a class="ref-link" href="#ref-kouvatsos1994">[9]</a></td></tr>
+	<tr><td><code>rd</code></td><td>Reduction heuristic</td><td><a class="ref-link" href="#ref-casale2021">[8]</a></td></tr>
+	<tr><td><code>propfair</code></td><td>Proportional fairness method</td><td>&mdash;</td></tr>
+	<tr><td><code>gm</code></td><td>General method</td><td>&mdash;</td></tr>
+	</table>
+	</div>
+
+	<div class="example-section">
+	<h3>Example</h3>
+	<p>This example demonstrates a closed queueing network with 5 jobs. The NC solver computes the normalizing constant using the CoMoM algorithm to obtain exact performance metrics without simulation.</p>
+
+	<div class="language-tabs">
+		<button class="language-tab active" data-lang="matlab">MATLAB</button>
+		<button class="language-tab" data-lang="java">Java</button>
+		<button class="language-tab" data-lang="python">Python</button>
+	</div>
+
+	<div class="language-content active" data-lang="matlab">
+		<div class="code-block">
+		<button class="copy-button">Copy</button>
+		<pre><code class="language-matlab">% Create a closed network with delay and queue
+model = Network('NC Example');
+delay = Delay(model, 'Delay');
+queue = Queue(model, 'Queue', SchedStrategy.FCFS);
+
+% Closed class with 5 jobs
+jobclass = ClosedClass(model, 'Class1', 5, delay);
+
+delay.setService(jobclass, Exp(1.0));
+queue.setService(jobclass, Exp(2.0));
+
+% Circular routing
+P = model.initRoutingMatrix();
+P.set(jobclass, jobclass, delay, queue, 1.0);
+P.set(jobclass, jobclass, queue, delay, 1.0);
+model.link(P);
+
+% Solve with NC
+solver = NC(model);
+NC(model).avgTable()</code></pre>
+		</div>
+
+		<div class="output-block">
+			<h4>Output:</h4>
+<pre>NC analysis [method: default/comom, lang: matlab] completed in 0.041s.
+
+ans =
+  2×8 table
+    Station    JobClass     QLen      Util     RespT     ResidT     ArvR      Tput
+    _______    ________    ______    ______    ______    ______    ______    ______
+     Delay      Class1     1.9266    1.9266         1         1    1.9266    1.9266
+     Queue      Class1     3.0734    0.9633    1.5952    1.5952    1.9266    1.9266</pre>
+		</div>
+	</div>
+
+	<div class="language-content" data-lang="java">
+		<div class="code-block">
+		<button class="copy-button">Copy</button>
+		<pre><code class="language-java">import jline.lang.*;
+import jline.lang.constant.SchedStrategy;
+import jline.lang.nodes.Delay;
+import jline.lang.nodes.Queue;
+import jline.lang.processes.Exp;
+import jline.solvers.NetworkAvgTable;
+import jline.solvers.nc.NC;
+import java.util.List;
+
+public class NCExample {
+    public static void main(String[] args) {
+        // Create a closed network with delay and queue
+        Network model = new Network("NC Example");
+        Delay delay = new Delay(model, "Delay");
+        Queue queue = new Queue(model, "Queue", SchedStrategy.FCFS);
+
+        // Closed class with 5 jobs
+        ClosedClass jobclass = new ClosedClass(model, "Class1", 5, delay);
+
+        delay.setService(jobclass, Exp.fitRate(1.0));
+        queue.setService(jobclass, Exp.fitRate(2.0));
+
+        // Circular routing
+        RoutingMatrix P = new RoutingMatrix(model,
+            List.of(jobclass), List.of(delay, queue));
+        P.addConnection(jobclass, jobclass, delay, queue, 1.0);
+        P.addConnection(jobclass, jobclass, queue, delay, 1.0);
+        model.link(P);
+
+        // Solve with NC
+        NC solver = new NC(model);
+        NetworkAvgTable avgTable = solver.avgTable;
+        System.out.println(avgTable);
+    }
+}</code></pre>
+		</div>
+
+		<div class="output-block">
+			<h4>Output:</h4>
+<pre>NC analysis [method: default/comom, lang: java] completed.
+
+Station    JobClass     QLen      Util     RespT     ResidT     ArvR      Tput
+Delay      Class1       1.9266    1.9266   1.0       1.0        1.9266    1.9266
+Queue      Class1       3.0734    0.9633   1.5952    1.5952     1.9266    1.9266</pre>
+		</div>
+	</div>
+
+	<div class="language-content" data-lang="python">
+		<div class="code-block">
+		<button class="copy-button">Copy</button>
+		<pre><code class="language-python">from line_solver import *
+
+# Create a closed network with delay and queue
+model = Network('NC Example')
+delay = Delay(model, 'Delay')
+queue = Queue(model, 'Queue', SchedStrategy.FCFS)
+
+# Closed class with 5 jobs
+jobclass = ClosedClass(model, 'Class1', 5, delay)
+
+delay.setService(jobclass, Exp(1.0))
+queue.setService(jobclass, Exp(2.0))
+
+# Circular routing
+P = model.initRoutingMatrix()
+P.set(jobclass, jobclass, delay, queue, 1.0)
+P.set(jobclass, jobclass, queue, delay, 1.0)
+model.link(P)
+
+# Solve with NC
+solver = NC(model)
+print(solver.avg_table)</code></pre>
+		</div>
+
+		<div class="output-block">
+			<h4>Output:</h4>
+<pre>NC analysis [method: default/comom, lang: python] completed.
+
+  Station  JobClass  QLen    Util    RespT   ResidT  ArvR    Tput
+0  Delay    Class1    1.9266  1.9266  1.0     1.0     1.9266  1.9266
+1  Queue    Class1    3.0734  0.9633  1.5952  1.5952  1.9266  1.9266</pre>
+		</div>
+	</div>
+	</div>
+
+	<div class="references">
+	<h3>References</h3>
+	<ol>
+	<li id="ref-casale2009">Casale, G. (2009). CoMoM: A class-oriented method of moments for queueing networks. <em>IEEE Transactions on Software Engineering</em>, 35(5), 692-709.</li>
+	<li id="ref-reiser1981">Reiser, M. (1981). Mean-value analysis and convolution method for queue-dependent servers. <em>Performance Evaluation</em>, 1(1), 7-18.</li>
+	<li id="ref-casale2017">Casale, G. (2017). Analytical modelling of data-parallel applications. <em>IEEE ICDCS</em>, pp. 2330-2336.</li>
+	<li id="ref-knessl1992">Knessl, C., &amp; Tier, C. (1992). Asymptotic approximations for queueing systems. <em>IEEE Transactions on Computers</em>, 41(6), 771-790.</li>
+	<li id="ref-mckenna1984">McKenna, J., &amp; Mitra, D. (1984). Asymptotic expansions and integral representations. <em>Journal of the ACM</em>, 31(2), 346-360.</li>
+	<li id="ref-robertazzi2000">Robertazzi, T. G. (2000). <em>Computer Networks and Systems</em> (3rd ed.). Springer.</li>
+	<li id="ref-wang2016">Wang, W., Casale, G., &amp; Sutton, C. (2016). Improved Monte Carlo integration. <em>ACM TOMACS</em>, 26(4), 22.</li>
+	<li id="ref-casale2021">Casale, G., Harrison, P. G., &amp; Hong, Z. (2021). An efficient algorithm for the N&ouml;rlund-Rice integral. <em>Performance Evaluation</em>, 150, 102203.</li>
+	<li id="ref-kouvatsos1994">Kouvatsos, D. D. (1994). Entropy maximisation and queueing network models. <em>Annals of Operations Research</em>, 48, 63-126.</li>
+	</ol>
+	</div>
+
+	<div class="back-link">
+		<a href="index.html#solvers">&larr; Back to Solvers</a>
+	</div>
+</div>
+
+<div id="footer">
+	<p>&copy; 2025 <a href="https://www.imperial.ac.uk/">Imperial College London</a></p>
+</div>
+
+</div>
+</body>
+</html>

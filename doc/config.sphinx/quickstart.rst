@@ -1,0 +1,60 @@
+Quick Start Guide
+=================
+
+This guide will help you get started with LINE Solver for Python. The solver is presently a wrapper for the JAR backend, which implements the core algorithms in Java/Kotlin.
+
+Creating a Simple Model
+-----------------------
+
+Here's a simple M/M/1 queue example::
+
+    from line_solver import *
+    
+    model = Network('M/M/1 Queue')
+    
+    # Create nodes
+    source = Source(model, 'Source')
+    queue = Queue(model, 'Queue', SchedStrategy.FCFS)
+    sink = Sink(model, 'Sink')
+    
+    # Create job class
+    jobclass = OpenClass(model, 'Class1')
+    
+    # Set service process
+    queue.set_service(jobclass, Exp(1.0))
+    
+    # Set arrival process
+    source.set_arrival(jobclass, Exp(0.5))
+    
+    # Link nodes
+    model.link(Network.serial_routing([source, queue, sink]))
+    
+    # Solve
+    solver = MVA(model)
+    result = solver.avg_table()
+    print(result)
+
+
+Available Solvers
+-----------------
+
+LINE provides multiple solvers for Network models:
+
+* **AUTO**: Wrapper for Automatic Solver Selection
+* **CTMC**: Continuous-Time Markov Chain solver
+* **FLD**: Fluid/Mean-Field ODE Solver
+* **MAM**: Matrix Analytic Methods solver
+* **MVA**: Mean Value Analysis solver
+* **NC**: Normalizing Constant Analyzer
+* **SSA**: Stochastic Simulation Algorithm solver
+
+Composite models such as LayeredNetworks or models coupled with a random environment can be evaluated by the following solvers:
+
+* **ENV**: Blending solver for Random Environments
+* **LN**: Layered Network Solver
+
+Wrappers for external solvers include:
+
+* **JMT**: Wrapper for Java Modelling Tools
+* **QNS**: Wrapper for the QNS utility part of LQNS
+* **LQNS**: Wrapper for the Layered Queueing Network Solver 

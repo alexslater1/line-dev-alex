@@ -1,0 +1,657 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+<link rel="stylesheet" href="css/line-solver.css" />
+	<meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<meta name="description" content="LINE Solver Project Statistics" />
+	<meta name="keywords" content="LINE solver statistics" />
+	<meta name="author" content="Giuliano Casale" />
+	<link rel="stylesheet" href="css/font-awesome.min.css"/>
+	<title>LINE Solver - Project Statistics</title>
+	<style>
+		.stats-grid {
+			display: grid;
+			grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+			gap: 20px;
+			margin: 30px 0;
+		}
+		.stat-card {
+			background: #fff;
+			border: 1px solid #ddd;
+			border-radius: 8px;
+			padding: 24px 20px;
+			text-align: center;
+			box-shadow: 0 2px 4px rgba(0,0,0,0.06);
+			transition: transform 0.2s, box-shadow 0.2s;
+		}
+		.stat-card:hover {
+			transform: translateY(-3px);
+			box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+		}
+		.stat-number {
+			font-size: 2.8em;
+			font-weight: 700;
+			color: #1d72b8;
+			line-height: 1.1;
+			margin-bottom: 6px;
+		}
+		.stat-label {
+			font-size: 0.95em;
+			color: #666;
+			font-weight: 500;
+		}
+		.stat-sublabel {
+			font-size: 0.8em;
+			color: #999;
+			margin-top: 4px;
+		}
+		.section-divider {
+			border: 0;
+			border-top: 2px solid #e8e8e8;
+			margin: 40px 0;
+		}
+		.stats-table {
+			width: 100%;
+			border-collapse: collapse;
+			margin: 20px 0;
+			background: #fff;
+			border-radius: 6px;
+			overflow: hidden;
+			box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+		}
+		.stats-table th {
+			background-color: #1d72b8;
+			color: #fff;
+			padding: 12px 16px;
+			text-align: left;
+			font-weight: 600;
+			font-size: 0.95em;
+		}
+		.stats-table td {
+			padding: 10px 16px;
+			border-bottom: 1px solid #eee;
+			font-size: 0.93em;
+		}
+		.stats-table tr:last-child td {
+			border-bottom: none;
+		}
+		.stats-table tr:nth-child(even) {
+			background-color: #f9f9f9;
+		}
+		.stats-table tr:hover {
+			background-color: #f0f4f8;
+		}
+		.stats-table .row-total {
+			font-weight: 700;
+			background-color: #eaf1f9;
+		}
+		.stats-table td.num {
+			text-align: right;
+			font-variant-numeric: tabular-nums;
+			font-family: 'Consolas', 'Monaco', monospace;
+		}
+		.feature-columns {
+			display: grid;
+			grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+			gap: 24px;
+			margin: 20px 0;
+		}
+		.feature-box {
+			background: #fff;
+			border: 1px solid #ddd;
+			border-radius: 6px;
+			padding: 20px;
+			box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+		}
+		.feature-box h3 {
+			color: #1d72b8;
+			margin-top: 0;
+			margin-bottom: 12px;
+			font-size: 1.05em;
+			border-bottom: 1px solid #eee;
+			padding-bottom: 8px;
+		}
+		.feature-box ul {
+			margin: 0;
+			padding-left: 18px;
+			line-height: 1.8;
+		}
+		.feature-box ul li {
+			color: #444;
+			font-size: 0.93em;
+		}
+		.badge {
+			display: inline-block;
+			padding: 2px 8px;
+			border-radius: 10px;
+			font-size: 0.78em;
+			font-weight: 600;
+			margin-left: 6px;
+			vertical-align: middle;
+		}
+		.badge-analytical { background: #e3f2fd; color: #1565c0; }
+		.badge-simulation { background: #e8f5e9; color: #2e7d32; }
+		.badge-meta { background: #fff3e0; color: #e65100; }
+		.badge-external { background: #f3e5f5; color: #7b1fa2; }
+		.category-count {
+			float: right;
+			background: #1d72b8;
+			color: #fff;
+			border-radius: 12px;
+			padding: 1px 10px;
+			font-size: 0.85em;
+			font-weight: 600;
+		}
+		h2 {
+			color: #1d72b8;
+			border-bottom: 2px solid #1d72b8;
+			padding-bottom: 8px;
+		}
+		.note {
+			background: #f8f9fa;
+			border-left: 3px solid #1d72b8;
+			padding: 12px 16px;
+			margin: 20px 0;
+			font-size: 0.92em;
+			color: #555;
+			border-radius: 0 4px 4px 0;
+		}
+	</style>
+</head>
+
+<body>
+
+<div id="wrap">
+
+<div id="header">
+<p id="toplinks"><a href="index.html" style="color: #fff;">&#8592; Back to Home</a></p>
+<h1><a href="index.html" style="color: #fff; text-decoration: none;">LINE</a></h1>
+<p id="slogan">Project Statistics</p>
+</div>
+
+<div id="sidebar">
+<h2>Navigate</h2>
+<ul class="sidebar-nav">
+<li><a href="index.html">Home</a></li>
+<li><a href="index.html#overview">Overview</a></li>
+<li><a href="index.html#papers">Documentation</a></li>
+<li><a href="tutorials.html">Tutorials</a></li>
+<li><a href="index.html#solvers">Solvers</a></li>
+<li class="active"><a href="statistics.html">Statistics</a></li>
+</ul>
+
+<h2>Support</h2>
+<ul class="sidebar-links">
+<li><a href="https://sourceforge.net/projects/line-solver/" target="_blank">Sourceforge site</a></li>
+<li><a href="https://github.com/imperial-qore/line-solver" target="_blank">Github repo</a></li>
+</ul>
+
+<h2>News</h2>
+<ul class="sidebar-news">
+<li><strong>2026</strong> - <a href="https://sourceforge.net/projects/line-solver/files/latest/download">LINE 3.0.4</a> is out!</li>
+<li><strong>2025</strong> - First release of LINE 3.0.0</li>
+<li><strong>2019</strong> - First release of LINE 2.0.0</li>
+<li><strong>2016</strong> - First release of LINE 1.0.0</li>
+</ul>
+</div>
+
+<div id="content">
+
+<!-- ========== AT A GLANCE ========== -->
+<h2>At a Glance</h2>
+
+<div class="stats-grid">
+	<div class="stat-card">
+		<div class="stat-number">780K+</div>
+		<div class="stat-label">Lines of Code</div>
+		<div class="stat-sublabel">across 4 codebases</div>
+	</div>
+	<div class="stat-card">
+		<div class="stat-number">14</div>
+		<div class="stat-label">Solvers</div>
+		<div class="stat-sublabel">analytical, simulation, external</div>
+	</div>
+	<div class="stat-card">
+		<div class="stat-number">30</div>
+		<div class="stat-label">Distributions</div>
+		<div class="stat-sublabel">continuous, phase-type, discrete</div>
+	</div>
+	<div class="stat-card">
+		<div class="stat-number">37</div>
+		<div class="stat-label">Scheduling Strategies</div>
+		<div class="stat-sublabel">priority, PS, FCFS, and more</div>
+	</div>
+	<div class="stat-card">
+		<div class="stat-number">13</div>
+		<div class="stat-label">Node Types</div>
+		<div class="stat-sublabel">queues, caches, forks, SPNs</div>
+	</div>
+	<div class="stat-card">
+		<div class="stat-number">846</div>
+		<div class="stat-label">Example Models</div>
+		<div class="stat-sublabel">across 3 language implementations</div>
+	</div>
+	<div class="stat-card">
+		<div class="stat-number">4</div>
+		<div class="stat-label">Languages</div>
+		<div class="stat-sublabel">MATLAB, Java/Kotlin, Python</div>
+	</div>
+</div>
+
+<hr class="section-divider" />
+
+<!-- ========== CODEBASE SIZE ========== -->
+<h2>Codebase Size</h2>
+
+<table class="stats-table">
+	<tr>
+		<th>Codebase</th>
+		<th>Language</th>
+		<th style="text-align:right;">Source Files</th>
+		<th style="text-align:right;">Lines of Code</th>
+		<th>Status</th>
+	</tr>
+	<tr>
+		<td>MATLAB (<code>matlab/src/</code>)</td>
+		<td>MATLAB</td>
+		<td class="num">1,069</td>
+		<td class="num">130,124</td>
+		<td>Stable</td>
+	</tr>
+	<tr>
+		<td>Java/Kotlin (<code>jar/src/</code>)</td>
+		<td>Kotlin, Java</td>
+		<td class="num">1,546</td>
+		<td class="num">392,894</td>
+		<td>Beta</td>
+	</tr>
+	<tr>
+		<td>Python Native (<code>python/</code>)</td>
+		<td>Python</td>
+		<td class="num">416</td>
+		<td class="num">207,712</td>
+		<td>Alpha</td>
+	</tr>
+	<tr>
+		<td>Python Wrapper (<code>python-wrapper/</code>)</td>
+		<td>Python</td>
+		<td class="num">58</td>
+		<td class="num">47,795</td>
+		<td>Alpha</td>
+	</tr>
+	<tr class="row-total">
+		<td>Total</td>
+		<td></td>
+		<td class="num">3,089</td>
+		<td class="num">778,525</td>
+		<td></td>
+	</tr>
+</table>
+
+<hr class="section-divider" />
+
+<!-- ========== SOLVERS ========== -->
+<h2>Solvers</h2>
+
+<table class="stats-table">
+	<tr>
+		<th>Solver</th>
+		<th>Full Name</th>
+		<th>Type</th>
+		<th>Method</th>
+	</tr>
+	<tr>
+		<td>MVA</td>
+		<td>Mean Value Analysis</td>
+		<td><span class="badge badge-analytical">Analytical</span></td>
+		<td>Exact &amp; approximate MVA, linearizer, AMVA</td>
+	</tr>
+	<tr>
+		<td>NC</td>
+		<td>Normalizing Constant</td>
+		<td><span class="badge badge-analytical">Analytical</span></td>
+		<td>Convolution, LNICE, MoM, recursion</td>
+	</tr>
+	<tr>
+		<td>CTMC</td>
+		<td>Continuous-Time Markov Chain</td>
+		<td><span class="badge badge-analytical">Analytical</span></td>
+		<td>State-space enumeration, generator matrix</td>
+	</tr>
+	<tr>
+		<td>MAM</td>
+		<td>Matrix Analytic Methods</td>
+		<td><span class="badge badge-analytical">Analytical</span></td>
+		<td>Phase-type / MAP service distributions</td>
+	</tr>
+	<tr>
+		<td>FLD</td>
+		<td>Fluid Analysis</td>
+		<td><span class="badge badge-analytical">Analytical</span></td>
+		<td>ODE-based mean-field approximation</td>
+	</tr>
+	<tr>
+		<td>SSA</td>
+		<td>Stochastic State-space Analysis</td>
+		<td><span class="badge badge-analytical">Analytical</span></td>
+		<td>Hashing-based state-space exploration</td>
+	</tr>
+	<tr>
+		<td>LN</td>
+		<td>Layered Network Solver</td>
+		<td><span class="badge badge-analytical">Analytical</span></td>
+		<td>Decomposition into sub-models</td>
+	</tr>
+	<tr>
+		<td>ENV</td>
+		<td>Environment Solver</td>
+		<td><span class="badge badge-analytical">Analytical</span></td>
+		<td>Random environment stage integration</td>
+	</tr>
+	<tr>
+		<td>LDES</td>
+		<td>LINE Discrete Event Simulator</td>
+		<td><span class="badge badge-simulation">Simulation</span></td>
+		<td>SSJ-based discrete event simulation</td>
+	</tr>
+	<tr>
+		<td>JMT</td>
+		<td>Java Modelling Tools</td>
+		<td><span class="badge badge-external">External</span></td>
+		<td>Integration with JMT simulator</td>
+	</tr>
+	<tr>
+		<td>LQNS</td>
+		<td>LQN Solver</td>
+		<td><span class="badge badge-external">External</span></td>
+		<td>Integration with LQNS analytical solver</td>
+	</tr>
+	<tr>
+		<td>QNS</td>
+		<td>Queueing Network Solver</td>
+		<td><span class="badge badge-external">External</span></td>
+		<td>Integration with external QN solvers</td>
+	</tr>
+	<tr>
+		<td>AUTO</td>
+		<td>Automatic Solver Selection</td>
+		<td><span class="badge badge-meta">Meta</span></td>
+		<td>Selects best solver for a given model</td>
+	</tr>
+	<tr>
+		<td>Ensemble</td>
+		<td>Ensemble Solver</td>
+		<td><span class="badge badge-meta">Meta</span></td>
+		<td>Multi-solver coordination</td>
+	</tr>
+</table>
+
+<hr class="section-divider" />
+
+<!-- ========== MODEL FEATURES ========== -->
+<h2>Model Features</h2>
+
+<div class="feature-columns">
+
+	<div class="feature-box">
+		<h3>Node Types <span class="category-count">13</span></h3>
+		<ul>
+			<li>Source &amp; Sink</li>
+			<li>Queue (single/multi-server)</li>
+			<li>Delay (infinite server)</li>
+			<li>Fork &amp; Join</li>
+			<li>Router</li>
+			<li>Cache</li>
+			<li>ClassSwitch</li>
+			<li>Logger</li>
+			<li>Place &amp; Transition (SPN)</li>
+			<li>Finite Capacity Region</li>
+		</ul>
+	</div>
+
+	<div class="feature-box">
+		<h3>Routing Strategies <span class="category-count">8</span></h3>
+		<ul>
+			<li>Probabilistic (PROB)</li>
+			<li>Random (RAND)</li>
+			<li>Round-Robin (RROBIN)</li>
+			<li>Weighted Round-Robin (WRROBIN)</li>
+			<li>Join Shortest Queue (JSQ)</li>
+			<li>Power of k Choices</li>
+			<li>Reinforcement Learning (RL)</li>
+			<li>SPN Transition Firing</li>
+		</ul>
+	</div>
+
+	<div class="feature-box">
+		<h3>Cache Replacement Policies <span class="category-count">4</span></h3>
+		<ul>
+			<li>Least Recently Used (LRU)</li>
+			<li>First In, First Out (FIFO)</li>
+			<li>Strict FIFO (SFIFO)</li>
+			<li>Random Replacement (RR)</li>
+		</ul>
+	</div>
+
+	<div class="feature-box">
+		<h3>Drop &amp; Blocking Strategies <span class="category-count">6</span></h3>
+		<ul>
+			<li>Waiting Queue (infinite buffer)</li>
+			<li>Drop on Full</li>
+			<li>Blocking After Service (BAS)</li>
+			<li>Blocking Before Service (BBS)</li>
+			<li>Retrial (unlimited / limited)</li>
+			<li>Restart on Requested Delay</li>
+		</ul>
+	</div>
+
+</div>
+
+<hr class="section-divider" />
+
+<!-- ========== SCHEDULING ========== -->
+<h2>Scheduling Strategies (37)</h2>
+
+<div class="feature-columns">
+
+	<div class="feature-box">
+		<h3>Order-Based</h3>
+		<ul>
+			<li>FCFS (First-Come-First-Served)</li>
+			<li>LCFS (Last-Come-First-Served)</li>
+			<li>SIRO (Service in Random Order)</li>
+			<li>INF (Infinite Server / Delay)</li>
+		</ul>
+	</div>
+
+	<div class="feature-box">
+		<h3>Processor Sharing</h3>
+		<ul>
+			<li>PS (Processor Sharing)</li>
+			<li>DPS (Discriminatory PS)</li>
+			<li>GPS (Generalized PS)</li>
+			<li>PSPRIO, DPSPRIO, GPSPRIO</li>
+		</ul>
+	</div>
+
+	<div class="feature-box">
+		<h3>Size-Based</h3>
+		<ul>
+			<li>SJF / LJF (Shortest/Longest Job)</li>
+			<li>SRPT / LRPT (Remaining Time)</li>
+			<li>SEPT / LEPT (Elapsed Time)</li>
+			<li>PSJF (Preemptive SJF)</li>
+		</ul>
+	</div>
+
+	<div class="feature-box">
+		<h3>Priority &amp; Deadline</h3>
+		<ul>
+			<li>HOL (Head-of-Line priority)</li>
+			<li>LCFSPR / LCFSPI (Preemptive)</li>
+			<li>FCFSPR / FCFSPI (Preemptive)</li>
+			<li>EDD / EDF (Deadline-based)</li>
+			<li>LPS (Least Progress)</li>
+			<li>FB (Feedback / Least Attained)</li>
+		</ul>
+	</div>
+
+</div>
+
+<hr class="section-divider" />
+
+<!-- ========== DISTRIBUTIONS ========== -->
+<h2>Supported Distributions (30)</h2>
+
+<div class="feature-columns">
+
+	<div class="feature-box">
+		<h3>Continuous</h3>
+		<ul>
+			<li>Exponential (Exp)</li>
+			<li>Erlang</li>
+			<li>Hyperexponential (HyperExp)</li>
+			<li>Deterministic (Det)</li>
+			<li>Uniform</li>
+			<li>Gamma</li>
+			<li>Weibull</li>
+			<li>Pareto</li>
+			<li>Lognormal</li>
+		</ul>
+	</div>
+
+	<div class="feature-box">
+		<h3>Phase-Type</h3>
+		<ul>
+			<li>PH (Phase-Type)</li>
+			<li>APH (Acyclic Phase-Type)</li>
+			<li>Coxian / Cox2</li>
+			<li>MAP (Markovian Arrival Process)</li>
+			<li>MMPP2</li>
+			<li>ME (Matrix Exponential)</li>
+			<li>RAP (Rational Arrival)</li>
+		</ul>
+	</div>
+
+	<div class="feature-box">
+		<h3>Discrete &amp; Special</h3>
+		<ul>
+			<li>Binomial / Bernoulli</li>
+			<li>Geometric</li>
+			<li>Poisson</li>
+			<li>Discrete Uniform</li>
+			<li>Zipf (power-law)</li>
+			<li>Immediate</li>
+			<li>Trace / Replayer</li>
+		</ul>
+	</div>
+
+</div>
+
+<hr class="section-divider" />
+
+<!-- ========== EXAMPLES ========== -->
+<h2>Examples &amp; Tests</h2>
+
+<table class="stats-table">
+	<tr>
+		<th>Category</th>
+		<th style="text-align:right;">MATLAB</th>
+		<th style="text-align:right;">Python Native</th>
+		<th style="text-align:right;">Python Wrapper</th>
+	</tr>
+	<tr>
+		<td>Example models</td>
+		<td class="num">291</td>
+		<td class="num">279</td>
+		<td class="num">276</td>
+	</tr>
+	<tr class="row-total">
+		<td>Total examples</td>
+		<td class="num" colspan="3" style="text-align:center;">846</td>
+	</tr>
+</table>
+
+<h3 style="color: #1d72b8;">Example Categories</h3>
+<div class="feature-columns">
+	<div class="feature-box">
+		<h3>Basic Models</h3>
+		<ul>
+			<li>Open Queueing Networks</li>
+			<li>Closed Queueing Networks</li>
+			<li>Mixed Queueing Networks</li>
+			<li>Class Switching</li>
+			<li>Priority Models</li>
+			<li>Fork-Join Networks</li>
+			<li>Layered Models (LQN)</li>
+			<li>Cache Models</li>
+			<li>Stochastic Petri Nets</li>
+			<li>Workflow Models</li>
+		</ul>
+	</div>
+	<div class="feature-box">
+		<h3>Advanced Models</h3>
+		<ul>
+			<li>Random Environments</li>
+			<li>Load-Dependent Servers</li>
+			<li>State-Dependent Routing</li>
+			<li>Finite Capacity Regions</li>
+			<li>CDF Response Times</li>
+			<li>Cyclic Polling</li>
+			<li>Switchover Times</li>
+			<li>State Probabilities</li>
+			<li>Reward Models</li>
+			<li>Retrial Queues</li>
+		</ul>
+	</div>
+</div>
+
+<hr class="section-divider" />
+
+<!-- ========== PERFORMANCE METRICS ========== -->
+<h2>Performance Metrics</h2>
+
+<div class="feature-columns">
+	<div class="feature-box">
+		<h3>Supported Metrics</h3>
+		<ul>
+			<li>Throughput (Tput)</li>
+			<li>Response Time (RespT)</li>
+			<li>Residence Time (ResidT)</li>
+			<li>Queue Length (QLen)</li>
+			<li>Utilization (Util)</li>
+			<li>Arrival Rate (ArvR)</li>
+			<li>Drop Rate (DropR)</li>
+			<li>Retrial Rate (RetrR)</li>
+			<li>Response Time CDF (RespTCDF)</li>
+			<li>System Response Time (SysRespT)</li>
+			<li>System Throughput (SysTput)</li>
+			<li>System Queue Length (SysQLen)</li>
+			<li>Transient measures</li>
+		</ul>
+	</div>
+	<div class="feature-box">
+		<h3>Output Formats</h3>
+		<ul>
+			<li>Per-station, per-class tables</li>
+			<li>Aggregated chain-level results</li>
+			<li>Transient analysis curves</li>
+			<li>CDF distributions</li>
+			<li>State probability vectors</li>
+			<li>JSON export/import</li>
+			<li>JMVA XML interchange</li>
+		</ul>
+	</div>
+</div>
+
+<div class="note">
+	Statistics are computed from the LINE v3.0.x development branch. Line counts include source files only (excluding tests, examples, and documentation). LINE is open source under the <a href="license.html">BSD-3 license</a>.
+</div>
+
+</div><!-- /content -->
+
+</div><!-- /wrap -->
+
+</body>
+</html>

@@ -1,0 +1,235 @@
+/**
+@page api_mam Matrix-Analytic Methods
+@brief QBD processes and matrix-analytic solutions
+
+The mam module implements matrix-analytic methods for analyzing queues with
+structured Markov chains, including QBD, MAP, RAP, and G/M/1 and M/G/1 type processes.
+
+@subsection matrix-analytic_methods_matlab_src_api_mam__list Function List
+
+- @ref aph_bernstein "aph_bernstein" - Fits an APH distribution using Bernstein's approximation
+- @ref map_ccdf_derivative "map_ccdf_derivative" - Derivative at zero of a MAP CCDF
+- @ref map_jointpdf_derivative "map_jointpdf_derivative" - Partial derivative at zero of a MAP's joint PDF
+- @ref mmap_compress "mmap_compress" - Compresses an MMAP into a smaller representation
+- @ref qbd_bmapbmap1 "qbd_bmapbmap1" - Computes QBD blocks for a BMAP/BMAP/1 queue
+- @ref qbd_mapmap1 "qbd_mapmap1" - Solves a MAP/MAP/1 queue using QBD methods
+- @ref qbd_raprap1 "qbd_raprap1" - Solves a RAP/RAP/1 queue using QBD methods
+- @ref qbd_rg "qbd_rg" - Computes QBD matrices R and G for MAP/MAP/1 queue
+- @ref qbd_R_logred "qbd_R_logred" - Computes the rate matrix R using logarithmic reduction
+- @ref qbd_R "qbd_R" - Computes the rate matrix R using successive substitutions
+- @ref qbd_setupdelayoff "qbd_setupdelayoff" - Queue-length analysis for system with setup delay and turn-off
+- @ref qbd_setupdelayoff_tmp "qbd_setupdelayoff_tmp" - Alternative implementation for setup delay and turn-off analysis
+
+@anchor aph_bernstein
+### aph_bernstein
+  <b>Description:</b> Fits an APH distribution using Bernstein's approximation
+
+  <b>Syntax:</b>
+  @code
+  APH = aph_bernstein(f, order)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>f</td><td>Fraction or frequency values</td></tr>
+  <tr><td>order</td><td>Order of approximation or moment</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>APH</td><td>Acyclic phase-type distribution</td></tr>
+  </table>
+
+@anchor map_ccdf_derivative
+### map_ccdf_derivative
+  <b>Description:</b> Derivative at zero of a MAP CCDF
+
+  <b>Syntax:</b>
+  @code
+  map_ccdf_derivative(...)
+  @endcode
+
+@anchor map_jointpdf_derivative
+### map_jointpdf_derivative
+  <b>Description:</b> Partial derivative at zero of a MAP's joint PDF
+
+  <b>Syntax:</b>
+  @code
+  map_jointpdf_derivative(...)
+  @endcode
+
+@anchor mmap_compress
+### mmap_compress
+  <b>Description:</b> Compresses an MMAP into a smaller representation
+
+  <b>Syntax:</b>
+  @code
+  mmap_compress(...)
+  @endcode
+
+@anchor qbd_bmapbmap1
+### qbd_bmapbmap1
+  <b>Description:</b> Computes QBD blocks for a BMAP/BMAP/1 queue
+
+  <b>Syntax:</b>
+  @code
+  function qbd_bmapbmap1(MAPa, pbatcha, MAPs)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>MAPa</td><td>Markovian Arrival Process for arrivals</td></tr>
+  <tr><td>pbatcha</td><td>Batch arrival probability</td></tr>
+  <tr><td>MAPs</td><td>Markovian Arrival Process for service</td></tr>
+  </table>
+
+@anchor qbd_mapmap1
+### qbd_mapmap1
+  <b>Description:</b> Solves a MAP/MAP/1 queue using QBD methods
+
+  <b>Syntax:</b>
+  @code
+  [XN, QN, UN, pqueue, R, eta, G, A_1, A0, A1, U, MAPs] = qbd_mapmap1(MAPa, MAPs, util)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>MAPa</td><td>Markovian Arrival Process for arrivals</td></tr>
+  <tr><td>MAPs</td><td>Markovian Arrival Process for service</td></tr>
+  <tr><td>util</td><td>Utilization values</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>XN</td><td>System throughput</td></tr>
+  <tr><td>QN</td><td>Mean queue lengths</td></tr>
+  <tr><td>UN</td><td>Utilization</td></tr>
+  <tr><td>pqueue</td><td>Queue state probabilities</td></tr>
+  <tr><td>R</td><td>R matrix (QBD) or response times</td></tr>
+  <tr><td>eta</td><td>Adjustment factors</td></tr>
+  <tr><td>G</td><td>Normalizing constant</td></tr>
+  <tr><td>A_1</td><td>Transition rate matrix level -1</td></tr>
+  <tr><td>A0</td><td>Exit rate vector (phase-type)</td></tr>
+  <tr><td>A1</td><td>Transition rate matrix level 1</td></tr>
+  <tr><td>U</td><td>Utilization matrix</td></tr>
+  <tr><td>MAPs</td><td>Markovian Arrival Process representation</td></tr>
+  </table>
+
+@anchor qbd_raprap1
+### qbd_raprap1
+  <b>Description:</b> Solves a RAP/RAP/1 queue using QBD methods
+
+  <b>Syntax:</b>
+  @code
+  [XN, QN, UN, pqueue, R, eta, G, B, L, F] = qbd_raprap1(RAPa, RAPs, util)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>RAPa</td><td>Rational Arrival Process for arrivals</td></tr>
+  <tr><td>RAPs</td><td>Rational Arrival Process for service</td></tr>
+  <tr><td>util</td><td>Utilization values</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>XN</td><td>System throughput</td></tr>
+  <tr><td>QN</td><td>Mean queue lengths</td></tr>
+  <tr><td>UN</td><td>Utilization</td></tr>
+  <tr><td>pqueue</td><td>Queue state probabilities</td></tr>
+  <tr><td>R</td><td>R matrix (QBD) or response times</td></tr>
+  <tr><td>eta</td><td>Adjustment factors</td></tr>
+  <tr><td>G</td><td>Normalizing constant</td></tr>
+  <tr><td>B</td><td>Boundary matrix or batch rate matrix</td></tr>
+  <tr><td>L</td><td>Service demand matrix or mean queue length</td></tr>
+  <tr><td>F</td><td>Flow or throughput values</td></tr>
+  </table>
+
+@anchor qbd_rg
+### qbd_rg
+  <b>Description:</b> Computes QBD matrices R and G for MAP/MAP/1 queue
+
+  <b>Syntax:</b>
+  @code
+  [R, G, B, L, F, U] = qbd_rg(MAPa, MAPs, util)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>MAPa</td><td>Markovian Arrival Process for arrivals</td></tr>
+  <tr><td>MAPs</td><td>Markovian Arrival Process for service</td></tr>
+  <tr><td>util</td><td>Utilization values</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>R</td><td>R matrix (QBD) or response times</td></tr>
+  <tr><td>G</td><td>Normalizing constant</td></tr>
+  <tr><td>B</td><td>Boundary matrix or batch rate matrix</td></tr>
+  <tr><td>L</td><td>Service demand matrix or mean queue length</td></tr>
+  <tr><td>F</td><td>Flow or throughput values</td></tr>
+  <tr><td>U</td><td>Utilization matrix</td></tr>
+  </table>
+
+@anchor qbd_R_logred
+### qbd_R_logred
+  <b>Description:</b> Computes the rate matrix R using logarithmic reduction
+
+  <b>Syntax:</b>
+  @code
+  qbd_R_logred(...)
+  @endcode
+
+@anchor qbd_R
+### qbd_R
+  <b>Description:</b> Computes the rate matrix R using successive substitutions
+
+  <b>Syntax:</b>
+  @code
+  qbd_R(...)
+  @endcode
+
+@anchor qbd_setupdelayoff
+### qbd_setupdelayoff
+  <b>Description:</b> Queue-length analysis for system with setup delay and turn-off
+
+  <b>Syntax:</b>
+  @code
+  qbd_setupdelayoff(...)
+  @endcode
+
+@anchor qbd_setupdelayoff_tmp
+### qbd_setupdelayoff_tmp
+  <b>Description:</b> Alternative implementation for setup delay and turn-off analysis
+
+  <b>Syntax:</b>
+  @code
+  QN = qbd_setupdelayoff_tmp(lambda, mu, alpharate, alphascv, betarate, betascv)
+  @endcode
+
+  <b>Parameters:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>lambda</td><td>Arrival rate(s)</td></tr>
+  <tr><td>mu</td><td>Load-dependent service rate matrix</td></tr>
+  <tr><td>alpharate</td><td>Alpha phase service rates</td></tr>
+  <tr><td>alphascv</td><td>Squared coefficient of variation for alpha phase</td></tr>
+  <tr><td>betarate</td><td>Beta phase service rates</td></tr>
+  <tr><td>betascv</td><td>Squared coefficient of variation for beta phase</td></tr>
+  </table>
+
+  <b>Returns:</b>
+  <table>
+  <tr><th>Name</th><th>Description</th></tr>
+  <tr><td>QN</td><td>Mean queue lengths</td></tr>
+  </table>
+*/

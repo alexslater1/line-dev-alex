@@ -1,0 +1,15 @@
+MEX {
+	global:
+		mexFunction;
+		mexfilerequiredapiversion;
+		emlrtMexFcnProperties;
+		pfqn_mmint2_gausslaguerre;
+		pfqn_mmint2_gausslaguerre_initialize;
+		pfqn_mmint2_gausslaguerre_terminate;
+		pfqn_mmint2_gausslaguerre_atexit;
+		emxFree_real_T;
+		emxInit_real_T;
+		emxEnsureCapacity_real_T;
+	local:
+		*;
+};

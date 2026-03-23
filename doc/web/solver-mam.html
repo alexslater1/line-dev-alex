@@ -1,0 +1,401 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+<link rel="stylesheet" href="css/line-solver.css" />
+	<meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<meta name="description" content="LINE Solver - MAM Solver Documentation" />
+	<meta name="keywords" content="LINE solver, MAM, Matrix Analytic Methods" />
+	<meta name="author" content="Giuliano Casale" />
+	<title>MAM Solver - LINE Solver Documentation</title>
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" />
+	<script type="text/javascript" src="js/jquery-1.11.0.min.js"></script>
+	<script type="text/javascript" src="js/line-solver.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-matlab.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-java.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+	<script type="text/javascript">
+		$(document).ready(function(){
+
+			$('.sidebar-nav .expandable > a').click(function(e){
+				e.preventDefault();
+				var parent = $(this).parent();
+				parent.toggleClass('open');
+			});
+			// Auto-expand Solvers menu on solver pages
+			$('.sidebar-nav .expandable').addClass('open');
+
+			$('.language-tab').click(function(){
+				var lang = $(this).data('lang');
+				$(this).siblings().removeClass('active');
+				$(this).addClass('active');
+				$(this).closest('.example-section').find('.language-content').removeClass('active');
+				$(this).closest('.example-section').find('.language-content[data-lang="' + lang + '"]').addClass('active');
+			});
+
+			// Copy button functionality
+			$('.copy-button').click(function(){
+				var button = $(this);
+				var codeBlock = button.siblings('pre').find('code').length > 0
+					? button.siblings('pre').find('code').text()
+					: button.siblings('pre').text();
+
+				if (navigator.clipboard && navigator.clipboard.writeText) {
+					navigator.clipboard.writeText(codeBlock).then(function() {
+						button.text('Copied!').addClass('copied');
+						setTimeout(function(){
+							button.text('Copy').removeClass('copied');
+						}, 2000);
+					});
+				} else {
+					// Fallback for older browsers
+					var textArea = document.createElement("textarea");
+					textArea.value = codeBlock;
+					document.body.appendChild(textArea);
+					textArea.select();
+					document.execCommand('copy');
+					document.body.removeChild(textArea);
+					button.text('Copied!').addClass('copied');
+					setTimeout(function(){
+						button.text('Copy').removeClass('copied');
+					}, 2000);
+				}
+			});
+
+			// Apply syntax highlighting
+			Prism.highlightAll();
+		});
+	</script>
+</head>
+<body>
+<div id="wrap">
+
+<div id="header">
+	<p id="toplinks"><a href="index.html">Home</a> | <a href="index.html#solvers">Solvers</a></p>
+	
+	<h1><a href="index.html">LINE Solver</a></h1>
+	<p id="slogan">Queueing Theory Algorithms</p>
+</div>
+
+<div id="sidebar">
+<div id="sidebar-content">
+<h2>Navigate</h2>
+<ul class="sidebar-nav">
+<li><a href="index.html">Home</a></li>
+<li><a href="index.html#overview">Overview</a></li>
+<li><a href="index.html#papers">Documentation</a></li>
+<li><a href="tutorials.html">Tutorials</a></li>
+<!-- Re-enable when 3.0.4 is out: <li><a href="mcp.html">MCP Integration</a></li> -->
+<li><a href="index.html#solvers">Solvers</a></li>
+</ul>
+
+<h2>Support</h2>
+<ul class="sidebar-links">
+<li><a href="https://sourceforge.net/projects/line-solver/" target="_blank">Sourceforge site</a></li>
+<li><a href="https://github.com/imperial-qore/line-solver" target="_blank">Github repo</a></li>
+</ul>
+
+<h2>News</h2>
+<ul class="sidebar-news">
+<li><strong>2026</strong> - <a href="https://sourceforge.net/projects/line-solver/files/latest/download">LINE 3.0.4</a> is out!</li>
+<li><strong>2025</strong> - First release of LINE 3.0.0</li>
+<li><strong>2019</strong> - First release of LINE 2.0.0</li>
+<li><strong>2016</strong> - First release of LINE 1.0.0</li>
+</ul>
+</div>
+</div>
+
+<div id="content">
+	<h2>MAM (Matrix Analytic Methods)</h2>
+
+	<div class="solver-section">
+	<p class="solver-subtitle">The MAM solver analyzes Markovian open queueing systems using matrix-analytic methods. The core solver is built on top of the BuTools library <a class="ref-link" href="#ref-horvath2017">[1]</a>, <a href="https://win.uantwerpen.be/~vanhoudt/" target="_blank">Q-MAM</a>, <a href="https://win.uantwerpen.be/~vanhoudt/" target="_blank">SMCSolver</a>, and <a href="https://www.cs.wm.edu/MAMSolver/" target="_blank">MAMSolverresume</a> <a class="ref-link" href="#ref-riska2003">[3]</a>. Native algorithms for parametric decomposition of queueing networks are integrated with this solver.</p>
+
+	<table class="algorithm-table">
+	<tr><th>Method</th><th>Algorithm</th><th>Reference</th></tr>
+	<tr><td><code>default</code></td><td>Matrix-analytic solution of structured QBDs</td><td><a class="ref-link" href="#ref-horvath2017">[1]</a></td></tr>
+	<tr><td><code>exact</code></td><td>Exact matrix-analytic solution</td><td>&mdash;</td></tr>
+	<tr><td><code>dec.source</code></td><td>Decomposition with source-like arrivals</td><td>&mdash;</td></tr>
+	<tr><td><code>dec.mmap</code></td><td>Decomposition with Markovian arrival process (MMAP)</td><td>&mdash;</td></tr>
+	<tr><td><code>dec.poisson</code></td><td>Decomposition with Poisson arrival flows</td><td>&mdash;</td></tr>
+	<tr><td><code>mna</code></td><td>Matrix Network Analyzer decomposition</td><td><a class="ref-link" href="#ref-li2024">[2]</a></td></tr>
+	<tr><td><code>inap</code></td><td>Iterative Numerical Algorithm for product-forms</td><td>&mdash;</td></tr>
+	<tr><td><code>inapplus</code></td><td>Iterative Numerical Algorithm for product-forms (enhanced)</td><td>&mdash;</td></tr>
+	</table>
+	</div>
+
+	<div class="solver-section">
+	<h3>MAP/BMAP/1 Queue Solver</h3>
+	<p>The MAM solver includes specialized support for MAP/BMAP/1 queues (Markovian Arrival Process with Batch Markovian Service). This solver models the queue as a GI/M/1 type Markov chain (skip-free to the right) and uses the ETAQA algorithm for efficient computation of stationary probabilities and queue length moments.</p>
+	<p><strong>Key Characteristics:</strong></p>
+	<ul>
+		<li><strong>MAP arrivals:</strong> Arrivals follow a Markovian Arrival Process, adding one customer at a time</li>
+		<li><strong>BMAP service:</strong> Service completions can process batches of 1, 2, 3, ... customers</li>
+		<li><strong>GI/M/1-type structure:</strong> Level increases by exactly 1 (arrivals), decreases by any amount (batch service)</li>
+	</ul>
+	<p><strong>Features:</strong></p>
+	<ul>
+		<li>Supports phase-type modulated arrival processes (MAP)</li>
+		<li>Handles batch service with arbitrary batch size distributions</li>
+		<li>Computes mean queue length, utilization, response time, and throughput</li>
+		<li>Returns aggregated stationary probabilities and R matrix</li>
+	</ul>
+	<p><strong>MATLAB Usage:</strong></p>
+	<div class="code-block">
+	<button class="copy-button">Copy</button>
+	<pre><code class="language-matlab">% Create 2-phase MAP for arrivals
+C0 = [-3.0, 1.0; 0.5, -2.0];  % transitions without arrivals
+C1 = [1.5, 0.5; 0.5, 1.0];    % arrival transitions
+
+% Create BMAP for service with batch sizes 1 and 2
+D0 = [-5.0, 1.0; 0.5, -4.5];  % transitions without service
+D1 = [2.0, 0.5; 0.5, 2.0];    % batch size 1 service
+D2 = [1.0, 0.5; 0.5, 1.0];    % batch size 2 service
+
+% Solve MAP/BMAP/1
+[QN, UN, RN, TN] = solver_mam_map_bmap_1({C0, C1}, {D0, D1, D2});
+
+% Display results
+fprintf('Mean queue length: %.4f\n', QN);
+fprintf('Utilization: %.4f\n', UN);
+fprintf('Mean response time: %.4f\n', RN);
+fprintf('Throughput: %.4f\n', TN);</code></pre>
+	</div>
+	<p><strong>Python Usage:</strong></p>
+	<div class="code-block">
+	<button class="copy-button">Copy</button>
+	<pre><code class="language-python">import numpy as np
+from line_solver.api_native.mam import solver_mam_map_bmap_1
+
+# Create 2-phase MAP for arrivals
+C0 = np.array([[-3.0, 1.0], [0.5, -2.0]])
+C1 = np.array([[1.5, 0.5], [0.5, 1.0]])
+
+# Create BMAP for service with batch sizes 1 and 2
+D0 = np.array([[-5.0, 1.0], [0.5, -4.5]])
+D1 = np.array([[2.0, 0.5], [0.5, 2.0]])
+D2 = np.array([[1.0, 0.5], [0.5, 1.0]])
+
+# Solve MAP/BMAP/1
+result = solver_mam_map_bmap_1(C0, C1, [D0, D1, D2])
+
+print(f"Mean queue length: {result.mean_queue_length:.4f}")
+print(f"Utilization: {result.utilization:.4f}")
+print(f"Mean response time: {result.mean_response_time:.4f}")
+print(f"Throughput: {result.throughput:.4f}")</code></pre>
+	</div>
+	</div>
+
+	<div class="solver-section">
+	<h3>BMAP/MAP/1 Queue Solver</h3>
+	<p>The MAM solver includes specialized support for BMAP/MAP/1 queues (Batch Markovian Arrivals with Markovian Service). This solver models the queue as an M/G/1 type Markov chain (skip-free to the left) and uses the ETAQA algorithm for efficient computation of stationary probabilities and queue length moments.</p>
+	<p><strong>Key Characteristics:</strong></p>
+	<ul>
+		<li><strong>BMAP arrivals:</strong> Batch arrivals with sizes 1, 2, 3, ... following a Batch Markovian Arrival Process</li>
+		<li><strong>MAP service:</strong> Service completions follow a Markovian Arrival Process, serving one customer at a time</li>
+		<li><strong>M/G/1-type structure:</strong> Level increases by any amount (batch arrivals), decreases by exactly 1 (single service)</li>
+	</ul>
+	<p><strong>Features:</strong></p>
+	<ul>
+		<li>Supports batch arrivals with arbitrary batch size distributions</li>
+		<li>Handles phase-type modulated service processes (MAP)</li>
+		<li>Computes mean queue length, utilization, response time, and throughput</li>
+		<li>Returns aggregated stationary probabilities and G matrix</li>
+	</ul>
+	<p><strong>MATLAB Usage:</strong></p>
+	<div class="code-block">
+	<button class="copy-button">Copy</button>
+	<pre><code class="language-matlab">% Create BMAP for arrivals with batch sizes 1 and 2
+D0 = [-2.8, 1.6; 1.6, -2.8];  % transitions without arrivals
+D1 = [0.5, 0.2; 0.2, 0.5];    % batch size 1 arrivals
+D2 = [0.3, 0.2; 0.2, 0.3];    % batch size 2 arrivals
+
+% Create 2-phase MAP for service
+S0 = [-5.0, 1.0; 0.5, -4.5];  % transitions without service
+S1 = [2.5, 1.5; 1.5, 2.5];    % service transitions
+
+% Solve BMAP/MAP/1
+[QN, UN, RN, TN] = solver_mam_bmap_map_1({D0, D1, D2}, {S0, S1});
+
+% Display results
+fprintf('Mean queue length: %.4f\n', QN);
+fprintf('Utilization: %.4f\n', UN);
+fprintf('Mean response time: %.4f\n', RN);
+fprintf('Throughput: %.4f\n', TN);</code></pre>
+	</div>
+	<p><strong>Python Usage:</strong></p>
+	<div class="code-block">
+	<button class="copy-button">Copy</button>
+	<pre><code class="language-python">import numpy as np
+from line_solver.api_native.mam import solver_mam_bmap_map_1
+
+# Create BMAP for arrivals with batch sizes 1 and 2
+D0 = np.array([[-2.8, 1.6], [1.6, -2.8]])
+D1 = np.array([[0.5, 0.2], [0.2, 0.5]])
+D2 = np.array([[0.3, 0.2], [0.2, 0.3]])
+
+# Create 2-phase MAP for service
+S0 = np.array([[-5.0, 1.0], [0.5, -4.5]])
+S1 = np.array([[2.5, 1.5], [1.5, 2.5]])
+
+# Solve BMAP/MAP/1
+result = solver_mam_bmap_map_1([D0, D1, D2], S0, S1)
+
+print(f"Mean queue length: {result.mean_queue_length:.4f}")
+print(f"Utilization: {result.utilization:.4f}")
+print(f"Mean response time: {result.mean_response_time:.4f}")
+print(f"Throughput: {result.throughput:.4f}")</code></pre>
+	</div>
+	</div>
+
+	<div class="example-section">
+	<h3>Example</h3>
+	<p>This example demonstrates solving a simple M/M/1 queue using the MAM solver. The unique feature shown here is the iterative matrix-analytic method which converges to the solution (note the "Iterations: 4" in the output).</p>
+
+	<div class="language-tabs">
+		<button class="language-tab active" data-lang="matlab">MATLAB</button>
+		<button class="language-tab" data-lang="java">Java</button>
+		<button class="language-tab" data-lang="python">Python</button>
+	</div>
+
+	<div class="language-content active" data-lang="matlab">
+		<div class="code-block">
+		<button class="copy-button">Copy</button>
+		<pre><code class="language-matlab">% Create a simple M/M/1 queue
+model = Network('M/M/1 Example');
+source = Source(model, 'Source');
+queue = Queue(model, 'Queue1', SchedStrategy.FCFS);
+sink = Sink(model, 'Sink');
+
+jobclass = OpenClass(model, 'Class1');
+source.setArrival(jobclass, Exp(0.9));
+queue.setService(jobclass, Exp(1.0));
+
+model.link(Network.serialRouting(source, queue, sink));
+
+% Solve with MAM (Matrix Analytic Methods)
+solver = MAM(model);
+
+% Display average performance metrics
+MAM(model).avgTable()</code></pre>
+		</div>
+
+		<div class="output-block">
+			<h4>Output:</h4>
+<pre>Default method: using dec.source
+MAM analysis [method: default/dec.source, lang: matlab] completed in 0.123s. Iterations: 4.
+
+ans =
+  2×8 table
+    Station    JobClass    QLen    Util    RespT    ResidT    ArvR    Tput
+    _______    ________    ____    ____    _____    ______    ____    ____
+    Source      Class1      0        0       0         0        0     0.9
+    Queue1      Class1      9      0.9      10        10      0.9     0.9 </pre>
+		</div>
+	</div>
+
+	<div class="language-content" data-lang="java">
+		<div class="code-block">
+		<button class="copy-button">Copy</button>
+		<pre><code class="language-java">import jline.lang.*;
+import jline.lang.constant.SchedStrategy;
+import jline.lang.nodes.*;
+import jline.lang.processes.Exp;
+import jline.solvers.NetworkAvgTable;
+import jline.solvers.mam.MAM;
+
+public class MAMExample {
+    public static void main(String[] args) {
+        // Create a simple M/M/1 queue
+        Network model = new Network("M/M/1 Example");
+
+        Source source = new Source(model, "Source");
+        Queue queue = new Queue(model, "Queue1", SchedStrategy.FCFS);
+        Sink sink = new Sink(model, "Sink");
+
+        OpenClass jobclass = new OpenClass(model, "Class1");
+        source.setArrival(jobclass, Exp.fitRate(0.9));
+        queue.setService(jobclass, Exp.fitRate(1.0));
+
+        model.link(Network.serialRouting(source, queue, sink));
+
+        // Solve with MAM (Matrix Analytic Methods)
+        MAM solver = new MAM(model);
+
+        // Display average performance metrics
+        NetworkAvgTable avgTable = solver.avgTable;
+        System.out.println(avgTable);
+    }
+}</code></pre>
+		</div>
+
+		<div class="output-block">
+			<h4>Output:</h4>
+<pre>Default method: using dec.source
+MAM analysis [method: default/dec.source, lang: java] completed. Iterations: 4.
+
+Station    JobClass    QLen    Util    RespT    ResidT    ArvR    Tput
+Source     Class1      0.0     0.0     0.0      0.0       0.0     0.9
+Queue1     Class1      9.0     0.9     10.0     10.0      0.9     0.9</pre>
+		</div>
+	</div>
+
+	<div class="language-content" data-lang="python">
+		<div class="code-block">
+		<button class="copy-button">Copy</button>
+		<pre><code class="language-python">from line_solver import *
+
+# Create a simple M/M/1 queue
+model = Network('M/M/1 Example')
+
+source = Source(model, 'Source')
+queue = Queue(model, 'Queue1', SchedStrategy.FCFS)
+sink = Sink(model, 'Sink')
+
+jobclass = OpenClass(model, 'Class1')
+source.setArrival(jobclass, Exp(0.9))
+queue.setService(jobclass, Exp(1.0))
+
+model.link(Network.serialRouting(source, queue, sink))
+
+# Solve with MAM (Matrix Analytic Methods)
+solver = MAM(model)
+
+# Display average performance metrics
+print(solver.avg_table)</code></pre>
+		</div>
+
+		<div class="output-block">
+			<h4>Output:</h4>
+<pre>Default method: using dec.source
+MAM analysis [method: default/dec.source, lang: python] completed. Iterations: 4.
+
+  Station  JobClass  QLen  Util  RespT  ResidT  ArvR  Tput
+0  Source    Class1   0.0   0.0    0.0     0.0   0.0   0.9
+1  Queue1    Class1   9.0   0.9   10.0    10.0   0.9   0.9</pre>
+		</div>
+	</div>
+	</div>
+
+	<div class="references">
+	<h3>References</h3>
+	<ol>
+	<li id="ref-horvath2017">Horv&aacute;th, G., &amp; Telek, M. (2017). BuTools: Burstiness and heavy traffic modeling. <em>IEEE Communications Surveys &amp; Tutorials</em>.</li>
+	<li id="ref-li2024">Li, Z., &amp; Casale, G. (2024). Matrix Network Analyzer: A new decomposition algorithm for phase-type queueing networks. <em>Proc. of ACM/SPEC ICPE</em>, 77-88.</li>
+	<li id="ref-riska2003">Riska, A., &amp; Smirni, E. (2003). ETAQA: An Efficient Technique for the Analysis of QBD-Processes by Aggregation. <em>Performance Evaluation</em>, 54(2):151-177. <a href="https://www.cs.wm.edu/MAMSolver/" target="_blank">MAMSolver</a></li>
+	</ol>
+	</div>
+
+	<div class="back-link">
+		<a href="index.html#solvers">&larr; Back to Solvers</a>
+	</div>
+</div>
+
+<div id="footer">
+	<p>&copy; 2025 <a href="https://www.imperial.ac.uk/">Imperial College London</a></p>
+</div>
+
+</div>
+</body>
+</html>

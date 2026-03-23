@@ -1,0 +1,488 @@
+\chapter{API Function Reference}
+\label{ch:api-function-reference}
+
+This appendix provides a comprehensive catalog of all API functions available in the \texttt{jline.api} package. The table lists each function name, its organizational package, and a brief description of its purpose.
+
+\begin{footnotesize}
+\begin{longtable}{|p{0.4\linewidth}|p{0.1\linewidth}|p{0.5\linewidth}|}
+\caption{Complete API Function Reference}
+\label{tab:api-functions}
+\\\hline
+\textbf{Function Name} & \textbf{Package} & \textbf{Description}
+\\\hline
+\endfirsthead
+\multicolumn{3}{c}%
+{\tablename\ \thetable\ -- API Function Reference.\textit{ Continued from previous page}} \\
+\hline
+\textbf{Function Name} & \textbf{Package} & \textbf{Description}\\
+\hline
+\endhead
+\hline \multicolumn{3}{r}{\textit{Continued on next page}} \\
+\endfoot
+\hline
+\endlastfoot
+\texttt{amap2\_fit\_gamma} & mam & Fits AMAP(2) distributions to match moments and correlation characteristics\\
+\texttt{amap2\_fit\_gamma\_map} & mam & Fits AMAP(2) by approximating arbitrary-order MAP with preserved correlation structure\\
+\texttt{amap2\_fit\_gamma\_trace} & mam & Fits AMAP(2) from empirical traces while preserving autocorrelation characteristics\\
+\texttt{aph2\_adjust} & mam & Adjusts moments to ensure feasibility bounds for APH(2) fitting procedures\\
+\texttt{aph2\_assemble} & mam & Constructs APH(2) transition matrices from specified rates and transition probabilities\\
+\texttt{aph2\_fit} & mam & Fits APH(2) distributions to match given moments with automatic feasibility adjustment\\
+\texttt{aph2\_fit\_map} & mam & Fits APH(2) distributions by approximating arbitrary-order MAP processes\\
+\texttt{aph2\_fit\_trace} & mam & Fits APH(2) distributions from empirical inter-arrival time traces\\
+\texttt{aph2\_fitall} & mam & Fits multiple APH(2) distributions to match given moments with exhaustive parameter search\\
+\texttt{aph\_bernstein} & mam & Constructs APH distributions using Bernstein exponential approximation methods\\
+\texttt{aph\_fit} & mam & Fits APH distributions to specified moments using optimization and approximation techniques\\
+\texttt{aph\_rand} & mam & APH random generation algorithms\\
+\texttt{aph\_simplify} & mam & Simplifies and combines APH distributions using structural pattern operations\\
+\texttt{cache\_erec} & cache & Implements exact recursive (EREC) algorithms for cache system analysis\\
+\texttt{cache\_gamma} & cache & Computes cache access factors from request arrival rates and routing matrices\\
+\texttt{cache\_gamma\_lp} & cache & Computes cache access factors using linear programming optimization methods\\
+\texttt{cache\_miss} & cache & Provides general-purpose algorithms for computing cache miss rates across\\
+\texttt{cache\_miss\_asy} & cache & Provides asymptotic approximation methods for cache miss rate analysis\\
+\texttt{cache\_miss\_fpi} & cache & Computes cache miss probabilities using fixed-point iteration methods\\
+\texttt{cache\_miss\_rayint} & cache & Estimates cache miss rates using ray method for partial differential equations\\
+\texttt{cache\_mva} & cache & Implements Mean Value Analysis algorithms for cache system performance\\
+\texttt{cache\_mva\_miss} & cache & Implements Mean Value Analysis (MVA) algorithms for computing cache miss\\
+\texttt{cache\_prob\_erec} & cache & Computes exact cache state probabilities using recursive methods based on\\
+\texttt{cache\_prob\_fpi} & cache & Computes cache state probabilities using fixed-point iteration algorithms\\
+\texttt{cache\_prob\_rayint} & cache & Computes cache state probabilities using ray integration methods for\\
+\texttt{cache\_rayint} & cache & Implements ray integration techniques for cache system analysis using\\
+\texttt{cache\_rrm\_meanfield\_ode} & cache & Implements the mean field ordinary differential equation system for Random\\
+\texttt{cache\_t\_hlru} & cache & Computes response time metrics for Hierarchical Least Recently Used (H-LRU)\\
+\texttt{cache\_t\_lrum} & cache & Computes response time metrics for Least Recently Used with Multiple servers\\
+\texttt{cache\_t\_lrum\_map} & cache & Analyzes response times for LRUM cache systems with Markovian Arrival\\
+\texttt{cache\_ttl\_hlru} & cache & Implements TTL approximation for Hierarchical LRU (H-LRU) cache systems\\
+\texttt{cache\_ttl\_lrua} & cache & Implementation of Time-To-Live (TTL) approximation for LRU(A) cache systems\\
+\texttt{cache\_ttl\_lrum} & cache & Implementation of Time-To-Live approximation for Least Recently Used with\\
+\texttt{cache\_ttl\_lrum\_map} & cache & Combines TTL approximation with LRUM cache policies and Markovian Arrival\\
+\texttt{cache\_ttl\_tree} & cache & Tree-based TTL cache analysis implementation for the LINE solver framework\\
+\texttt{cache\_xi\_bvh} & cache & Computes cache xi terms using the iterative method from Gast-van Houdt\\
+\texttt{cache\_xi\_fp} & cache & Estimates cache xi terms using fixed-point algorithms. Xi terms represent\\
+\texttt{ctmc\_courtois} & mc & Courtois decomposition for nearly completely decomposable CTMCs\\
+\texttt{ctmc\_kms} & mc & Koury-McAllister-Stewart aggregation-disaggregation method for CTMCs\\
+\texttt{ctmc\_makeinfgen} & mc & Constructs and validates infinitesimal generator matrices for continuous-time\\
+\texttt{ctmc\_multi} & mc & Multi-level aggregation method for CTMCs\\
+\texttt{ctmc\_pseudostochcomp} & mc & API function for mc operations\\
+\texttt{ctmc\_rand} & mc & Generates random infinitesimal generator matrices for continuous-time Markov chains\\
+\texttt{ctmc\_randomization} & mc & Converts a continuous-time Markov chain into an equivalent discrete-time chain\\
+\texttt{ctmc\_relsolve} & mc & Equilibrium distribution of a continuous-time Markov chain re-normalized with respect to\\
+\texttt{ctmc\_simulate} & mc & Generates sample paths for CTMCs using the standard simulation algorithm with\\
+\texttt{ctmc\_solve} & mc & Computes the steady-state probability distribution for CTMCs by solving the linear\\
+\texttt{ctmc\_solve\_reducible} & mc & Solve reducible CTMCs by converting to DTMC via randomization\\
+\texttt{ctmc\_ssg} & mc & API function for mc operations\\
+\texttt{ctmc\_ssg\_reachability} & mc & CTMC State Space Generator for Reachability Analysis\\
+\texttt{ctmc\_stmonotone} & mc & Computes the stochastically monotone upper bound for a CTMC\\
+\texttt{ctmc\_stochcomp} & mc & Implements stochastic complementarity analysis for CTMCs to identify strongly\\
+\texttt{ctmc\_takahashi} & mc & Takahashi's aggregation-disaggregation method for CTMCs\\
+\texttt{ctmc\_testpf\_kolmogorov} & mc & Test if a CTMC has product form using Kolmogorov's criteria\\
+\texttt{ctmc\_timereverse} & mc & Computes the infinitesimal generator of the time-reversed continuous-time\\
+\texttt{ctmc\_transient} & mc & Computes transient probabilities for CTMCs using numerical integration of the\\
+\texttt{ctmc\_uniformization} & mc & CTMC Transient Analysis via Uniformization\\
+\texttt{dtmc\_isfeasible} & mc & Check if a matrix represents a feasible DTMC transition matrix\\
+\texttt{dtmc\_makestochastic} & mc & Converts non-negative matrices into valid discrete-time Markov chain transition\\
+\texttt{dtmc\_rand} & mc & Generates random stochastic transition matrices for discrete-time Markov chains\\
+\texttt{dtmc\_simulate} & mc & Generates sample trajectories for DTMCs by sampling from the transition probability\\
+\texttt{dtmc\_solve} & mc & Computes the steady-state probability distribution for DTMCs by converting the\\
+\texttt{dtmc\_solve\_reducible} & mc & Result class for DTMC solve reducible\\
+\texttt{dtmc\_stochcomp} & mc & Returns the stochastic complement of a DTMC\\
+\texttt{dtmc\_timereverse} & mc & Compute the infinitesimal generator of the time-reversed DTMC\\
+\texttt{dtmc\_uniformization} & mc & Result class for DTMC uniformization analysis containing the probability vector and maximum iterations used\\
+\texttt{lossn\_erlangfp} & lossn & Implements fixed-point algorithms for analyzing loss networks using Erlang\\
+\texttt{lsn\_max\_multiplicity} & lsn & Computes maximum multiplicity constraints for load sharing network (LSN)\\
+\texttt{m3pp22\_fitc\_approx\_cov} & mam.m3pp & Implements parameter fitting for second-order Marked Markov Modulated Poisson Process\\
+\texttt{m3pp22\_fitc\_approx\_cov\_multiclass} & mam.m3pp & Implements constrained optimization for fitting M3PP(2,2) parameters given an underlying\\
+\texttt{m3pp22\_interleave\_fitc} & mam.m3pp & Implements lumped superposition of multiple M3PP(2,2) processes using interleaved\\
+\texttt{m3pp2m\_fitc} & mam.m3pp & Implements exact fitting of second-order Marked Markov Modulated Poisson Process\\
+\texttt{m3pp2m\_fitc\_approx} & mam.m3pp & Implements approximation-based fitting for M3PP(2,m) using optimization methods\\
+\texttt{m3pp2m\_fitc\_approx\_ag} & mam.m3pp & Implements auto-gamma approximation method for M3PP(2,m) parameter fitting\\
+\texttt{m3pp2m\_fitc\_approx\_ag\_multiclass} & mam.m3pp & Implements multiclass auto-gamma fitting for M3PP(2,m) with variance and covariance\\
+\texttt{m3pp2m\_interleave} & mam.m3pp & Implements interleaved superposition of multiple M3PP(2,m) processes to construct\\
+\texttt{m3pp\_interleave\_fitc} & mam.m3pp & Implements fitting and interleaving of k second-order M3PP processes with varying\\
+\texttt{m3pp\_interleave\_fitc\_theoretical} & mam.m3pp & Implements theoretical MMAP fitting through M3PP interleaving using analytical\\
+\texttt{m3pp\_interleave\_fitc\_trace} & mam.m3pp & Implements M3PP interleaving and fitting directly from empirical trace data\\
+\texttt{m3pp\_rand} & mam.m3pp & Implements random generation of Markovian Multi-class Point Processes (M3PP)\\
+\texttt{m3pp\_superpos\_fitc} & mam.m3pp & Implements superposition-based fitting of k second-order M3PP processes into\\
+\texttt{m3pp\_superpos\_fitc\_theoretical} & mam.m3pp & Implements superposition fitting of k second-order M3PP processes using theoretical\\
+\texttt{mamap22\_fit\_gamma\_fs\_trace} & mam & Fits MAMAP(2,2) from trace data using gamma autocorrelation and forward-sigma characteristics\\
+\texttt{mamap22\_fit\_multiclass} & mam & Fits MAMAP(2,2) processes for two-class systems with forward moments and sigma characteristics\\
+\texttt{mamap2m\_coefficients} & mam & Computes coefficients for MAMAP(2,m) fitting formulas in canonical forms\\
+\texttt{mamap2m\_fit} & mam & Fits MAMAP(2,m) processes matching moments, autocorrelation, and class characteristics\\
+\texttt{mamap2m\_fit\_fb\_multiclass} & mam & Fits MAMAP using combined forward and backward moment characteristics for multiclass systems\\
+\texttt{mamap2m\_fit\_gamma\_fb\_mmap} & mam & Fits MAMAP with autocorrelation control using forward-backward moments from MMAP input\\
+\texttt{mamap2m\_fit\_mmap} & mam & Fits MAPH/MAMAP(2,m) by approximating characteristics of input MMAP processes\\
+\texttt{mamap2m\_fit\_trace} & mam & Fits MAMAP(2,m) processes from empirical trace data with inter-arrival times and class labels\\
+\texttt{map2\_fit} & mam & Fits MAP(2) processes to match specified moments and autocorrelation decay rates\\
+\texttt{map2mmpp} & mam & Converts MAP representations to MMPP format for compatibility with MMPP-specific algorithms\\
+\texttt{map\_acf} & mam & Computes autocorrelation function (ACF) values for MAP inter-arrival times at specified lags\\
+\texttt{map\_acfc} & mam & Computes ACFC values for MAP counting processes over time intervals, measuring temporal correlation\\
+\texttt{map\_block} & mam & Constructs MAP(2) representations from moment and autocorrelation parameters using fallback\\
+\texttt{map\_ccdf\_derivative} & mam & Computes derivatives of MAP complementary cumulative distribution functions at zero\\
+\texttt{map\_cdf} & mam & Computes CDF values for MAP inter-arrival times using CTMC uniformization techniques\\
+\texttt{map\_checkfeasible} & mam & Comprehensive validation of MAP matrices including stochastic properties, numerical stability,\\
+\texttt{map\_count\_mean} & mam & Computes mean number of arrivals in MAP counting processes over specified time intervals\\
+\texttt{map\_count\_moment} & mam & Computes power moments of MAP counting processes using moment generating functions and\\
+\texttt{map\_count\_var} & mam & Computes variance of MAP counting processes over specified time intervals using matrix\\
+\texttt{map\_embedded} & mam & Computes embedded DTMC matrices from MAP representations by extracting transition\\
+\texttt{map\_erlang} & mam & Constructs MAP representations of Erlang-k processes with specified means and phases\\
+\texttt{map\_exponential} & mam & Creates MAP representations of exponential inter-arrival time distributions with specified\\
+\texttt{map\_feasblock} & mam & Constructs feasible MAP representations when exact moment matching fails by adjusting\\
+\texttt{map\_feastol} & mam & Provides standard tolerance values for numerical feasibility checks in MAP algorithms\\
+\texttt{map\_gamma} & mam & Computes gamma parameter measuring autocorrelation decay rates in MAP processes\\
+\texttt{map\_gamma2} & mam & Computes largest non-unit eigenvalue of embedded DTMC for MAP correlation characterization\\
+\texttt{map\_hyperexp} & mam & Constructs MAP representations of two-phase hyperexponential renewal processes\\
+\texttt{map\_idc} & mam & Computes asymptotic index of dispersion for MAP counting processes, measuring long-term\\
+\texttt{map\_infgen} & mam & Computes infinitesimal generator matrix of underlying CTMC by combining MAP transition\\
+\texttt{map\_isfeasible} & mam & Provides convenient interface for MAP feasibility validation with configurable tolerance\\
+\texttt{map\_joint} & mam & Computes joint moments of MAP inter-arrival times for advanced statistical characterization\\
+\texttt{map\_jointpdf\_derivative} & mam & Computes partial derivatives of MAP joint probability density functions at origin\\
+\texttt{map\_kpc} & mam & Computes Kronecker product composition of multiple MAPs for building complex arrival processes\\
+\texttt{map\_kurt} & mam & Computes kurtosis of MAP inter-arrival times measuring tail heaviness and distribution shape\\
+\texttt{map\_lambda} & mam & MAP arrival rate computation algorithms\\
+\texttt{map\_largemap} & mam & Provides size thresholds for determining when MAP algorithms should switch to\\
+\texttt{map\_mark} & mam & Creates Marked MAP (MMAP) representations by adding class labels to MAP arrivals\\
+\texttt{map\_max} & mam & Computes MAP representation of maximum inter-arrival times from independent MAP processes\\
+\texttt{map\_mean} & mam & MAP mean inter-arrival time computation algorithms\\
+\texttt{map\_mixture} & mam & Creates probabilistic mixtures of MAP processes with specified mixture probabilities\\
+\texttt{map\_moment} & mam & Computes raw moments of MAP inter-arrival times using matrix inversion techniques\\
+\texttt{map\_normalize} & mam & Sanitizes MAP matrices by ensuring non-negativity constraints and proper diagonal adjustments\\
+\texttt{map\_pdf} & mam & Computes PDF values for MAP inter-arrival times using matrix exponential techniques\\
+\texttt{map\_pie} & mam & Computes steady-state probability vector of embedded discrete-time Markov chain\\
+\texttt{map\_piq} & mam & Computes steady-state probability vector of underlying continuous-time Markov chain\\
+\texttt{map\_pntiter} & mam & Computes exact arrival probabilities using iterative numerical methods based on Neuts and Li\\
+\texttt{map\_pntquad} & mam & Computes MAP point process probabilities using ODE quadrature methods with Runge-Kutta integration\\
+\texttt{map\_prob} & mam & Computes equilibrium probability distribution of underlying CTMC for MAP analysis\\
+\texttt{map\_rand} & mam & Generates random MAP representations for testing, simulation, and statistical analysis\\
+\texttt{map\_randn} & mam & Generates random MAP samples with added numerical noise for robustness testing\\
+\texttt{map\_renewal} & mam & Creates renewal MAP by removing correlations to obtain memoryless arrival processes\\
+\texttt{map\_sample} & mam & Generates random samples from MAP distributions for simulation and empirical analysis\\
+\texttt{map\_scale} & mam & Rescales MAP inter-arrival time distributions to achieve specified mean values\\
+\texttt{map\_scv} & mam & Computes SCV of MAP inter-arrival times as normalized dispersion measure\\
+\texttt{map\_skew} & mam & Computes skewness of MAP inter-arrival times measuring asymmetry in distributions\\
+\texttt{map\_stochcomp} & mam & Performs state elimination through stochastic complementation while preserving MAP properties\\
+\texttt{map\_sum} & mam & Computes MAP representations of sums of identical MAP processes for load scaling\\
+\texttt{map\_sumind} & mam & Computes MAP representations of sums of independent MAP processes for modeling\\
+\texttt{map\_super} & mam & Creates superposition of MAP processes using Kronecker product techniques\\
+\texttt{map\_timereverse} & mam & Computes time-reversed MAP by adjusting transition rates based on stationary distributions\\
+\texttt{map\_var} & mam & MAP variance computation algorithms\\
+\texttt{map\_varcount} & mam & Computes variance of event counts in MAP processes over specified time intervals\\
+\texttt{maph2m\_fit} & mam & Fits MAPH(2,m) processes to match ordinary moments, class probabilities, and backward moments\\
+\texttt{maph2m\_fit\_mmap} & mam & Fits MAPH(2,m) by approximating characteristics of input MMAP processes\\
+\texttt{maph2m\_fit\_multiclass} & mam & Fits MAPH(2,m) models to multiclass characteristics with class-specific parameters\\
+\texttt{maph2m\_fit\_trace} & mam & Fits MAPH(2,m) from empirical trace data for multiclass service time modeling\\
+\texttt{maph2m\_fitc\_approx} & mam & Fits MAPH(2,m) using approximation methods for count statistics when exact solutions fail\\
+\texttt{maph2m\_fitc\_theoretical} & mam & Fits MAPH(2,m) using theoretical count statistics for precise parameter estimation\\
+\texttt{mapqn\_bnd\_lr} & mapqn & Implements general linear reduction methods for computing performance\\
+\texttt{mapqn\_bnd\_lr\_mva} & mapqn & Implements linear reduction bounds for MAP queueing networks using Mean\\
+\texttt{mapqn\_bnd\_lr\_pf} & mapqn & Implements linear reduction bounds specialized for product-form MAP\\
+\texttt{mapqn\_bnd\_qr} & mapqn & Implements general quadratic reduction methods for computing performance\\
+\texttt{mapqn\_bnd\_qr\_delay} & mapqn & Implements quadratic reduction bounds for delay systems in MAP queueing\\
+\texttt{mapqn\_bnd\_qr\_ld} & mapqn & Implements quadratic reduction bounds for load-dependent MAP queueing\\
+\texttt{mapqn\_lpmodel} & mapqn & Base class for representing MAP queueing network linear programming models\\
+\texttt{mapqn\_parameters} & mapqn & Defines the base parameter structure for MAP queueing network analysis\\
+\texttt{mapqn\_parameters\_factory} & mapqn & Factory class for creating parameter objects for MAP queueing network\\
+\texttt{mapqn\_qr\_bounds\_bas} & mapqn & Implements Queue-Router bounds using the Balanced Asymptotic Scaling (BAS)\\
+\texttt{mapqn\_qr\_bounds\_rsrd} & mapqn & Implements Queue-Router (QR) bounds using the Randomized Simultaneous\\
+\texttt{mmap\_backward\_moment} & mam & Computes backward moments of MMAP inter-arrival times for each marked class\\
+\texttt{mmap\_compress} & mam & Compresses MMAP using various approximation methods including mixture, matching,\\
+\texttt{mmap\_count\_idc} & mam & Computes IDC values for each marked class in MMAP counting processes\\
+\texttt{mmap\_count\_lambda} & mam & Computes arrival rate vectors for each marked class in MMAP processes\\
+\texttt{mmap\_count\_mcov} & mam & Computes count covariance matrices between marked classes in MMAP processes\\
+\texttt{mmap\_count\_mean} & mam & Computes mean count vectors for each marked class in MMAP counting processes\\
+\texttt{mmap\_count\_var} & mam & Computes variance vectors for counting processes of each marked class in MMAP\\
+\texttt{mmap\_cross\_moment} & mam & Computes cross-moment matrices between different marked classes in MMAP processes\\
+\texttt{mmap\_embedded} & mam & Computes embedded discrete-time Markov chain for MMAP processes\\
+\texttt{mmap\_exponential} & mam & Constructs MMAP with exponential inter-arrival distributions for each marked class\\
+\texttt{mmap\_forward\_moment} & mam & Computes forward moments of MMAP inter-arrival times for each marked class\\
+\texttt{mmap\_hide} & mam & Hides specified arrival classes in MMAP processes by removing observable events\\
+\texttt{mmap\_idc} & mam & Computes asymptotic IDC for each marked class in MMAP as time approaches infinity\\
+\texttt{mmap\_isfeasible} & mam & Validates mathematical feasibility of MMAP representations including stochastic\\
+\texttt{mmap\_issym} & mam & Checks if an MMAP is symmetric\\
+\texttt{mmap\_lambda} & mam & MMAP arrival rate computation algorithms\\
+\texttt{mmap\_maps} & mam & Extracts individual MAP processes for each marked class from MMAP representations\\
+\texttt{mmap\_mark} & mam & Converts a Markovian Arrival Process with marked arrivals (MMAP) into a new MMAP with redefined classes based on a given probability matrix\\
+\texttt{mmap\_max} & mam & Computes element-wise maximum of MMAP processes for synchronization analysis\\
+\texttt{mmap\_mixture} & mam & Creates probabilistic mixtures of MMAP processes with specified weights\\
+\texttt{mmap\_mixture\_fit} & mam & Fits a mixture of Markovian Arrival Processes (MMAPs) to match the given cross-moments\\
+\texttt{mmap\_mixture\_fit\_mmap} & mam & Fits a mixture of Markovian Arrival Processes (MMAPs) to match the given moments\\
+\texttt{mmap\_mixture\_order2} & mam & Creates a second-order MMAP mixture from a collection of MMAPs\\
+\texttt{mmap\_modulate} & mam & Modulates an MMAP by another MMAP, creating a compound arrival process\\
+\texttt{mmap\_normalize} & mam & Normalizes MMAP matrices to ensure feasibility and mathematical validity\\
+\texttt{mmap\_pc} & mam & Computes the proportion of counts (PC) for each type in a Markovian Arrival Process with marked arrivals (MMAP)\\
+\texttt{mmap\_pie} & mam & Computes steady-state probability vectors for each marked class in MMAP processes\\
+\texttt{mmap\_rand} & mam & Generates random MMAP representations for testing and simulation purposes\\
+\texttt{mmap\_sample} & mam & Generates random samples from MMAP distributions for each marked class\\
+\texttt{mmap\_scale} & mam & Rescales MMAP inter-arrival distributions to achieve specified mean values\\
+\texttt{mmap\_shorten} & mam & Converts an MMAP representation from M3A format to BUTools format\\
+\texttt{mmap\_sigma} & mam & Computes one-step class transition probabilities for a Marked Markovian Arrival Process (MMAP)\\
+\texttt{mmap\_sigma2} & mam & Computes two-step class transition probabilities for a Markovian Arrival Process (MMAP)\\
+\texttt{mmap\_sum} & mam & Computes superposition of MMAP processes creating independent multiclass arrival streams\\
+\texttt{mmap\_super} & mam & Combines multiple MMAP processes into superposed multiclass arrival streams\\
+\texttt{mmap\_super\_safe} & mam & API function for mam operations\\
+\texttt{mmap\_timereverse} & mam & Computes the time-reversed version of a Markovian Arrival Process with marked arrivals (MMAP)\\
+\texttt{mmpp2\_fit} & mam & Fits MMPP(2) models to match specified moments and correlation characteristics\\
+\texttt{mmpp2\_fit1} & mam & Fits MMPP(2) models using simplified single-parameter approach for specific scenarios\\
+\texttt{mmpp2\_fitc} & mam & Fits MMPP(2) models using count statistics and index of dispersion criteria\\
+\texttt{mmpp2\_fitc\_approx} & mam & Fits MMPP(2) using optimization-based approximation methods for count statistics\\
+\texttt{mmpp\_rand} & mam & Generates random MMPP models with diagonal D1 matrices for testing and simulation\\
+\texttt{ms\_additivesymmetricchisquared} & measures & Additive symmetric chi-squared distance between two probability distributions\\
+\texttt{ms\_adtest} & measures & Implements the Anderson-Darling test for assessing whether a sample comes from\\
+\texttt{ms\_avgl1linfty} & measures & Average L1 L-infinity distance between two probability distributions\\
+\texttt{ms\_bhattacharyya} & measures & Computes the Bhattacharyya distance measuring the similarity between probability\\
+\texttt{ms\_canberra} & measures & Canberra distance between two probability distributions\\
+\texttt{ms\_chebyshev} & measures & Chebyshev Distance for Probability Distributions\\
+\texttt{ms\_chisquared} & measures & Squared chi-squared distance between two probability distributions\\
+\texttt{ms\_cityblock} & measures & Implements the City block distance between probability distributions\\
+\texttt{ms\_clark} & measures & Clark distance between two probability distributions\\
+\texttt{ms\_condentropy} & measures & Computes conditional entropy measuring the remaining uncertainty\\
+\texttt{ms\_cramer\_von\_mises} & measures & Implements the Cramer-von Mises test statistic for comparing two empirical distributions\\
+\texttt{ms\_cosine} & measures & Computes cosine distance (1 - cosine similarity) measuring the angle between two\\
+\texttt{ms\_czekanowski} & measures & Czekanowski distance between two probability distributions\\
+\texttt{ms\_dice} & measures & Dice distance between two probability distributions\\
+\texttt{ms\_divergence} & measures & Divergence distance between two probability distributions\\
+\texttt{ms\_entropy} & measures & Implements Shannon entropy for discrete random variables\\
+\texttt{ms\_euclidean} & measures & Implements the standard Euclidean distance between probability distributions\\
+\texttt{ms\_fidelity} & measures & Fidelity distance between two probability distributions\\
+\texttt{ms\_gower} & measures & Gower distance between two probability distributions\\
+\texttt{ms\_harmonicmean} & measures & Harmonic mean distance between two probability distributions\\
+\texttt{ms\_hellinger} & measures & Computes the Hellinger distance measuring dissimilarity between probability distributions\\
+\texttt{ms\_intersection} & measures & Intersection distance between two probability distributions\\
+\texttt{ms\_jaccard} & measures & Jaccard distance between two probability distributions\\
+\texttt{ms\_jeffreys} & measures & Jeffreys divergence between two probability distributions\\
+\texttt{ms\_jensendifference} & measures & Jensen difference divergence between two probability distributions\\
+\texttt{ms\_jensenshannon} & measures & Implements Jensen-Shannon divergence, a symmetric and bounded version of\\
+\texttt{ms\_jointentropy} & measures & Computes joint entropy measuring the uncertainty of joint distributions\\
+\texttt{ms\_kdivergence} & measures & K-divergence between two probability distributions\\
+\texttt{ms\_kolmogorov\_smirnov} & measures & Implements the Kolmogorov-Smirnov test for determining if a sample follows\\
+\texttt{ms\_kuiper} & measures & Implements the Kuiper test statistic, a rotation-invariant variant of the Kolmogorov-Smirnov\\
+\texttt{ms\_kulczynskid} & measures & Kulczynski d distance between two probability distributions\\
+\texttt{ms\_kulczynskis} & measures & Kulczynski s distance between two probability distributions\\
+\texttt{ms\_kullbackleibler} & measures & Implements the Kullback-Leibler divergence measuring distribution differences\\
+\texttt{ms\_kumarhassebrook} & measures & Kumar-Hassebrook distance between two probability distributions\\
+\texttt{ms\_kumarjohnson} & measures & Kumar-Johnson distance between two probability distributions\\
+\texttt{ms\_lorentzian} & measures & Lorentzian distance between two probability distributions\\
+\texttt{ms\_matusita} & measures & Matusita distance between two probability distributions\\
+\texttt{ms\_minkowski} & measures & Minkowski Distance for Probability Distributions\\
+\texttt{ms\_motyka} & measures & Motyka distance between two probability distributions\\
+\texttt{ms\_mutinfo} & measures & Computes mutual information measuring the amount of shared information\\
+\texttt{ms\_neymanchisquared} & measures & Neyman chi-squared distance between two probability distributions\\
+\texttt{ms\_nmi} & measures & Computes normalized mutual information providing a scale-invariant measure\\
+\texttt{ms\_nvi} & measures & Computes normalized variation information measuring the normalized distance\\
+\texttt{ms\_pearsonchisquared} & measures & Pearson chi-squared distance between two probability distributions\\
+\texttt{ms\_probsymmchisquared} & measures & Probabilistic symmetry chi-squared distance between two probability distributions\\
+\texttt{ms\_relatentropy} & measures & Computes relative entropy measuring the information difference\\
+\texttt{ms\_product} & measures & Product distance between two probability distributions\\
+\texttt{ms\_ruzicka} & measures & Ruzicka distance between two probability distributions\\
+\texttt{ms\_soergel} & measures & Soergel distance between two probability distributions\\
+\texttt{ms\_sorensen} & measures & Sorensen distance between two probability distributions\\
+\texttt{ms\_squaredchord} & measures & Squared chord distance between two probability distributions\\
+\texttt{ms\_squaredeuclidean} & measures & Squared Euclidean distance between two probability distributions\\
+\texttt{ms\_taneja} & measures & Taneja distance between two probability distributions\\
+\texttt{ms\_tanimoto} & measures & Tanimoto distance between two probability distributions\\
+\texttt{ms\_topsoe} & measures & Topsoe distance between two probability distributions\\
+\texttt{ms\_wasserstein} & measures & Implements the Wasserstein distance measuring the minimum cost to transform\\
+\texttt{ms\_wavehegdes} & measures & Wave-Hedges distance between two probability distributions\\
+\texttt{mtrace\_backward\_moment} & trace & Computes backward moments of a multi-class trace\\
+\texttt{mtrace\_bootstrap} & trace & Implements bootstrap resampling methods for multi-class empirical trace data\\
+\texttt{mtrace\_count} & trace & Computes count statistics from a multi-class trace over specified time windows\\
+\texttt{mtrace\_cov} & trace & Computes the covariance matrix for multi-type traces\\
+\texttt{mtrace\_cross\_moment} & trace & Computes the k-th order moment of the inter-arrival time between an event\\
+\texttt{mtrace\_forward\_moment} & trace & Computes the forward moments of a marked trace\\
+\texttt{mtrace\_iat2counts} & trace & Computes the per-class counting processes of T, i.e., the counts after\\
+\texttt{mtrace\_joint} & trace & Given a multi-class trace, computes the empirical class-dependent joint\\
+\texttt{mtrace\_mean} & trace & Computes per-class means for multi-class empirical trace data. Enables separate\\
+\texttt{mtrace\_merge} & trace & Merges two traces in a single marked (multiclass) trace\\
+\texttt{mtrace\_moment} & trace & Computes empirical class-dependent statistical moments for multi-class trace data\\
+\texttt{mtrace\_moment\_simple} & trace & Computes the k-th order moment of the inter-arrival time between an event\\
+\texttt{mtrace\_pc} & trace & Computes the probabilities of arrival for each class\\
+\texttt{mtrace\_sigma} & trace & Computes the empirical probability of observing a specific 2-element\\
+\texttt{mtrace\_sigma2} & trace & Computes the empirical probability of observing a specific 3-element\\
+\texttt{mtrace\_split} & trace & Given a multi-class trace with inter-arrivals T and labels L,\\
+\texttt{mtrace\_summary} & trace & Computes summary statistics for multiple trace analysis, providing\\
+\texttt{npfqn\_nonexp\_approx} & npfqn & Implements approximation methods for non-product-form queueing networks\\
+\texttt{npfqn\_traffic\_merge} & npfqn & Implements traffic merging algorithms for non-product-form queueing networks\\
+\texttt{npfqn\_traffic\_merge\_cs} & npfqn & Implements traffic merging algorithms for non-product-form queueing networks\\
+\texttt{npfqn\_traffic\_split\_cs} & npfqn & Implements traffic splitting algorithms for non-product-form queueing networks\\
+\texttt{pfqn\_ab} & pfqn.ld & Implements the Akyildiz-Bolch linearizer method for analyzing closed product-form queueing networks\\
+\texttt{pfqn\_aql} & pfqn.mva & Implements the Aggregate Queue Length (AQL) approximation method for analyzing closed\\
+\texttt{pfqn\_bs} & pfqn.mva & Implements the classic Bard-Schweitzer approximate MVA algorithm for closed queueing networks\\
+\texttt{pfqn\_ca} & pfqn.nc & Convolution Algorithm for Product-Form Networks\\
+\texttt{pfqn\_cdfun} & pfqn.ld & Provides functionality to evaluate class-dependent scaling functions in load-dependent queueing networks\\
+\texttt{pfqn\_comomrm} & pfqn.nc & Implements the Convolution Method of Moments specialized for repairman queueing models\\
+\texttt{pfqn\_comomrm\_ld} & pfqn.ld & Implements the Convolution Method of Moments (COMOM) for computing normalizing constants in\\
+\texttt{pfqn\_conwayms} & pfqn.mva & Implements the Conway-Maxwell approximation method for analyzing closed queueing networks\\
+\texttt{pfqn\_cub} & pfqn.nc & Implements the cubature (multi-dimensional integration) approach for computing normalizing\\
+\texttt{pfqn\_egflinearizer} & pfqn.mva & Implements the Extended General-Form linearizer approximation for closed queueing networks\\
+\texttt{pfqn\_fnc} & pfqn.ld & Computes scaling factors for load-dependent functional servers in product-form queueing networks\\
+\texttt{pfqn\_gflinearizer} & pfqn.mva & Implements the general-form linearizer approximation for closed queueing networks with\\
+\texttt{pfqn\_gld} & pfqn.ld & Implements the generalized convolution algorithm for computing normalizing constants in\\
+\texttt{pfqn\_gld\_complex} & pfqn.ld & Extends the generalized load-dependent convolution algorithm to handle complex-valued\\
+\texttt{pfqn\_gldsingle} & pfqn.ld & Provides specialized auxiliary function for computing normalizing constants in single-class\\
+\texttt{pfqn\_gldsingle\_complex} & pfqn.ld & Provides specialized auxiliary function for computing normalizing constants in single-class\\
+\texttt{pfqn\_kt} & pfqn.nc & Implements the Knessl-Tier asymptotic expansion using the ray method for computing\\
+\texttt{pfqn\_le} & pfqn.nc & Implements the Laguerre expansion approach for computing normalizing constants in\\
+\texttt{pfqn\_le\_fpi} & pfqn.nc & Implements the fixed-point iteration algorithm used in the Laguerre expansion method\\
+\texttt{pfqn\_le\_fpiz} & pfqn.nc & Implements the fixed-point iteration algorithm for the Laguerre expansion method\\
+\texttt{pfqn\_le\_hessian} & pfqn.nc & Computes the Hessian matrix used in the Laguerre expansion method for second-order\\
+\texttt{pfqn\_le\_hessianz} & pfqn.nc & Computes the Hessian matrix used in the Laguerre expansion method for closed queueing\\
+\texttt{pfqn\_linearizer} & pfqn.mva & Linearizer Approximate MVA for Product-Form Networks\\
+\texttt{pfqn\_linearizerms} & pfqn.mva & Implements the multi-server version of Krzesinski's linearizer approximation for closed\\
+\texttt{pfqn\_linearizermx} & pfqn.mva & Implements linearizer-based approximation methods for mixed queueing networks with\\
+\texttt{pfqn\_linearizerpp} & pfqn.mva & Implements the Linearizer++ algorithm for closed queueing networks with enhanced accuracy\\
+\texttt{pfqn\_lldfun} & pfqn.ld & Evaluates limited load-dependent (LLD) scaling functions using spline interpolation for\\
+\texttt{pfqn\_ls} & pfqn.nc & Implements the logistic sampling approach for computing normalizing constants in\\
+\texttt{pfqn\_mci} & pfqn.nc & Implements Monte Carlo integration approaches including Importance Monte Carlo Integration\\
+\texttt{pfqn\_mmint2} & pfqn.nc & Implements numerical integration for computing normalizing constants in multi-class\\
+\texttt{pfqn\_mmint2\_gausslegendre} & pfqn.nc & Implements Gauss-Legendre quadrature integration for computing normalizing constants\\
+\texttt{pfqn\_mmsample2} & pfqn.nc & Implements importance sampling for computing normalizing constants in multi-class\\
+\texttt{pfqn\_mom} & pfqn.nc & Implements the Method of Moments using exact arithmetic with BigFraction for computing\\
+\texttt{pfqn\_mu\_ms} & pfqn.ld & Computes load-dependent scaling factors for multi-server queueing stations with finite\\
+\texttt{pfqn\_mushift} & pfqn.ld & Provides utility function for shifting load-dependent scaling vectors by one position,\\
+\texttt{pfqn\_mva} & pfqn.mva & Mean Value Analysis for Product-Form Queueing Networks\\
+\texttt{pfqn\_mvald} & pfqn.ld & Load-Dependent Mean Value Analysis\\
+\texttt{pfqn\_mvaldms} & pfqn.ld & Provides wrapper functionality for load-dependent Mean Value Analysis with automatic\\
+\texttt{pfqn\_mvaldmx} & pfqn.ld & Implements Mean Value Analysis for mixed queueing networks with both open and closed classes\\
+\texttt{pfqn\_mvaldmx\_ec} & pfqn.ld & Provides auxiliary functionality for computing EC terms used in load-dependent Mean Value\\
+\texttt{pfqn\_mvams} & pfqn.mva & Provides comprehensive MVA solution for mixed queueing networks with multi-server stations\\
+\texttt{pfqn\_mvamx} & pfqn.mva & Implements MVA for mixed networks containing both open and closed classes without multi-server\\
+\texttt{pfqn\_nc} & pfqn.nc & Normalizing Constant Methods for Product-Form Networks\\
+\texttt{pfqn\_nc\_sanitize} & pfqn.nc & Sanitizes and preprocesses parameters for product-form queueing network models to\\
+\texttt{pfqn\_nca} & pfqn.nc & Implements the Normalizing Constant Approximation method for single-class closed\\
+\texttt{pfqn\_ncld} & pfqn.ld & Provides the main entry point for computing normalizing constants in load-dependent\\
+\texttt{pfqn\_nrl} & pfqn.nc & Implements the Normal Random Lattice approach for computing normalizing constants\\
+\texttt{pfqn\_nrp} & pfqn.nc & Implements the Normal Random Permutation approach for computing normalizing constants\\
+\texttt{pfqn\_panacea} & pfqn.nc & Implements the PANACEA approximation method for computing normalizing constants in\\
+\texttt{pfqn\_pff\_delay} & pfqn.nc & Computes the product-form factor for delay stations in closed queueing networks\\
+\texttt{pfqn\_procomom2} & pfqn.ld & Implements the probabilistic class-oriented method of moments for analyzing\\
+\texttt{pfqn\_propfair} & pfqn.nc & Implements the proportionally fair allocation method using convex optimization\\
+\texttt{pfqn\_qzgblow} & pfqn.mva & Computes the lower Geometric Bound (GB) for queue lengths in closed single-class queueing\\
+\texttt{pfqn\_qzgbup} & pfqn.mva & Computes the upper Geometric Bound (GB) for queue lengths in closed single-class queueing\\
+\texttt{pfqn\_rd} & pfqn.nc & Implements the Random Discretization approach for computing normalizing constants in\\
+\texttt{pfqn\_recal} & pfqn.nc & Implements the RECAL (Recursive Calculation) algorithm for computing normalizing constants\\
+\texttt{pfqn\_schmidt} & pfqn.ld & Schmidt method for load-dependent MVA with multi-server stations\\
+\texttt{pfqn\_sqni} & pfqn.mva & Implements the Single Queue Network Interpolation method for analyzing multi-class closed\\
+\texttt{pfqn\_stdf} & pfqn.nc & Implements McKenna's 1987 method for computing sojourn time distributions at\\
+\texttt{pfqn\_stdf\_heur} & pfqn.nc & Implements a heuristic variant of McKenna's 1987 method for computing sojourn time\\
+\texttt{pfqn\_xia} & pfqn.ld & Implements Xia's asymptotic approximation method for computing normalizing constants\\
+\texttt{pfqn\_xzabalow} & pfqn.mva & Computes the lower ABA bound for throughput in closed single-class queueing networks\\
+\texttt{pfqn\_xzabaup} & pfqn.mva & Computes the upper ABA bound for throughput in closed single-class queueing networks\\
+\texttt{pfqn\_xzgsblow} & pfqn.mva & Computes the lower GSB for throughput in closed single-class queueing networks using\\
+\texttt{pfqn\_xzgsbup} & pfqn.mva & Computes the upper GSB for throughput in closed single-class queueing networks using\\
+\texttt{ph\_reindex} & mam & Reindexes phase-type distribution maps for network models using integer station and class indices\\
+\texttt{polling\_qsys\_1limited} & polling & Implements analysis algorithms for 1-limited polling systems where the\\
+\texttt{polling\_qsys\_exhaustive} & polling & Implements analysis algorithms for exhaustive polling systems where the\\
+\texttt{polling\_qsys\_gated} & polling & Implements analysis algorithms for gated polling systems where the server\\
+\texttt{qbd\_bmapbmap1} & mam & Analyzes batch arrival and service systems using QBD matrix methods\\
+\texttt{qbd\_mapmap1} & mam & Analyzes MAP/MAP/1 queueing systems using QBD matrix analytic methods\\
+\texttt{qbd\_r} & mam & QBD R-matrix computation algorithms\\
+\texttt{qbd\_r\_logred} & mam & Computes QBD R-matrix using logarithmic reduction method for numerical stability\\
+\texttt{qbd\_raprap1} & mam & Analyzes RAP/RAP/1 queueing systems using QBD methods with rational arrival processes\\
+\texttt{qbd\_rg} & mam & Computes fundamental R and G matrices for QBD analysis of MAP/MAP/1 queues\\
+\texttt{qbd\_setupdelayoff} & mam & Analyzes queueing systems with server setup delays and switch-off mechanisms\\
+\texttt{qsys\_gg1} & qsys & Provides comprehensive analysis of G/G/1 queues with general arrival and service processes\\
+\texttt{qsys\_gig1\_approx\_allencunneen} & qsys & Implements the widely-used Allen-Cunneen approximation for general G/G/1 queueing\\
+\texttt{qsys\_gig1\_approx\_gelenbe} & qsys & G/G/1 queue approximation using Gelenbe's method\\
+\texttt{qsys\_gig1\_approx\_heyman} & qsys & Analyzes a G/G/1 queueing system using Heyman's approximation\\
+\texttt{qsys\_gig1\_approx\_kimura} & qsys & G/G/1 queue approximation using Kimura's method\\
+\texttt{qsys\_gig1\_approx\_klb} & qsys & Analyzes a G/G/1 queueing system using the Kramer-Langenbach-Belz (KLB) approximation\\
+\texttt{qsys\_gig1\_approx\_kobayashi} & qsys & Analyzes a G/G/1 queueing system using Kobayashi's approximation\\
+\texttt{qsys\_gig1\_approx\_marchal} & qsys & Analyzes a G/G/1 queueing system using Marchal's approximation\\
+\texttt{qsys\_gig1\_approx\_myskja} & qsys & G/G/1 queue approximation using Myskja's method\\
+\texttt{qsys\_gig1\_approx\_myskja2} & qsys & G/G/1 queue approximation using enhanced Myskja's method\\
+\texttt{qsys\_gig1\_lbnd} & qsys & G/G/1 queue lower bounds\\
+\texttt{qsys\_gig1\_ubnd\_kingman} & qsys & Calculates an upper bound on the waiting time for a G/G/1 system using Kingman's formula\\
+\texttt{qsys\_gigk\_approx} & qsys & Analyzes a G/G/k queueing system using an approximation method\\
+\texttt{qsys\_gigk\_approx\_cosmetatos} & qsys & G/G/k queue approximation using Cosmetatos method\\
+\texttt{qsys\_gigk\_approx\_kingman} & qsys & Analyzes a G/G/k queueing system using Kingman's approximation\\
+\texttt{qsys\_gigk\_approx\_whitt} & qsys & G/G/k queue approximation using Whitt's method\\
+\texttt{qsys\_gm1} & qsys & G/M/1 Queueing System Analysis\\
+\texttt{qsys\_mg1} & qsys & Implements the Pollaczek-Khinchine formula for M/G/1 queues with Poisson arrivals\\
+\texttt{qsys\_mg1\_prio} & qsys & M/G/1 queueing system with non-preemptive class priorities\\
+\texttt{qsys\_mg1k\_loss} & qsys & M/G/1/K loss probability calculation\\
+\texttt{qsys\_mg1k\_loss\_mgs} & qsys & M/G/1/K loss probability using MacGregor Smith approximation\\
+\texttt{qsys\_mginf} & qsys & M/G/inf queue analysis (infinite servers)\\
+\texttt{qsys\_mm1} & qsys & Implements exact analytical solutions for the M/M/1 queue (Poisson arrivals, exponential\\
+\texttt{qsys\_mm1k\_loss} & qsys & M/M/1/K loss probability calculation\\
+\texttt{qsys\_mmk} & qsys & Implements exact analytical solutions for M/M/k queues with Poisson arrivals,\\
+\texttt{qsys\_mapg1} & qsys & Analyzes MAP/G/1 queues with MAP arrivals and general service times using BUTools\\
+\texttt{qsys\_mapm1} & qsys & MAP/M/1 queueing system analysis with MAP arrivals and exponential service\\
+\texttt{qsys\_mapmap1} & qsys & Analyzes MAP/MAP/1 queues with MAP arrivals and MAP service times\\
+\texttt{qsys\_mapmc} & qsys & MAP/M/c multiserver queueing system analysis with MAP arrivals\\
+\texttt{qsys\_mapph1} & qsys & Analyzes MAP/PH/1 queues with MAP arrivals and phase-type service distributions\\
+\texttt{qsys\_phph1} & qsys & Analyzes PH/PH/1 queues with phase-type arrivals and service distributions\\
+\texttt{randp} & mam & Provides random value selection based on relative probability distributions\\
+\texttt{rl\_env} & rl & Provides a reinforcement learning environment interface for queueing networks\\
+\texttt{rl\_env\_general} & rl & Provides a general reinforcement learning environment for queueing networks\\
+\texttt{rl\_td\_agent} & rl & Implements a temporal difference learning agent for queueing network control\\
+\texttt{rl\_td\_agent\_general} & rl & Implements a general-purpose temporal difference learning agent for queueing\\
+\texttt{sn\_deaggregate\_chain\_results} & sn & Calculate class-based performance metrics for a queueing network based on performance measures of its chains\\
+\texttt{sn\_get\_arv\_r\_from\_tput} & sn & Calculates the average arrival rates at each station from the network throughputs\\
+\texttt{sn\_get\_demands\_chain} & sn & Calculate new queueing network parameters after aggregating classes into chains\\
+\texttt{sn\_get\_node\_arv\_r\_from\_tput} & sn & API function for sn operations\\
+\texttt{sn\_get\_node\_tput\_from\_tput} & sn & APIs to process NetworkStruct objects\\
+\texttt{sn\_get\_product\_form\_chain\_params} & sn & Calculate the parameters at class and chain level for a queueing network model\\
+\texttt{sn\_get\_product\_form\_params} & sn & Extracts essential parameters (service demands, populations, visit ratios) from\\
+\texttt{sn\_get\_residt\_from\_respt} & sn & Calculates the residence times at each station from the response times\\
+\texttt{sn\_get\_state\_aggr} & sn & Aggregates the state of the network\\
+\texttt{sn\_has\_class\_switching} & sn & Checks if the network uses class-switching\\
+\texttt{sn\_has\_closed\_classes} & sn & Checks if the network has one or more closed classes\\
+\texttt{sn\_has\_dps} & sn & Check if the network includes a node with DPS scheduling\\
+\texttt{sn\_has\_dps\_prio} & sn & Check if the network includes a node with DPSPRIO scheduling\\
+\texttt{sn\_has\_fb} & sn & Check if the network includes a node with FB (LAS) scheduling\\
+\texttt{sn\_has\_fcfs} & sn & Identifies queueing networks using First-Come-First-Served scheduling disciplines\\
+\texttt{sn\_has\_fork\_join} & sn & Checks if the network uses fork and/or join nodes\\
+\texttt{sn\_has\_fractional\_populations} & sn & Checks if the network has closed classes with non-integer populations\\
+\texttt{sn\_has\_gps} & sn & Check if the network includes a node with GPS scheduling\\
+\texttt{sn\_has\_gps\_prio} & sn & Check if the network includes a node with GPSPRIO scheduling\\
+\texttt{sn\_has\_hol} & sn & Check if the network includes a node with HOL scheduling\\
+\texttt{sn\_has\_homogeneous\_scheduling} & sn & Checks if the network uses an identical scheduling strategy at every station\\
+\texttt{sn\_has\_inf} & sn & Check if the network includes a node with INF scheduling\\
+\texttt{sn\_has\_lcfs} & sn & Check if the network includes a node with LCFS scheduling\\
+\texttt{sn\_has\_lcfs\_pr} & sn & Check if the network includes a node with LCFSPR scheduling\\
+\texttt{sn\_has\_lcfs\_pi} & sn & Check if the network includes a node with LCFSPI scheduling\\
+\texttt{sn\_has\_lept} & sn & Check if the network includes a node with LEPT scheduling\\
+\texttt{sn\_has\_ljf} & sn & Check if the network includes a node with LJF scheduling\\
+\texttt{sn\_has\_lrpt} & sn & Check if the network includes a node with LRPT scheduling\\
+\texttt{sn\_has\_load\_dependence} & sn & Checks if the network has a station with load-dependent service process\\
+\texttt{sn\_has\_mixed\_classes} & sn & Checks if the network has both open and closed classes\\
+\texttt{sn\_has\_multi\_chain} & sn & Check if the network has multiple chains\\
+\texttt{sn\_has\_multi\_class} & sn & Identifies queueing networks with multiple job classes, which require specialized\\
+\texttt{sn\_has\_multi\_class\_fcfs} & sn & API function for sn operations\\
+\texttt{sn\_has\_multi\_class\_heter\_exp\_fcfs} & sn & Checks if the network has one or more stations with multiclass heterogeneous FCFS\\
+\texttt{sn\_has\_multi\_class\_heter\_fcfs} & sn & Checks if the network has one or more stations with multiclass heterogeneous FCFS\\
+\texttt{sn\_has\_multi\_server} & sn & Check if the network includes a multi-server node\\
+\texttt{sn\_has\_multiple\_closed\_classes} & sn & Checks if the network has one or more closed classes\\
+\texttt{sn\_has\_open\_classes} & sn & Checks if the network has one or more open classes\\
+\texttt{sn\_has\_polling} & sn & Check if the network includes a node with polling\\
+\texttt{sn\_has\_priorities} & sn & Checks if the network uses class priorities\\
+\texttt{sn\_has\_product\_form} & sn & Determines if a queueing network has a known product-form solution by validating\\
+\texttt{sn\_has\_product\_form\_not\_het\_fcfs} & sn & Checks if the network satisfies product-form assumptions (does not have heterogeneous FCFS)\\
+\texttt{sn\_has\_ps} & sn & Check if the network includes a node with PS scheduling\\
+\texttt{sn\_has\_ps\_prio} & sn & Check if the network includes a node with PSPRIO scheduling\\
+\texttt{sn\_has\_psjf} & sn & Check if the network includes a node with PSJF scheduling\\
+\texttt{sn\_has\_sept} & sn & Check if the network includes a node with SEPT scheduling\\
+\texttt{sn\_has\_single\_chain} & sn & Check if the network has a single chain\\
+\texttt{sn\_has\_single\_class} & sn & Check if the network has a single class\\
+\texttt{sn\_has\_siro} & sn & Check if the network includes a node with SIRO scheduling\\
+\texttt{sn\_has\_sjf} & sn & Check if the network includes a node with SJF scheduling\\
+\texttt{sn\_has\_srpt} & sn & Check if the network includes a node with SRPT scheduling\\
+\texttt{sn\_is\_closed\_model} & sn & Identifies closed queueing network models with finite job populations and no external\\
+\texttt{sn\_is\_mixed\_model} & sn & Checks if the network is a mixed model\\
+\texttt{sn\_is\_open\_model} & sn & Identifies open queueing network models with external arrivals and infinite\\
+\texttt{sn\_is\_population\_model} & sn & Checks if the model is a population model (only specific scheduling strategies without priorities or fork-join)\\
+\texttt{sn\_is\_state\_valid} & sn & Stochastic Network State Validation Utility\\
+\texttt{sn\_print} & sn & Prints comprehensive information about a NetworkStruct\\
+\texttt{sn\_print\_routing\_matrix} & sn & Prints the routing matrix of the network, optionally for a specific job class\\
+\texttt{sn\_refresh\_visits} & sn & Stochastic Network Visit Ratio Calculator\\
+\texttt{sn\_rtnodes\_to\_rtorig} & sn & Converts routing matrices from nodes to original format, specifically handling class switching nodes\\
+\texttt{trace\_mean} & trace & Computes the arithmetic mean of empirical trace data. Fundamental statistical\\
+\texttt{trace\_skew} & trace & Computes the skewness of the trace data using Apache Commons Math\\
+\texttt{trace\_var} & trace & Computes sample variance and related statistics for empirical trace data\\
+\texttt{wf\_analyzer} & wf & Provides comprehensive workflow analysis capabilities including pattern\\
+\texttt{wf\_auto\_integration} & wf & Provides automatic integration capabilities for workflow analysis with\\
+\texttt{wf\_branch\_detector} & wf & Implements algorithms for detecting branching patterns in workflow traces\\
+\texttt{wf\_loop\_detector} & wf & Implements algorithms for detecting loop and iterative patterns in workflow\\
+\texttt{wf\_parallel\_detector} & wf & Implements algorithms for detecting parallel execution patterns in workflow\\
+\texttt{wf\_pattern\_updater} & wf & Implements dynamic pattern updating algorithms for workflow analysis\\
+\texttt{wf\_sequence\_detector} & wf & Implements algorithms for detecting sequential patterns in workflow traces\\
+\end{longtable}
+\end{footnotesize}

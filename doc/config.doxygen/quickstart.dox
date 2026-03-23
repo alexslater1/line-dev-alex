@@ -1,0 +1,59 @@
+/**
+@page matlab_quickstart Quick Start Guide
+
+This guide will help you get started with LINE Solver for MATLAB.
+
+@section quickstart_simple Creating a Simple Model
+
+Here's a simple M/M/1 queue example:
+
+@code{.m}
+model = Network('M/M/1 Queue');
+
+% Create nodes
+source = Source(model, 'Source');
+queue = Queue(model, 'Queue', SchedStrategy.FCFS);
+sink = Sink(model, 'Sink');
+
+% Create job class
+jobclass = OpenClass(model, 'Class1');
+
+% Set service process
+queue.setService(jobclass, Exp(1.0));
+
+% Set arrival process
+source.setArrival(jobclass, Exp(0.5));
+
+% Link nodes
+model.link(Network.serialRouting(source, queue, sink));
+
+% Solve
+solver = MVA(model);
+result = solver.getAvgTable();
+disp(result);
+@endcode
+
+@section quickstart_solvers Available Solvers
+
+LINE provides multiple solvers for Network models:
+
+- <b>AUTO</b>: Wrapper for Automatic Solver Selection
+- <b>CTMC</b>: Continuous-Time Markov Chain solver
+- <b>FLD</b>: Fluid/Mean-Field ODE Solver
+- <b>MAM</b>: Matrix Analytic Methods solver
+- <b>MVA</b>: Mean Value Analysis solver
+- <b>NC</b>: Normalizing Constant Analyzer
+- <b>SSA</b>: Stochastic Simulation Algorithm solver
+
+Composite models such as LayeredNetworks or models coupled with a random environment can be evaluated by the following solvers:
+
+- <b>ENV</b>: Random Environment Solver
+- <b>LN</b>: Layered Network Solver
+
+Wrappers for external solvers include:
+
+- <b>JMT</b>: Wrapper for Java Modelling Tools
+- <b>QNS</b>: Wrapper for the QNS utility part of LQNS
+- <b>LQNS</b>: Wrapper for the Layered Queueing Network Solver
+
+*/

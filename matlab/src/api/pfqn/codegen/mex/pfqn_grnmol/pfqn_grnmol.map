@@ -1,0 +1,22 @@
+MEX {
+	global:
+		mexFunction;
+		mexfilerequiredapiversion;
+		emlrtMexFcnProperties;
+		pfqn_grnmol;
+		pfqn_grnmol_initialize;
+		pfqn_grnmol_terminate;
+		pfqn_grnmol_atexit;
+		emxEnsureCapacity_boolean_T;
+		emxFree_boolean_T;
+		emxInit_boolean_T;
+		emxFreeMatrix_cell_wrap_0;
+		emxFreeStruct_cell_wrap_0;
+		emxInitMatrix_cell_wrap_0;
+		emxInitStruct_cell_wrap_0;
+		emxFree_real_T;
+		emxInit_real_T;
+		emxEnsureCapacity_real_T;
+	local:
+		*;
+};

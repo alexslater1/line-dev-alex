@@ -1,0 +1,23 @@
+MEX {
+	global:
+		mexFunction;
+		mexfilerequiredapiversion;
+		emlrtMexFcnProperties;
+		pfqn_mmint2;
+		pfqn_mmint2_initialize;
+		pfqn_mmint2_terminate;
+		pfqn_mmint2_atexit;
+		b_feval;
+		emlrt_marshallOut;
+		emxEnsureCapacity_boolean_T;
+		emxFree_boolean_T;
+		emxInit_boolean_T;
+		emxEnsureCapacity_int32_T;
+		emxFree_int32_T;
+		emxInit_int32_T;
+		emxFree_real_T;
+		emxInit_real_T;
+		emxEnsureCapacity_real_T;
+	local:
+		*;
+};

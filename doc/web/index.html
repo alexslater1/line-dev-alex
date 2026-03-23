@@ -1,0 +1,899 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+<link rel="stylesheet" href="css/line-solver.css" />
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-128388377-1"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'UA-128388377-1');
+</script>
+	<meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<meta name="description" content="LINE Queueing Theory Algorithms" />
+	<meta name="keywords" content="LINE solver" />
+	<meta name="author" content="Giuliano Casale" />
+	<!-- Full-width layout styles are now inline -->
+	<link rel="stylesheet" href="css/font-awesome.min.css"/>
+	<title>LINE Solver: Queueing Theory Algorithms</title>
+
+	<script type="text/javascript" src="js/jquery-1.11.0.min.js"></script>
+	<script type="text/javascript">
+		function showPage(pageId) {
+			$('.page').hide();
+			$('.sidebar-nav li').removeClass('active');
+			$('.sidebar-nav .expandable').removeClass('open');
+
+			// Find and activate the corresponding nav item
+			// Prioritize submenu items over parent items
+			var foundSubmenuMatch = false;
+			$('.sidebar-nav .submenu li').each(function(){
+				var navHref = $(this).find('a').attr('href');
+				if (navHref === pageId) {
+					$(this).addClass('active');
+					foundSubmenuMatch = true;
+					// Open the parent expandable menu
+					$(this).closest('.expandable').addClass('open');
+				}
+			});
+
+			// If no submenu match, check top-level items
+			if (!foundSubmenuMatch) {
+				$('.sidebar-nav > li').each(function(){
+					if (!$(this).hasClass('expandable')) {
+						var navHref = $(this).find('> a').attr('href');
+						if (navHref === pageId) {
+							$(this).addClass('active');
+						}
+					}
+				});
+			}
+
+			// Show the requested page or default to home
+			if ($(pageId).length > 0) {
+				$(pageId).fadeIn('slow');
+			} else {
+				$('#home').fadeIn('slow');
+				$('.sidebar-nav li:first').addClass('active');
+			}
+		}
+
+		function handleHashChange() {
+			var hash = window.location.hash;
+			if (hash) {
+				showPage(hash);
+			} else {
+				showPage('#home');
+			}
+		}
+
+		$(document).ready(function(){
+
+			// Handle initial page load with hash
+			handleHashChange();
+
+			// Handle hash changes (back/forward button)
+			$(window).on('hashchange', handleHashChange);
+
+			$('.sidebar-nav li').click(function(e){
+				var link = $(this).find('a');
+				var href = link.attr('href');
+
+				// Check if it's an external link
+				if (href.startsWith('http') || link.attr('target') === '_blank') {
+					// Allow default behavior for external links
+					e.stopPropagation();
+					return true;
+				}
+
+				// Check if it's a link to a separate HTML file (with or without hash anchor)
+				if (href.indexOf('.html') !== -1 && !href.startsWith('#')) {
+					// Allow default behavior for separate HTML files
+					e.stopPropagation();
+					return true;
+				}
+
+				// Handle internal navigation
+				window.location.hash = href;
+				return false;
+			});
+
+			$('.switch').click(function(){
+				var activeTab = $(this).attr('href');
+				window.location.hash = activeTab;
+				return false;
+			});
+
+			// Handle expandable menu items
+			$('.sidebar-nav .expandable > a').click(function(e){
+				e.preventDefault();
+				var parent = $(this).parent();
+				parent.toggleClass('open');
+			});
+
+			// Handle reference links - scroll to bibliography entry
+			$('.ref-link').click(function(e){
+				var href = $(this).attr('href');
+
+				// Check if this is a reference link (starts with #ref-)
+				if (href && href.startsWith('#ref-')) {
+					e.preventDefault();
+
+					// Make sure solver-details page is visible
+					if (!$('#solver-details').is(':visible')) {
+						showPage('#solver-details');
+					}
+
+					// Scroll to the reference after a short delay to ensure page is shown
+					setTimeout(function() {
+						var targetElement = $(href);
+						if (targetElement.length) {
+							$('html, body').animate({
+								scrollTop: targetElement.offset().top - 100
+							}, 500);
+
+							// Highlight the reference briefly
+							targetElement.css('background-color', '#ffffcc');
+							setTimeout(function() {
+								targetElement.css('background-color', '');
+							}, 2000);
+						}
+					}, 100);
+
+					return false;
+				}
+			});
+
+		});
+	</script>
+</head>
+
+<body>
+<!-- Google Tag Manager -->
+<noscript><iframe src="//www.googletagmanager.com/ns.html?id=GTM-W2HRLJ"
+height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+'//www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+})(window,document,'script','dataLayer','GTM-W2HRLJ');</script>
+<!-- End Google Tag Manager -->
+
+<!-- Google Tag Manager -->
+<noscript><iframe src="//www.googletagmanager.com/ns.html?id=GTM-KR4HZ6"
+height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+'//www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+})(window,document,'script','dataLayer','GTM-KR4HZ6');</script>
+<!-- End Google Tag Manager -->
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-52740375-2', 'auto');
+  ga('send', 'pageview');
+
+</script>
+
+<div id="wrap">
+
+<div id="header">
+<p id="toplinks">Skip to: <a class="switch" href="#home">Downloads</a> | <a class="switch" href="#overview">Overview</a> | <a class="switch" href="#papers">Documentation</a> | <a class="switch" href="#solvers">Solvers</a></p>
+
+<!--<h1><a href="index.html">LINE<span class="fade">px</span></a></h1>-->
+<h1><a href="#home" style="color: #fff; text-decoration: none;">LINE</a></h1>
+<p id="slogan">Open-source solver for queueing theory</p>
+</div>
+
+<div id="content">
+	<div id="home" class="page">
+	<h2>What is LINE?</h2>
+	<!--<img src="images/example.jpg" width="280" height="144" alt="Example frontpage image" class="left photo" />-->
+	<p>LINE is an open-source solver for performance analysis of queueing systems (M/M/1, M/M/k, M/G/1, ...), queueing networks, and layered queueing networks. The tool is developed by the <a href="http://qore.doc.ic.ac.uk/">QORE lab</a> at Imperial College London and distributed under the <a href="http://opensource.org/licenses/BSD-3-Clause" target="_blank">BSD-3</a> license.</p>
+
+<!--	<p>The package offers solution algorithms for queueing systems (e.g., M/M/1, M/M/k, M/G/1, ...), queueing networks, layered queueing networks, and queueing models in random environments. Models are solved in LINE either natively or via external solvers, such as <a href="http://jmt.sourceforge.net/">JMT</a>, <a href="http://www.sce.carleton.ca/rads/lqns/">LQNS</a>, <a href="https://www.cs.wm.edu/MAMSolver/">MAMSolver</a>, <a href="https://win.uantwerpen.be/~vanhoudt/">Q-MAM</a>, <a href="https://win.uantwerpen.be/~vanhoudt/">SMCSolver</a>, and <a href="http://webspn.hit.bme.hu/~telek/tools/butools/">BuTools</a>.</p>
+	-->
+	</p>
+	</p>
+
+	<!-- Re-enable when 3.0.4 is out:
+	<h2 style="margin-top: 1.5em;">MCP Integration</h2>
+	<p>LINE is available as a <a href="https://modelcontextprotocol.io/" target="_blank">Model Context Protocol (MCP)</a> server, enabling LLM tools such as <a href="https://claude.ai/code" target="_blank">Claude Code</a> and <a href="https://claude.ai/download" target="_blank">Claude Desktop</a> to build and solve queueing models through natural language &mdash; no coding required. Install with <code>pip install line-solver</code> and see the <a href="mcp.html">MCP Integration</a> page or the <a href="https://line-solver.sourceforge.net/doc/LINE-mcp.pdf">MCP Getting Started Guide</a> for details.</p>
+	-->
+
+	<h2>Getting started</h2>
+	<p>
+		<a class="download-button" href="https://sourceforge.net/projects/line-solver/files/latest/download">
+			<img src="https://upload.wikimedia.org/wikipedia/commons/8/8d/Download_alt_font_awesome.svg" alt="Download Icon" class="icon">
+			Download integrated release (for Java/Kotlin, Matlab, and Python)
+		</a>
+	</p>
+	<p>Manuals:
+		<a href="https://line-solver.sourceforge.net/doc/LINE-java.pdf"><img src="https://upload.wikimedia.org/wikipedia/it/2/2e/Java_Logo.svg" alt="Manual Icon" class="icon">Java</a>&nbsp;
+		<a href="https://line-solver.sourceforge.net/doc/LINE-kotlin.pdf"><img src="https://upload.wikimedia.org/wikipedia/commons/7/74/Kotlin_Icon.png" alt="Kotlin Icon" class="icon">Kotlin</a>&nbsp;
+		<a href="https://line-solver.sourceforge.net/doc/LINE-matlab.pdf"><img src="https://upload.wikimedia.org/wikipedia/commons/2/21/Matlab_Logo.png" alt="Matlab Icon" class="icon">Matlab</a>&nbsp;
+		<a href="https://line-solver.sourceforge.net/doc/LINE-python.pdf"><img src="https://upload.wikimedia.org/wikipedia/commons/c/c3/Python-logo-notext.svg" alt="Python Icon" class="icon">Python</a>&nbsp;
+		<a href="https://line-solver.sourceforge.net/doc/LINE-cheatsheet.pdf"><img src="https://upload.wikimedia.org/wikipedia/commons/8/87/PDF_file_icon.svg" alt="PDF Icon" class="icon">Cheatsheet</a>&nbsp;
+		<!-- Re-enable when 3.0.4 is out: <a href="https://line-solver.sourceforge.net/doc/LINE-mcp.pdf"><img src="https://upload.wikimedia.org/wikipedia/commons/8/87/PDF_file_icon.svg" alt="MCP Guide" class="icon">MCP Guide</a> -->
+	</p>
+	<p>API reference:
+		<a href="javadoc/index.html"><img src="https://upload.wikimedia.org/wikipedia/it/2/2e/Java_Logo.svg" alt="Java Icon" class="icon">Javadoc</a>&nbsp;
+		<a href="doxygen/index.html"><img src="https://upload.wikimedia.org/wikipedia/commons/2/21/Matlab_Logo.png" alt="Matlab Icon" class="icon">Doxygen</a>&nbsp;
+		<a href="sphinx/index.html"><img src="https://upload.wikimedia.org/wikipedia/commons/c/c3/Python-logo-notext.svg" alt="Python Icon" class="icon">Sphinx</a>
+	</p>
+	<!-- API Documentation: 
+		<a href="https://line-solver.sourceforge.net/doc/index.html"><img src="https://www.svgrepo.com/show/373563/doxygen.svg" alt="Doxygen Icon" class="icon">Doxygen</a>
+	-->
+
+	<h2>Acknowledgement</h2>
+	<!--<p>The development of LINE has been partially funded by the European Commission grants FP7-318484 (<a href="https://cordis.europa.eu/project/id/318484">MODAClouds</a>), H2020-644869 (<a href="https://cordis.europa.eu/project/id/644869" target="_blank">DICE</a>), H2020-825040 (<a href="http://radon-h2020.eu" target="_blank">RADON</a>), and by the EPSRC grant EP/M009211/1 (<a href="http://wp.doc.ic.ac.uk/optimam/" target="_blank">OptiMAM</a>).
+-->	<p>If you use LINE for a research paper, please cite the following article:</p>
+	<ul>
+		<li>Giuliano Casale. <a href="http://line-solver.sourceforge.net/doc/wsc20line.pdf">Integrated Performance Evaluation of Extended Queueing Network Models with LINE</a>. Proceedings of the 2020 Winter Simulation Conference, ACM Press, December 2020.</li>
+	</ul>
+	</p>
+
+	</div>
+
+	<div id="overview" class="page">
+	<h2>Supported Models</h2>
+	<p>LINE can evaluate several types of queueing models and systems, including:</p>
+
+	<ul style="column-count: 2; column-gap: 40px;">
+		<li>M/M/1 queues</li>
+		<li>M/M/c multiserver queues</li>
+		<li>G/G/1 queues</li>
+		<li>G/G/c queues</li>
+		<li>Matrix analytic methods
+			<ul>
+				<li>M/G/1 queues</li>
+				<li>M/G/c queues</li>
+				<li>PH/PH/1 queues</li>
+				<li>ME/ME/1 queues</li>
+				<li>PH/PH/c queues</li>
+				<li>MAP/MAP/1 queues</li>
+				<li>MAP/MAP/c queues</li>
+				<li>RAP/RAP/1 queues</li>
+				<li>BMAP/BMAP/1 queues</li>
+			</ul>
+		</li>
+		<li>BCMP product-form queueing networks
+			<ul>
+				<li>open</li>
+				<li>closed</li>
+				<li>mixed</li>
+				<li>load-dependent</li>
+				<li>class-dependent</li>
+				<li>class switching</li>
+			</ul>
+		</li>
+		<li>Extended queueing networks
+			<ul>
+				<li>fork-join</li>
+				<li>priority</li>
+				<li>blocking</li>
+				<li>state-dependent routing</li>
+				<li>random environments</li>
+				<li>polling</li>
+				<li>finite-capacity regions</li>
+			</ul>
+		</li>
+		<li>Loss networks with finite capacity and blocking</li>
+		<li>Cache models with LRU, FIFO, and other replacement policies</li>
+		<li>Layered networks
+			<ul>
+				<li>Layered queueing networks (LQN)</li>
+				<li>Layered cache-queueing models (LCQ)</li>
+			</ul>
+		</li>
+	</ul>
+
+	</div>
+
+
+	<div id="doc" class="page">
+		<h2>Latest release</h2> 
+		<p>
+		<a href="https://sourceforge.net/p/line-solver/code/ci/master/tree/doc/" target="_blank">LINE 2.0.x user manual</a></p>
+
+		<h2>Older releases</h2>
+		<p>
+		<a href="http://svn.code.sf.net/p/line-solver/code/trunk/doc/v100/LINE_doc_100.pdf" target="_blank">LINE 1.0.0 user manual</a></p>
+	</div>
+	<!--
+	<div id="videos" class="page">
+	<h2>Videos</h2>
+	<h3>YouTube channel</h3>
+	Demos that illustrate the practical use of LINE are available on our <a href="https://www.youtube.com/channel/UCPUBNrt3NSQbX8wvoVH8qaA">YouTube channel</a>.
+	<h3>LINE 2.0.0</h3>
+	<iframe width="420" height="315" autoplay=0
+	src="http://wp.doc.ic.ac.uk/gcasale/wp-content/uploads/sites/9/2015/05/LINE4.mp4">
+	</iframe>
+	<h4>Solving a M/M/1 queue via JMT</h4>
+	This example shows the solution of a M/M/1 queue specified in LINE with JMT and how to export to JSIMgraph and JSIMwiz (the video has no audio):<br/><br/>
+	<video width="690" controls="controls">
+		<source src="http://wp.doc.ic.ac.uk/gcasale/wp-content/uploads/sites/9/2018/10/line2jmt.mp4" type="video/mp4">
+	</video>
+	<h4>Importing a JMT model into LINE</h4>
+	The following example viceversa shows the automated import into LINE of a M/M/1 queue specified with JMT (the video has no audio):<br/><br/>
+	<video width="690" controls="controls">
+		<source src="http://wp.doc.ic.ac.uk/gcasale/wp-content/uploads/sites/9/2018/10/jmt2line.mp4" type="video/mp4">
+	</video>
+	</div>
+	-->
+
+	<div id="solvers" class="page">
+	<h2>Solvers</h2>
+
+	<h4>LINE Native Solvers</h4>
+	<p>The following solvers are implemented natively in LINE:</p>
+	<table class="solver-table">
+		<tr>
+			<th>Solver</th>
+			<th>Description</th>
+		</tr>
+		<tr>
+			<td><a href="solver-ctmc.html">CTMC</a></td>
+			<td>Constructs and solves the underlying Markov chain using the global-balance equations and uniformization.</td>
+		</tr>
+		<tr>
+			<td><a href="solver-ldes.html">LDES</a></td>
+			<td>Discrete-event simulator implemented using the SSJ library. Both Python and MATLAB call the JAR backend via subprocess.</td>
+		</tr>
+		<tr>
+			<td><a href="solver-fld.html">FLD</a></td>
+			<td>Solves models using fluid/mean-field approximation based on ODEs.</td>
+		</tr>
+		<tr>
+			<td><a href="solver-mam.html">MAM</a></td>
+			<td>Applies matrix-analytic methods and parametric decomposition for quasi-birth-death processes.</td>
+		</tr>
+		<tr>
+			<td><a href="solver-mva.html">MVA</a></td>
+			<td>Implements exact and approximate mean value analysis for closed and mixed networks.</td>
+		</tr>
+		<tr>
+			<td><a href="solver-nc.html">NC</a></td>
+			<td>Computes performance metrics, including probability distributions, by estimating normalizing constants.</td>
+		</tr>
+		<tr>
+			<td><a href="solver-ssa.html">SSA</a></td>
+			<td>Performs discrete-event simulation using Gillespie's algorithm and the next reaction method.</td>
+		</tr>
+	</table>
+
+	<h4>LINE Native Meta-Solvers</h4>
+	<p>Meta-solvers analyze complex models by coordinating the execution of other solvers.</p>
+	<table class="solver-table">
+		<tr>
+			<th>Solver</th>
+			<th>Description</th>
+		</tr>
+		<tr>
+			<td><a href="solver-auto.html">AUTO</a></td>
+			<td>Automatically selects the most appropriate solver based on model characteristics.</td>
+		</tr>
+		<tr>
+			<td><a href="solver-env.html">ENV</a></td>
+			<td>Analyzes queueing models operating in random environments with multiple operational stages.</td>
+		</tr>
+		<tr>
+			<td><a href="solver-ln.html">LN</a></td>
+			<td>Analyzes layered queueing networks using iterative decomposition.</td>
+		</tr>
+	</table>
+
+	<h4>LINE Wrappers</h4>
+	<p>LINE provides wrapper solvers that integrate external tools for specialized analysis:</p>
+	<table class="solver-table">
+		<tr>
+			<th>Solver</th>
+			<th>Description</th>
+		</tr>
+		<tr>
+			<td><a href="solver-jmt.html">JMT</a></td>
+			<td>A wrapper for the Java Modelling Tools suite enabling execution of JMVA and JSIM.</td>
+		</tr>
+		<tr>
+			<td><a href="solver-lqns.html">LQNS</a></td>
+			<td>A wrapper for the LQNS solver for layered queueing networks.</td>
+		</tr>
+		<tr>
+			<td><a href="solver-qns.html">QNS</a></td>
+			<td>A wrapper for the qnsolver library within the LQNS suite aimed at prodcut-form network analysis.</td>
+		</tr>
+	</table>
+
+	<h4>External Tools Integration</h4>
+	<p>LINE integrates with several external performance modeling tools to extend its analysis capabilities:</p>
+	<table class="solver-table">
+		<tr>
+			<th>Tool</th>
+			<th>Description</th>
+			<th>Reference</th>
+		</tr>
+		<tr>
+			<td><a href="https://jmt.sourceforge.net/" target="_blank">JMT</a></td>
+			<td>Java Modelling Tools, an open-source suite for performance evaluation developed at Politecnico di Milano. LINE uses a custom build: <a href="https://line-solver.sourceforge.io/latest/JMT.jar" target="_blank">JAR</a>, <a href="https://line-solver.sourceforge.io/latest/JMT-custom-sources.zip" target="_blank">sources</a>.</td>
+			<td><a class="ref-link" href="#ref-bertoli2007">[4]</a></td>
+		</tr>
+		<tr>
+			<td><a href="http://webspn.hit.bme.hu/~telek/tools/butools/" target="_blank">BuTools</a></td>
+			<td>A collection of tools for phase-type distributions and Markovian arrival processes developed at Budapest University of Technology.</td>
+			<td><a class="ref-link" href="#ref-horvath2017">[22]</a></td>
+		</tr>
+		<tr>
+			<td><a href="http://www.cs.wm.edu/MAPQN/kpctoolbox.html" target="_blank">KPC-Toolbox</a></td>
+			<td>A MATLAB toolbox for fitting Markovian Arrival Processes developed at William & Mary.</td>
+			<td><a class="ref-link" href="#ref-casale2013">[9]</a></td>
+		</tr>
+		<tr>
+			<td><a href="https://www.cs.wm.edu/MAMSolver/" target="_blank">MAMSolver</a></td>
+			<td>A tool for matrix-analytic methods developed at William & Mary.</td>
+			<td><a class="ref-link" href="#ref-riska2007">[33]</a></td>
+		</tr>
+		<tr>
+			<td><a href="https://simul.iro.umontreal.ca/ssj/" target="_blank">SSJ</a></td>
+			<td>A library for stochastic simulation developed at Université de Montréal.</td>
+			<td><a class="ref-link" href="#ref-lecuyer2002">[25]</a></td>
+		</tr>
+		<tr>
+			<td><a href="https://win.uantwerpen.be/~vanhoudt/" target="_blank">Q-MAM</a></td>
+			<td>A MATLAB toolbox for matrix-analytic methods in queueing theory developed at University of Antwerp.</td>
+			<td><a class="ref-link" href="#ref-perez2008">[29]</a></td>
+		</tr>
+		<tr>
+			<td><a href="https://win.uantwerpen.be/~vanhoudt/" target="_blank">SMCSolver</a></td>
+			<td>A solver for structured Markov chains in queueing models developed at University of Pisa and University of Antwerp.</td>
+			<td><a class="ref-link" href="#ref-bini2005">[5]</a></td>
+		</tr>
+		<tr>
+			<td><a href="https://github.com/ngast/rmf_tool" target="_blank">rmf_tool</a></td>
+			<td>A library for computing refined mean field approximations for density-dependent population processes, developed at Inria by Nicolas Gast.</td>
+			<td><a class="ref-link" href="#ref-gast2017">[19]</a></td>
+		</tr>
+	</table>
+
+	<h4>Interoperability</h4>
+	<p>LINE supports cross-language execution, model transformations, and integration with external tools. See the <a href="interop.html">Interoperability</a> page.</p>
+	</div>
+
+	<div id="solver-details" class="page">
+	<h2>Solver Details</h2>
+
+	<div class="solver-section" id="auto">
+	<h3 class="solver-name">AUTO</h3>
+	<p class="solver-subtitle">The AUTO solver (callable also as LINE) offers automatic choice of the other solvers implemented in LINE (CTMC, NC, MVA, etc.). Presently it relies on custom heuristics based on known features of the algorithms.</p>
+
+	<table class="algorithm-table">
+	<tr><th>Method</th><th>Algorithm</th><th>Reference</th></tr>
+	<tr><td><code>default</code></td><td>Automatic solver and method selection</td><td>&mdash;</td></tr>
+	<tr><td><code>auto</code></td><td>Heuristic-based automatic selection</td><td>&mdash;</td></tr>
+	<tr><td><code>heur</code></td><td>Custom heuristic selection</td><td>&mdash;</td></tr>
+	<tr><td><code>sim</code></td><td>Prefer simulation-based solvers</td><td>&mdash;</td></tr>
+	<tr><td><code>exact</code></td><td>Prefer exact analytical solvers</td><td>&mdash;</td></tr>
+	<tr><td><code>fast</code></td><td>Prefer fast approximate methods</td><td>&mdash;</td></tr>
+	<tr><td><code>accurate</code></td><td>Prefer accurate methods over speed</td><td>&mdash;</td></tr>
+	</table>
+	</div>
+
+	<div class="solver-section" id="ctmc">
+	<h3 class="solver-name">CTMC (Continuous Time Markov Chain)</h3>
+	<p class="solver-subtitle">The CTMC solver analyzes models by first generating the infinitesimal generator of the network and then solving the global balance equations for steady-state analysis. Transient analysis is carried out by numerically solving Kolmogorov's forward equations and value iteration for transient rewards. For models with infinite states, such as open networks, the cutoff option can be used to truncate the state space.</p>
+
+	<table class="algorithm-table">
+	<tr><th>Method</th><th>Algorithm</th><th>Reference</th></tr>
+	<tr><td><code>default</code></td><td>Steady-state solution via global balance</td><td><a class="ref-link" href="#ref-bolch2006">[6]</a></td></tr>
+	<tr><td><code>gpu</code></td><td>GPU-accelerated solution</td><td>&mdash;</td></tr>
+	</table>
+	</div>
+
+	<div class="solver-section" id="ldes">
+	<h3 class="solver-name">LDES (LINE Discrete Event Simulation)</h3>
+	<p class="solver-subtitle">The LDES solver is a discrete-event simulator implemented using the SSJ library in the JAR backend. It has similar support as JMT in terms of models, but it is lighter and thus tends to run faster. Both MATLAB and Python call the JAR backend via subprocess.</p>
+
+	<table class="algorithm-table">
+	<tr><th>Method</th><th>Algorithm</th><th>Reference</th></tr>
+	<tr><td><code>default</code></td><td>Discrete-event simulation (SSJ in JAR)</td><td>&mdash;</td></tr>
+	</table>
+	</div>
+
+	<div class="solver-section" id="bln">
+	<h3 class="solver-name">ENV (Blending Solver)</h3>
+	<p class="solver-subtitle">The ENV solver analyzes queueing systems operating in random environments with multiple operational stages. The solver uses stage-dependent analysis where system parameters vary according to the current environmental state. Performance metrics are computed as ensemble averages over all environmental stages, enabling modeling of systems subject to external conditions or failures.</p>
+
+	<table class="algorithm-table">
+	<tr><th>Method</th><th>Algorithm</th><th>Reference</th></tr>
+	<tr><td><code>default</code></td><td>Automatic environment-aware analysis</td><td>&mdash;</td></tr>
+	</table>
+	</div>
+
+	<div class="solver-section" id="fld">
+	<h3 class="solver-name">FLD (Fluid)</h3>
+	<p class="solver-subtitle">The FLD solver is based on a system of ordinary differential equations (ODEs) that provide mean-field approximations for queueing networks. The approach is grounded in Kurtz's mean-field approximation theory and is particularly effective for transient analysis and models with large job populations. </p>
+
+	<table class="algorithm-table">
+	<tr><th>Method</th><th>Algorithm</th><th>Reference</th></tr>
+	<tr><td><code>default</code></td><td>Automatic method selection</td><td>&mdash;</td></tr>
+	<tr><td><code>matrix</code></td><td>ODE-based mean field approximations</td><td><a class="ref-link" href="#ref-perez2017">[30]</a>, <a class="ref-link" href="#ref-ruuskanen2021">[35]</a></td></tr>
+	<tr><td><code>pnorm</code></td><td>ODE approximation using p-norm smoothing for the processor-share constraint. Supports open models, unlike softmin.</td><td><a class="ref-link" href="#ref-ruuskanen2021">[35]</a></td></tr>
+	<tr><td><code>statedep</code></td><td>Kurtz's mean field ODEs for closed models</td><td><a class="ref-link" href="#ref-perez2017">[30]</a></td></tr>
+	<tr><td><code>closing</code></td><td>FLD with closing method for open classes</td><td><a class="ref-link" href="#ref-bolch2006">[6]</a></td></tr>
+	<tr><td><code>softmin</code></td><td>Smoothed statedep with softmin functions</td><td>&mdash;</td></tr>
+	<tr><td><code>diffusion</code></td><td>Diffusion approximation via Euler-Maruyama SDEs</td><td>&mdash;</td></tr>
+	<tr><td><code>mfq</code></td><td>Markovian fluid queueing systems</td><td><a class="ref-link" href="#ref-horvath2014">[21]</a></td></tr>
+	<tr><td><code>rmf</code></td><td>Refined mean field approximation for multi-list caches with RANDOM(m) replacement</td><td><a class="ref-link" href="#ref-gast2017">[19]</a></td></tr>
+	</table>
+	</div>
+
+	<div class="solver-section" id="jmt">
+	<h3 class="solver-name">JMT (Java Modelling Tools)</h3>
+	<p class="solver-subtitle">The JMT solver is a wrapper for the Java Modelling Tools suite <a class="ref-link" href="#ref-bertoli2007">[4]</a>, providing model-to-model transformation from LINE's data structures into JMT's input XML formats. It supports both discrete-event simulation via JSIM and mean value analysis via JMVA. LINE uses a custom build of JMT: <a href="https://line-solver.sourceforge.io/latest/JMT.jar" target="_blank">JAR</a>, <a href="https://line-solver.sourceforge.io/latest/JMT-custom-sources.zip" target="_blank">sources</a>.</p>
+
+	<table class="algorithm-table">
+	<tr><th>Method</th><th>Algorithm</th><th>Reference</th></tr>
+	<tr><td><code>default</code></td><td>Automatic method selection</td><td>&mdash;</td></tr>
+	<tr><td><code>jsim</code></td><td>Discrete-event simulation in JSIM</td><td><a class="ref-link" href="#ref-bertoli2007">[4]</a></td></tr>
+	<tr><td><code>closing</code></td><td>Closing approximation</td><td>&mdash;</td></tr>
+	<tr><td><code>jmva</code></td><td>Java MVA analysis</td><td><a class="ref-link" href="#ref-bertoli2007">[4]</a></td></tr>
+	<tr><td><code>jmva.amva</code></td><td>Approximate MVA in JMVA</td><td>&mdash;</td></tr>
+	<tr><td><code>jmva.mva</code></td><td>Exact MVA in JMVA</td><td><a class="ref-link" href="#ref-reiser1980">[31]</a></td></tr>
+	<tr><td><code>jmva.recal</code></td><td>RECAL algorithm (exact)</td><td><a class="ref-link" href="#ref-conway1986">[16]</a></td></tr>
+	<tr><td><code>jmva.comom</code></td><td>CoMoM algorithm (exact)</td><td><a class="ref-link" href="#ref-casale2009">[8]</a></td></tr>
+	<tr><td><code>jmva.bs</code></td><td>Bard-Schweitzer (approximate)</td><td><a class="ref-link" href="#ref-bolch2006">[6]</a></td></tr>
+	<tr><td><code>jmva.lin</code></td><td>Linearizer (approximate)</td><td><a class="ref-link" href="#ref-chandy1982">[14]</a></td></tr>
+	<tr><td><code>jmva.dmlin</code></td><td>De Souza-Muntz Linearizer</td><td><a class="ref-link" href="#ref-desouza1990">[17]</a></td></tr>
+	<tr><td><code>jmva.chow</code></td><td>Chow algorithm</td><td><a class="ref-link" href="#ref-chow1983">[15]</a></td></tr>
+	</table>
+	</div>
+
+	<div class="solver-section" id="ln">
+	<h3 class="solver-name">LN (Layered Network Solver)</h3>
+	<p class="solver-subtitle">The LN solver analyzes layered queueing networks using iterative decomposition methods. It decomposes the network into layers and solves them iteratively, updating metrics and parameters until convergence. This approach is particularly effective for analyzing software architectures with multiple service layers and task dependencies.</p>
+
+	<table class="algorithm-table">
+	<tr><th>Method</th><th>Algorithm</th><th>Reference</th></tr>
+	<tr><td><code>default</code></td><td>Automatic layer analysis and iteration</td><td>&mdash;</td></tr>
+	<tr><td><code>moment3</code></td><td>Three-moment process matching for layer sychronization</td><td>&mdash;</td></tr>
+	<tr><td><code>mol</code></td><td>Method of Layers iteration</td><td>&mdash;</td></tr>
+	</table>
+	</div>
+
+	<div class="solver-section" id="lqns">
+	<h3 class="solver-name">LQNS (Layered Queueing Network Solver)</h3>
+	<p class="solver-subtitle">The LQNS wrapper integrates the Layered Queueing Network Solver developed by the RADS group at Carleton University. LINE automatically exports network models to LQNS format, invokes the external LQNS tool, and imports the results back into LINE's data structures.</p>
+
+	<table class="algorithm-table">
+	<tr><th>Method</th><th>Algorithm</th><th>Reference</th></tr>
+	<tr><td><code>default</code></td><td>Automatic LQNS method selection</td><td>&mdash;</td></tr>
+	<tr><td><code>lqns</code></td><td>LQNS exact analytical solution</td><td>&mdash;</td></tr>
+	<tr><td><code>srvn</code></td><td>Stochastic Rendezvous Network (SRVN) analysis</td><td>&mdash;</td></tr>
+	<tr><td><code>exactmva</code></td><td>Exact MVA solution</td><td>&mdash;</td></tr>
+	<tr><td><code>srvn.exactmva</code></td><td>SRVN with exact MVA solution</td><td>&mdash;</td></tr>
+	<tr><td><code>sim</code></td><td>LQNS simulation mode</td><td>&mdash;</td></tr>
+	<tr><td><code>lqsim</code></td><td>LQNS simulator (lqsim)</td><td>&mdash;</td></tr>
+	<tr><td><code>lqnsdefault</code></td><td>LQNS default method</td><td>&mdash;</td></tr>
+	</table>
+	</div>
+
+	<div class="solver-section" id="mam">
+	<h3 class="solver-name">MAM (Matrix Analytic Methods)</h3>
+	<p class="solver-subtitle">The MAM solver analyzes Markovian open queueing systems using matrix-analytic methods. The core solver is built on top of the BuTools library <a class="ref-link" href="#ref-horvath2017">[22]</a>, <a href="https://win.uantwerpen.be/~vanhoudt/" target="_blank">Q-MAM</a>, <a href="https://www.cs.wm.edu/MAMSolver/">MAMSolver</a>, and <a href="https://win.uantwerpen.be/~vanhoudt/" target="_blank">SMCSolver</a>. Native algorithms for parametric decomposition of queueing networks are integrated with this solver.</p>
+
+	<table class="algorithm-table">
+	<tr><th>Method</th><th>Algorithm</th><th>Reference</th></tr>
+	<tr><td><code>default</code></td><td>Matrix-analytic solution of structured QBDs</td><td><a class="ref-link" href="#ref-horvath2017">[22]</a></td></tr>
+	<tr><td><code>exact</code></td><td>Exact matrix-analytic solution</td><td>&mdash;</td></tr>
+	<tr><td><code>dec.mna</code></td><td>Matrix Network Analyzer traffic decomposition</td><td><a class="ref-link" href="#ref-li2024">[26]</a></td></tr>
+	<tr><td><code>dec.source</code></td><td>Traffic decomposition with source-like arrival process as flow</td><td>&mdash;</td></tr>
+	<tr><td><code>dec.mmap</code></td><td>Traffic decomposition with marked Markovian arrival process as flows</td><td>&mdash;</td></tr>
+	<tr><td><code>dec.poisson</code></td><td>Traffic decomposition with Poisson arrival flows</td><td>&mdash;</td></tr>
+	<tr><td><code>inap</code></td><td>Iterative Numerical Algorithm for Product-forms</td><td><a class="ref-link" href="#ref-marin2009">[27]</a></td></tr>
+	<tr><td><code>inapplus</code></td><td>Weighted Iterative Numerical Algorithm for Product-forms</td><td><a class="ref-link" href="#ref-balsamo2010">[3]</a></td></tr>
+	</table>
+	</div>
+
+	<div class="solver-section" id="mva">
+	<h3 class="solver-name">MVA (Mean Value Analysis)</h3>
+	<p class="solver-subtitle">The MVA solver implements both exact and approximate mean value analysis algorithms for product-form queueing networks. The default method uses Linearizer for approximate MVA, with support for extended queueing features including non-exponential service times, multi-servers, non-preemptive priorities, and fork-join networks. </p>
+
+	<table class="algorithm-table">
+	<tr><th>Method</th><th>Algorithm</th><th>Reference</th></tr>
+	<tr><td><code>default</code></td><td>Automatic method selection</td><td>&mdash;</td></tr>
+	<tr><td><code>exact</code></td><td>Exact mean value analysis</td><td><a class="ref-link" href="#ref-reiser1980">[31]</a></td></tr>
+	<tr><td><code>mva</code></td><td>Exact mean value analysis</td><td><a class="ref-link" href="#ref-reiser1980">[31]</a></td></tr>
+	<tr><td><code>amva</code></td><td>Approximate MVA with Linearizer</td><td><a class="ref-link" href="#ref-chandy1982">[14]</a></td></tr>
+	<tr><td><code>bs</code></td><td>Bard-Schweitzer approximate MVA</td><td><a class="ref-link" href="#ref-bolch2006">[6]</a></td></tr>
+	<tr><td><code>amva.bs</code></td><td>Approximate MVA with Bard-Schweitzer</td><td><a class="ref-link" href="#ref-bolch2006">[6]</a></td></tr>
+	<tr><td><code>lin</code></td><td>Linearizer approximate MVA</td><td><a class="ref-link" href="#ref-chandy1982">[14]</a></td></tr>
+	<tr><td><code>qna</code></td><td>Queuing Network Analyzer</td><td>&mdash;</td></tr>
+	<tr><td><code>qd</code></td><td>Queue-dependent approximate MVA</td><td><a class="ref-link" href="#ref-casale2015">[10]</a></td></tr>
+	<tr><td><code>amva.qd</code></td><td>Approximate MVA queue-dependent</td><td><a class="ref-link" href="#ref-casale2015">[10]</a></td></tr>
+	<tr><td><code>qdlin</code></td><td>Queue-dependent Linearizer</td><td>&mdash;</td></tr>
+	<tr><td><code>amva.qdlin</code></td><td>Approximate MVA with queue-dependent Linearizer</td><td>&mdash;</td></tr>
+	<tr><td><code>qli</code></td><td>Queue-Linearizer iteration</td><td>&mdash;</td></tr>
+	<tr><td><code>amva.qli</code></td><td>Approximate MVA with queue-Linearizer iteration</td><td>&mdash;</td></tr>
+	<tr><td><code>sqni</code></td><td>Single-server queue approximation iteration</td><td>&mdash;</td></tr>
+	<tr><td><code>aba.upper/lower</code></td><td>Asymptotic bound analysis</td><td><a class="ref-link" href="#ref-bolch2006">[6]</a></td></tr>
+	<tr><td><code>bjb.upper/lower</code></td><td>Balanced job bounds</td><td><a class="ref-link" href="#ref-casale2008">[7]</a></td></tr>
+	<tr><td><code>gb.upper/lower</code></td><td>Geometric square-root bounds</td><td><a class="ref-link" href="#ref-casale2008">[7]</a></td></tr>
+	<tr><td><code>pb.upper/lower</code></td><td>Proportional bounds</td><td><a class="ref-link" href="#ref-casale2008">[7]</a></td></tr>
+	<tr><td><code>sb.upper/lower</code></td><td>Simple bounds</td><td><a class="ref-link" href="#ref-harel1999">[20]</a></td></tr>
+	<tr><td><code>mm1</code></td><td>Exact M/M/1 formula</td><td><a class="ref-link" href="#ref-bolch2006">[6]</a></td></tr>
+	<tr><td><code>mmk</code></td><td>Erlang-C formula (M/M/k)</td><td>&mdash;</td></tr>
+	<tr><td><code>mg1</code></td><td>Pollaczek-Khinchine (M/G/1)</td><td><a class="ref-link" href="#ref-bolch2006">[6]</a></td></tr>
+	<tr><td><code>gig1.kingman</code></td><td>Kingman upper bound (GI/G/1)</td><td><a class="ref-link" href="#ref-bolch2006">[6]</a></td></tr>
+	<tr><td><code>gig1.allen</code></td><td>Allen-Cunneen formula (GI/G/1)</td><td><a class="ref-link" href="#ref-bolch2006">[6]</a></td></tr>
+	<tr><td><code>gig1.klb</code></td><td>Kr&auml;mer-Langenbach-Belz (GI/G/1)</td><td><a class="ref-link" href="#ref-bolch2006">[6]</a></td></tr>
+	<tr><td><code>gig1.kobayashi</code></td><td>Kobayashi diffusion approx. (GI/G/1)</td><td><a class="ref-link" href="#ref-bolch2006">[6]</a></td></tr>
+	<tr><td><code>gig1.marchal</code></td><td>Marchal formula (GI/G/1)</td><td><a class="ref-link" href="#ref-bolch2006">[6]</a></td></tr>
+	</table>
+	</div>
+
+	<div class="solver-section" id="nc">
+	<h3 class="solver-name">NC (Normalizing Constant)</h3>
+	<p class="solver-subtitle">The NC solver implements algorithms based on the normalizing constant of product-form queueing networks. Unlike other solvers, NC is able to compute state and marginal probabilities in queueing networks without the need for simulation. It also offers the most accurate approximations for models including caches.</p>
+
+	<table class="algorithm-table">
+	<tr><th>Method</th><th>Algorithm</th><th>Reference</th></tr>
+	<tr><td><code>default</code></td><td>Automatic normalizing constant method selection</td><td>&mdash;</td></tr>
+	<tr><td><code>exact</code></td><td>Exact normalizing constant computation</td><td>&mdash;</td></tr>
+	<tr><td><code>imci</code></td><td>Improved Monte Carlo integration</td><td><a class="ref-link" href="#ref-wang2016">[36]</a></td></tr>
+	<tr><td><code>ls</code></td><td>Logistic sampling (Monte Carlo)</td><td><a class="ref-link" href="#ref-casale2017">[11]</a></td></tr>
+	<tr><td><code>le</code></td><td>Logistic asymptotic expansion</td><td><a class="ref-link" href="#ref-casale2017">[11]</a></td></tr>
+	<tr><td><code>mmint2</code></td><td>Multivariate moment integration (order 2)</td><td>&mdash;</td></tr>
+	<tr><td><code>gleint</code></td><td>Gauss-Legendre integration</td><td>&mdash;</td></tr>
+	<tr><td><code>panacea</code></td><td>Panacea asymptotic expansion</td><td><a class="ref-link" href="#ref-mckenna1984">[28]</a>, <a class="ref-link" href="#ref-robertazzi2000">[34]</a></td></tr>
+	<tr><td><code>ca</code></td><td>Multiclass convolution algorithm (exact)</td><td>&mdash;</td></tr>
+	<tr><td><code>kt</code></td><td>Knessl-Tier asymptotic expansion</td><td><a class="ref-link" href="#ref-knessl1992">[23]</a></td></tr>
+	<tr><td><code>sampling</code></td><td>Generic sampling method</td><td>&mdash;</td></tr>
+	<tr><td><code>propfair</code></td><td>Proportional fairness approximation</td><td>&mdash;</td></tr>
+	<tr><td><code>comom</code></td><td>Class-oriented method of moments (exact)</td><td><a class="ref-link" href="#ref-casale2009">[8]</a></td></tr>
+	<tr><td><code>cub</code></td><td>Grundmann-Moeller cubature rules</td><td><a class="ref-link" href="#ref-casale2017">[11]</a></td></tr>
+	<tr><td><code>rd</code></td><td>Reduction heuristic</td><td><a class="ref-link" href="#ref-casale2021">[13]</a></td></tr>
+	<tr><td><code>nrp</code></td><td>N&ouml;rlund-Rice integral (Probit)</td><td><a class="ref-link" href="#ref-casale2021">[13]</a></td></tr>
+	<tr><td><code>nrl</code></td><td>N&ouml;rlund-Rice integral (Logit)</td><td><a class="ref-link" href="#ref-casale2021">[13]</a></td></tr>
+	<tr><td><code>gm</code></td><td>Grundmann-Moeller method</td><td>&mdash;</td></tr>
+	</table>
+	</div>
+
+	<div class="solver-section" id="qns">
+	<h3 class="solver-name">QNS (Queueing Network Solver)</h3>
+	<p class="solver-subtitle">The QNS wrapper exposes the corresponding tool for product-form queueing network analysis in the Layered Queueing Network Solver developed by the RADS group at Carleton University. Unlike the LQNS solver, QNS models are ordinary (non-layered) queueing networks.</p>
+
+	<table class="algorithm-table">
+	<tr><th>Method</th><th>Algorithm</th><th>Reference</th></tr>
+	<tr><td><code>default</code></td><td>Default QNS method</td><td>&mdash;</td></tr>
+	<tr><td><code>conway</code></td><td>Conway's multi-server</td><td>&mdash;</td></tr>
+	<tr><td><code>rolia</code></td><td>Rolia-Sevcik multi-server</td><td>&mdash;</td></tr>
+	<tr><td><code>zhou</code></td><td>Zhou-Woodside multi-server</td><td>&mdash;</td></tr>
+	<tr><td><code>suri</code></td><td>Suri approximation</td><td>&mdash;</td></tr>
+	<tr><td><code>reiser</code></td><td>Reiser-Lavenberg exact mean value analysis</td><td>&mdash;</td></tr>
+	<tr><td><code>schmidt</code></td><td>Schmidt method</td><td>&mdash;</td></tr>
+	</table>
+	</div>
+
+	<div class="solver-section" id="ssa">
+	<h3 class="solver-name">SSA (Stochastic Simulation Algorithm)</h3>
+	<p class="solver-subtitle">The SSA solver is a stochastic simulator for continuous-time Markov chains. The state space is not generated upfront but is built during simulation starting from the initial state. The solver offers both serial and parallel execution modes, with the latter supporting independent replications across multiple cores. </p>
+
+	<table class="algorithm-table">
+	<tr><th>Method</th><th>Algorithm</th><th>Reference</th></tr>
+	<tr><td><code>default</code></td><td>Default SSA method</td><td>&mdash;</td></tr>
+	<tr><td><code>ssa</code></td><td>Stochastic simulation algorithm</td><td><a class="ref-link" href="#ref-gillespie1977">[18]</a></td></tr>
+	<tr><td><code>serial</code></td><td>Gillespie's direct method (single core)</td><td><a class="ref-link" href="#ref-gillespie1977">[18]</a></td></tr>
+	<tr><td><code>para</code></td><td>Parallel independent replications</td><td>&mdash;</td></tr>
+	<tr><td><code>parallel</code></td><td>Parallel execution mode</td><td>&mdash;</td></tr>
+	<tr><td><code>nrm</code></td><td>Next Reaction Method</td><td><a class="ref-link" href="#ref-anderson2007">[2]</a></td></tr>
+	</table>
+	</div>
+
+	<div id="references" style="margin-top: 30px; padding-top: 15px; border-top: 2px solid #ddd;">
+	<h2>References</h2>
+
+	<ol style="font-size: 0.9em; line-height: 1.7; color: #333;">
+	<li id="ref-afshari1984">Afshari, S., Balbo, G., &amp; Bruell, S. C. (1984). Load dependent servers in queueing networks. <em>Performance Evaluation</em>, 4(2), 85-100. <a class="ref-link" href="https://doi.org/10.1016/0166-5316(84)90025-7" target="_blank">https://doi.org/10.1016/0166-5316(84)90025-7</a></li>
+
+	<li id="ref-anderson2007">Anderson, D. F. (2007). A modified next reaction method for simulating chemical systems with time dependent propensities and delays. <em>The Journal of Chemical Physics</em>, 127(21), 214107. <a class="ref-link" href="https://doi.org/10.1063/1.2799998" target="_blank">https://doi.org/10.1063/1.2799998</a></li>
+
+	<li id="ref-balsamo2010">Balsamo, S., Dei Rossi, G.-L., &amp; Marin, A. (2010). A Numerical Algorithm for the Solution of Product-Form Models with Infinite State Spaces. <em>Proc. of EPEW 2010, LNCS</em>, 6342, 191-206.</li>
+
+	<li id="ref-bertoli2007">Bertoli, M., Casale, G., &amp; Serazzi, G. (2007). The JMT Simulator for Performance Evaluation of Non-Product-Form Queueing Networks. <em>Proc. of the 40th Annual Simulation Symposium (ANSS)</em>, 3-10. <a class="ref-link" href="https://doi.org/10.1109/ANSS.2007.35" target="_blank">https://doi.org/10.1109/ANSS.2007.35</a></li>
+
+	<li id="ref-bini2005">Bini, D. A., Meini, B., Steff&eacute;, S., &amp; Van Houdt, B. (2005). Structured Markov chains solver: software tools. <em>Proc. of SMCtools Workshop</em>. <a class="ref-link" href="https://doi.org/10.1145/1190366.1190370" target="_blank">https://doi.org/10.1145/1190366.1190370</a></li>
+
+	<li id="ref-bolch2006">Bolch, G., Greiner, S., de Meer, H., &amp; Trivedi, K. S. (2006). <em>Queueing Networks and Markov Chains: Modeling and Performance Evaluation with Computer Science Applications</em> (2nd ed.). Wiley-Interscience. <a class="ref-link" href="https://onlinelibrary.wiley.com/doi/book/10.1002/0471200581" target="_blank">https://onlinelibrary.wiley.com/doi/book/10.1002/0471200581</a></li>
+
+	<li id="ref-casale2008">Casale, G., Muntz, R. R., &amp; Serazzi, G. (2008). Geometric Bounds: A Noniterative Analysis Technique for Closed Queueing Networks. <em>IEEE Transactions on Computers</em>, 57(6), 780-794. <a class="ref-link" href="https://doi.org/10.1109/TC.2008.37" target="_blank">https://doi.org/10.1109/TC.2008.37</a></li>
+
+	<li id="ref-casale2009">Casale, G. (2009). CoMoM: Efficient Class-Oriented Evaluation of Multiclass Performance Models. <em>IEEE Transactions on Software Engineering</em>, 35(2), 162-177. <a class="ref-link" href="https://doi.org/10.1109/TSE.2008.63" target="_blank">https://doi.org/10.1109/TSE.2008.63</a></li>
+
+	<li id="ref-casale2013">Casale, G., Zhang, E. Z., &amp; Smirni, E. (2008). KPC-toolbox: Simple yet effective trace fitting using Markovian arrival processes. <em>Proc. of Fifth International Conference on Quantitative Evaluation of Systems (QEST)</em>, 83-92. <a class="ref-link" href="https://doi.org/10.1109/QEST.2008.33" target="_blank">https://doi.org/10.1109/QEST.2008.33</a></li>
+
+	<li id="ref-casale2015">Casale, G., P&eacute;rez, J. F., &amp; Wang, W. (2015). QD-AMVA: Evaluating Systems with Queue-Dependent Service Requirements. <em>Proceedings of IFIP PERFORMANCE</em>. <a class="ref-link" href="https://dl.acm.org/doi/10.1145/2825236.2825251" target="_blank">https://dl.acm.org/doi/10.1145/2825236.2825251</a></li>
+
+	<li id="ref-casale2017">Casale, G. (2017). Accelerating Performance Inference over Closed Systems by Asymptotic Methods. <em>Proc. of ACM SIGMETRICS</em>. <a class="ref-link" href="https://dl.acm.org/doi/10.1145/3078505.3078512" target="_blank">https://dl.acm.org/doi/10.1145/3078505.3078512</a></li>
+
+	<li id="ref-casale2020">Casale, G. (2020). Integrated performance evaluation of extended queueing network models with LINE. In <em>Proceedings of the 2020 Winter Simulation Conference (WSC)</em> (pp. 1-15). <a class="ref-link" href="https://doi.org/10.1109/WSC48552.2020.9383931" target="_blank">https://doi.org/10.1109/WSC48552.2020.9383931</a></li>
+
+	<li id="ref-casale2021">Casale, G., Harrison, P. G., &amp; Hong, O. W. (2021). Facilitating Load-Dependent Queueing Analysis Through Factorization. <em>Performance Evaluation</em>. <a class="ref-link" href="https://doi.org/10.1016/j.peva.2021.102203" target="_blank">https://doi.org/10.1016/j.peva.2021.102203</a></li>
+
+	<li id="ref-chandy1982">Chandy, K. M., &amp; Neuse, D. (1982). Linearizer: a heuristic algorithm for queueing network models of computing systems. <em>Communications of the ACM</em>, 25(2), 126-134. <a class="ref-link" href="https://dl.acm.org/doi/10.1145/358396.358403" target="_blank">https://dl.acm.org/doi/10.1145/358396.358403</a></li>
+
+	<li id="ref-chow1983">Chow, W.-M. (1983). Approximations for large scale closed queueing networks. <em>Performance Evaluation</em>, 3(1), 1-12. <a class="ref-link" href="https://doi.org/10.1016/0166-5316(83)90013-0" target="_blank">https://doi.org/10.1016/0166-5316(83)90013-0</a></li>
+
+	<li id="ref-conway1986">Conway, A. E., &amp; Georganas, N. D. (1986). RECAL: A new efficient algorithm for the exact analysis of multiple-chain queueing networks. <em>Journal of the ACM</em>, 33(2), 356-386. <a class="ref-link" href="https://doi.org/10.1145/6490.6495" target="_blank">https://doi.org/10.1145/6490.6495</a></li>
+
+	<li id="ref-desouza1990">de Souza e Silva, E., &amp; Muntz, R. R. (1990). A Note on the Computational Cost of the Linearizer Algorithm for Queueing Networks. <em>IEEE Transactions on Computers</em>, 39(6), 840-842. <a class="ref-link" href="https://doi.org/10.1109/12.53607" target="_blank">https://doi.org/10.1109/12.53607</a></li>
+
+	<li id="ref-gillespie1977">Gillespie, D. T. (1977). Exact stochastic simulation of coupled chemical reactions. <em>The Journal of Physical Chemistry</em>, 81(25), 2340-2361. <a class="ref-link" href="https://doi.org/10.1021/j100540a008" target="_blank">https://doi.org/10.1021/j100540a008</a></li>
+
+	<li id="ref-gast2017">Gast, N. (2017). Expected Values Estimated via Mean-Field Approximation are 1/N-Accurate. <em>Proc. ACM Meas. Anal. Comput. Syst.</em>, 1(1), Article 17. <a class="ref-link" href="https://doi.org/10.1145/3084454" target="_blank">https://doi.org/10.1145/3084454</a></li>
+
+	<li id="ref-harel1999">Harel, A., Namn, S., &amp; Sturm, J. (1999). Simple bounds for closed queueing networks. <em>Queueing Systems</em>, 31(1-2), 125-135. <a class="ref-link" href="https://doi.org/10.1023/a:1019102112869" target="_blank">https://doi.org/10.1023/a:1019102112869</a></li>
+
+	<li id="ref-horvath2014">Horv&aacute;th, G., &amp; Telek, M. (2014). Sojourn times in fluid queues with independent and dependent input and output processes. <em>Performance Evaluation</em>, 79, 160-181. <a class="ref-link" href="https://doi.org/10.1016/j.peva.2014.07.011" target="_blank">https://doi.org/10.1016/j.peva.2014.07.011</a></li>
+
+	<li id="ref-horvath2017">Horv&aacute;th, G., &amp; Telek, M. (2017). BuTools 2: A Rich Toolbox for Markovian Performance Evaluation. <em>Proc. of VALUETOOLS</em>, 137-142. <a class="ref-link" href="https://doi.org/10.4108/eai.25-10-2016.2266400" target="_blank">https://doi.org/10.4108/eai.25-10-2016.2266400</a></li>
+
+	<li id="ref-knessl1992">Knessl, C., &amp; Tier, C. (1992). Asymptotic Expansions for Large Closed Queueing Networks with Multiple Job Classes. <em>IEEE Transactions on Computers</em>, 41(4), 480-488. <a class="ref-link" href="https://doi.org/10.1109/12.135560" target="_blank">https://doi.org/10.1109/12.135560</a></li>
+
+	<li id="ref-latouche2000">Latouche, G., &amp; Ramaswami, V. (2000). <em>Introduction to Matrix Analytic Methods in Stochastic Modeling</em>. SIAM. <a class="ref-link" href="https://link.springer.com/book/10.1007/978-0-387-22765-9" target="_blank">https://link.springer.com/book/10.1007/978-0-387-22765-9</a></li>
+
+	<li id="ref-lecuyer2002">L'Ecuyer, P., &amp; Buist, E. (2005). Simulation in Java with SSJ. <em>Proc. of the 2005 Winter Simulation Conference</em>, 611-620. <a class="ref-link" href="https://doi.org/10.1109/WSC.2005.1574309" target="_blank">https://doi.org/10.1109/WSC.2005.1574309</a></li>
+
+	<li id="ref-li2024">Li, Z., &amp; Casale, G. (2024). Matrix Network Analyzer: A New Decomposition Algorithm for Phase-type Queueing Networks. <em>Proc. of ACM/SPEC ICPE</em>, 77-88. <a class="ref-link" href="https://doi.org/10.1145/3629527.3651431" target="_blank">https://doi.org/10.1145/3629527.3651431</a></li>
+
+	<li id="ref-marin2009">Marin, A., &amp; Bul&ograve;, S. R. (2009). A general algorithm to compute the steady-state solution of product-form cooperating Markov chains. <em>Proc. of MASCOTS 2009</em>, 515-524.</li>
+
+
+	<li id="ref-mckenna1984">McKenna, J., &amp; Mitra, D. (1984). Asymptotic Expansions and Integral Representations of Moments of Queue Lengths in Closed Markovian Networks. <em>Journal of the ACM</em>, 31(2), 346-360. <a class="ref-link" href="https://doi.org/10.1145/800057.808676" target="_blank">https://doi.org/10.1145/800057.808676</a></li>
+
+	<li id="ref-perez2008">P&eacute;rez, J. F., Van Velthoven, J., &amp; Van Houdt, B. (2008). Q-MAM: A Tool for Solving Infinite Queues using Matrix-Analytic Methods. <em>Proc. of 3rd International ICST Workshop on Tools for solving Structured Markov Chains (SMCtools)</em>. <a class="ref-link" href="https://doi.org/10.4108/ICST.VALUETOOLS2008.4368" target="_blank">https://doi.org/10.4108/ICST.VALUETOOLS2008.4368</a></li>
+
+	<li id="ref-perez2017">P&eacute;rez, J. F., &amp; Casale, G. (2017). LINE: Evaluating Software Applications in Unreliable Environments. <em>IEEE Transactions on Reliability</em>, 66(3), 837-853. <a class="ref-link" href="https://doi.org/10.1109/TR.2017.2655505" target="_blank">https://doi.org/10.1109/TR.2017.2655505</a></li>
+
+	<li id="ref-reiser1980">Reiser, M., &amp; Lavenberg, S. S. (1980). Mean-value analysis of closed multichain queuing networks. <em>Journal of the ACM</em>, 27(2), 313-322. <a class="ref-link" href="https://dl.acm.org/doi/10.1145/322186.322195" target="_blank">https://dl.acm.org/doi/10.1145/322186.322195</a></li>
+
+	<li id="ref-reiser1981">Reiser, M. (1981). Mean-value analysis and convolution method for queue-dependent servers in closed queueing networks. <em>Performance Evaluation</em>, 1(1), 7-18. <a class="ref-link" href="https://doi.org/10.1016/0166-5316(81)90003-8" target="_blank">https://doi.org/10.1016/0166-5316(81)90003-8</a></li>
+
+	<li id="ref-riska2007">Riska, A., &amp; Smirni, E. (2007). ETAQA Solutions for Infinite Markov Processes with Repetitive Structure. <em>INFORMS Journal of Computing</em>, 19(2), 215-228. <a class="ref-link" href="https://doi.org/10.1287/ijoc.1060.0184" target="_blank">https://doi.org/10.1287/ijoc.1060.0184</a></li>
+
+	<li id="ref-robertazzi2000">Robertazzi, T. G. (2000). <em>Computer Networks and Systems: Queueing Theory and Performance Evaluation</em> (3rd ed.). Springer. <a class="ref-link" href="https://link.springer.com/book/10.1007/978-0-387-22765-9" target="_blank">https://link.springer.com/book/10.1007/978-0-387-22765-9</a></li>
+
+	<li id="ref-ruuskanen2021">Ruuskanen, J., Berner, T., &Aring;rz&eacute;n, K.-E., &amp; Cervin, A. (2021). Improving the mean-field fluid model of processor sharing queueing networks for dynamic performance models in cloud computing. <em>Performance Evaluation</em>, 151, 102231. <a class="ref-link" href="https://doi.org/10.1016/j.peva.2021.102231" target="_blank">https://doi.org/10.1016/j.peva.2021.102231</a></li>
+
+	<li id="ref-wang2016">Wang, W., Casale, G., &amp; Sutton, C. A. (2016). A Bayesian Approach to Parameter Inference in Queueing Networks. <em>ACM Transactions on Modeling and Computer Simulation</em>, 27(1), 2:1-2:26. <a class="ref-link" href="https://doi.org/10.1145/2893480" target="_blank">https://doi.org/10.1145/2893480</a></li>
+
+	<li id="ref-zahorjan1988">Zahorjan, J., Eager, D. L., &amp; Sweillam, H. M. (1988). Accuracy, Speed, and Convergence of Approximate Mean Value Analysis. <em>Performance Evaluation</em>, 8(4), 255-270. <a class="ref-link" href="https://doi.org/10.1016/0166-5316(88)90018-1" target="_blank">https://doi.org/10.1016/0166-5316(88)90018-1</a></li>
+	</ol>
+
+	</div>
+
+	<p style="margin-top: 40px;"><a class="switch" href="#solvers">&larr; Back to Solvers Overview</a></p>
+
+	</div>
+
+	<div id="papers" class="page">
+	<h2>Documentation</h2>
+
+	<div style="display: flex; gap: 40px;">
+		<div style="flex: 1;">
+			<h3>Manuals</h3>
+			<ul class="doc-list">
+				<li><a href="https://line-solver.sourceforge.net/doc/LINE-java.pdf"><img src="https://upload.wikimedia.org/wikipedia/it/2/2e/Java_Logo.svg" alt="Java Manual" class="icon-large">Java Manual</a></li>
+				<li><a href="https://line-solver.sourceforge.net/doc/LINE-kotlin.pdf"><img src="https://upload.wikimedia.org/wikipedia/commons/7/74/Kotlin_Icon.png" alt="Kotlin Manual" class="icon-large">Kotlin Manual</a></li>
+				<li><a href="https://line-solver.sourceforge.net/doc/LINE-matlab.pdf"><img src="https://upload.wikimedia.org/wikipedia/commons/2/21/Matlab_Logo.png" alt="Matlab Manual" class="icon-large">Matlab Manual</a></li>
+				<li><a href="https://line-solver.sourceforge.net/doc/LINE-python.pdf"><img src="https://upload.wikimedia.org/wikipedia/commons/c/c3/Python-logo-notext.svg" alt="Python Manual" class="icon-large">Python Manual</a></li>
+				<li><a href="https://line-solver.sourceforge.net/doc/LINE-cheatsheet.pdf"><img src="https://upload.wikimedia.org/wikipedia/commons/8/87/PDF_file_icon.svg" alt="Cheatsheet" class="icon-large">Cheatsheet</a></li>
+			<!-- Re-enable when 3.0.4 is out: <li><a href="https://line-solver.sourceforge.net/doc/LINE-mcp.pdf"><img src="https://upload.wikimedia.org/wikipedia/commons/8/87/PDF_file_icon.svg" alt="MCP Guide" class="icon-large">MCP Getting Started</a></li> -->
+			</ul>
+		</div>
+		<div style="flex: 1;">
+			<h3>API Reference</h3>
+			<ul class="doc-list">
+				<li><a href="javadoc/index.html"><img src="https://upload.wikimedia.org/wikipedia/it/2/2e/Java_Logo.svg" alt="Javadoc" class="icon-large">Javadoc (Java/Kotlin API Documentation)</a></li>
+				<li><a href="doxygen/index.html"><img src="https://upload.wikimedia.org/wikipedia/commons/2/21/Matlab_Logo.png" alt="Doxygen" class="icon-large">Doxygen (MATLAB API Documentation)</a></li>
+				<li><a href="sphinx/index.html"><img src="https://upload.wikimedia.org/wikipedia/commons/c/c3/Python-logo-notext.svg" alt="Sphinx" class="icon-large">Sphinx (Python API Documentation)</a></li>
+			</ul>
+		</div>
+	</div>
+
+	<!--<h3 id="citing-line">Citing LINE</h3>
+	<p>If you use LINE for a research paper, please cite the following article:</p>
+	<ul>
+		<li> G. Casale.
+		<a href="http://line-solver.sourceforge.net/doc/wsc20line.pdf" target="_blank">
+		Integrated Performance Evaluation of Extended Queueing Network Models with LINE</a>.
+		 Winter Simulation Conference, ACM Press, December 2020.
+		</li>
+	</ul>
+
+	<h3 id="papers-list">Papers</h3>
+	<p>The following papers extend or use LINE across different applications:</p>
+	<ul>
+		<li>Y. Gao, G. Casale, R. Singhal. <a href="https://doi.org/10.1145/3689936">Performance Modeling of Distributed Data Processing in Microservice Applications</a>. ACM TOMPECS, October 2024.</li>
+		<li>Y. Zhou, M. Sheldon, G. Casale. <a href="https://doi.org/10.1109/MASCOTS63447.2024.00015">Approximating Closed Queueing Networks in Semi-Markov Random Environments</a>. IEEE MASCOTS, October 2024.</li>
+		<li>G. Casale, Y. Gao, Z. Niu, L. Zhu. <a href="https://doi.org/10.1145/3661825">LN: A Flexible Algorithmic Framework for Layered Queueing Network Analysis</a>. ACM TOMACS, July 2024.</li>
+		<li>R.-A. Dobre, Z. Niu, G. Casale. <a href="https://doi.org/10.1145/3629527.3651432">Approximating Fork-Join Systems via Mixed Model Transformations</a>. ACM/SPEC ICPE, May 2024.</li>
+		<li>Z. Li, G. Casale. <a href="https://doi.org/10.1145/3629527.3651431">Matrix Network Analyzer: A New Decomposition Algorithm for Phase-type Queueing Networks</a>. ACM/SPEC ICPE, May 2024.</li>
+		<li>Z. Niu, G. Casale. <a href="https://doi.org/10.1109/TSE.2024.3360663">Neural Density Estimation of Response Times in Layered Software Systems</a>. IEEE TSE, January 2024.</li>
+		<li>R. Wang, G. Casale, A. Filieri. <a href="https://doi.org/10.1145/3579847">Estimating Multiclass Service Demand Distributions Using Markovian Arrival Processes</a>. ACM TOMACS, February 2023.</li>
+		<li>Z. Niu, G. Casale. <a href="https://doi.org/10.1109/MASCOTS53633.2021.9614283">A Mixture Density Network Approach to Predicting Response Times in Layered Systems</a>. IEEE MASCOTS, November 2021.</li>
+		<li>G. Casale. <a href="https://dl.acm.org/doi/abs/10.1145/3302541.3311959" target="_blank">Automated Multi-paradigm Analysis of Extended and Layered Queueing Models with LINE</a>. ACM/SPEC ICPE, 2019.</li>
+		<li>J. F. Perez and G. Casale. <a href="http://ieeexplore.ieee.org/document/7843645/">LINE: Evaluating Software Applications in Unreliable Environments</a>. IEEE Transactions on Reliability, 66(3), pp. 837-853, Sept 2017.</li>
+		<li>C. Muller, P. Rygielski, S. Spinner and S. Kounev. <a href="https://www.sciencedirect.com/science/article/pii/S157106611630069X" target="_blank">Enabling Fluid Analysis for Queueing Petri Nets via Model Transformation</a>. Intl. Workshop on Practical Applications of Stochastic Modelling (PASM), 2016.</li>
+		<li>D. J. Dubois and G. Casale. <a href="https://spiral.imperial.ac.uk/handle/10044/1/32496" target="_blank">OptiSpot: minimizing application deployment cost using spot cloud resources</a>. IEEE CLOUD, 2016.</li>
+		<li>R. Osman, J. F. Perez and G. Casale. <a href="https://spiral.imperial.ac.uk/handle/10044/1/33189" target="_blank">Quantifying the Impact of Replication on the Quality-of-Service in Cloud Databases</a>. IEEE Intl. Conference on Software Quality, Reliability, and Security (QRS), 2016.</li>
+		<li>D. J. Dubois and G. Casale. <a href="http://link.springer.com/article/10.1007/s10586-016-0568-7" target="_blank">OptiSpot: minimizing application deployment cost using spot cloud resources</a>. Cluster Computing, 2016.</li>
+		<li>J. F. Perez and G. Casale. <a href="https://ieeexplore.ieee.org/abstract/document/6821177" target="_blank">Assessing SLA compliance from Palladio component models</a>. Proceedings of the 2nd Workshop on Management of resources and services in Cloud and Sky computing (MICAS), IEEE Press, 2013.</li>
+	</ul>
+	-->
+	</div>
+</div>
+
+
+
+
+<div id="sidebar">
+
+<div id="sidebar-content">
+<h2>Navigate</h2>
+<ul class="sidebar-nav">
+<li><a href="index.html">Home</a></li>
+<li><a href="index.html#overview">Overview</a></li>
+<li><a href="index.html#papers">Documentation</a></li>
+<li><a href="tutorials.html">Tutorials</a></li>
+<!-- Re-enable when 3.0.4 is out: <li><a href="mcp.html">MCP Integration</a></li> -->
+<li><a href="index.html#solvers">Solvers</a></li>
+</ul>
+
+<h2>Support</h2>
+<ul class="sidebar-links">
+<li><a href="https://sourceforge.net/projects/line-solver/" target="_blank">Sourceforge site</a></li>
+<li><a href="https://github.com/imperial-qore/line-solver" target="_blank">Github repo</a></li>
+</ul>
+
+<h2>News</h2>
+<ul class="sidebar-news">
+<li><strong>2026</strong> - <a href="https://sourceforge.net/projects/line-solver/files/latest/download">LINE 3.0.4</a> is out!</li>
+<li><strong>2025</strong> - First release of LINE 3.0.0</li>
+<li><strong>2019</strong> - First release of LINE 2.0.0</li>
+<li><strong>2016</strong> - First release of LINE 1.0.0</li>
+</ul>
+</div>
+
+<div id="footer">
+<p><a href="mailto:g.casale@imperial.ac.uk">Contact us</a> | <a href="https://sourceforge.net/projects/line-solver/">Project site</a> | <a href="https://sourceforge.net/p/line-solver/code/feed">RSS</a> | <a href="#header">Back to top</a><br />
+&copy; 2025 <a href="https://www.imperial.ac.uk/">Imperial College London</a> | Design by <a href="http://andreasviklund.com/">AV</a></p>
+</div>
+
+</div>
+
+<!-- Start of StatCounter Code for Default Guide -->
+<script type="text/javascript">
+var sc_project=11021045; 
+var sc_invisible=1; 
+var sc_security="63445923"; 
+var scJsHost = (("https:" == document.location.protocol) ?
+"https://secure." : "http://www.");
+document.write("<sc"+"ript type='text/javascript' src='" +
+scJsHost+
+"statcounter.com/counter/counter.js'></"+"script>");
+</script>
+<noscript><div class="statcounter"><a title="hits counter"
+href="http://statcounter.com/" target="_blank"><img
+class="statcounter"
+src="//c.statcounter.com/11021045/0/63445923/1/" alt="hits
+counter"></a></div></noscript>
+<!-- End of StatCounter Code for Default Guide -->
+
+</body>
+</html>

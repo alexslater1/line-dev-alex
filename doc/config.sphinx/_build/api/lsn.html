@@ -1,0 +1,773 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Layered Stochastic Networks &mdash; LINE Solver (Python) 3.0.2 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=3f474186"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Markov Chain Utilities" href="mc.html" />
+    <link rel="prev" title="Loss Networks" href="lossn.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            LINE Solver (Python)
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">API Reference:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">API Documentation</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="core.html">Core Modules</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="core.html#network-models-line-solver-lang">Network Models (line_solver.lang)</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="core.html#main-classes">Main Classes</a></li>
+<li class="toctree-l4"><a class="reference internal" href="core.html#node-classes">Node Classes</a></li>
+<li class="toctree-l4"><a class="reference internal" href="core.html#job-class-classes">Job Class Classes</a></li>
+<li class="toctree-l4"><a class="reference internal" href="core.html#routing-and-structure">Routing and Structure</a></li>
+<li class="toctree-l4"><a class="reference internal" href="core.html#state-representation">State Representation</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="core.html#solvers-line-solver-solvers">Solvers (line_solver.solvers)</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="core.html#base-solver-classes">Base Solver Classes</a></li>
+<li class="toctree-l4"><a class="reference internal" href="core.html#analytical-solvers">Analytical Solvers</a></li>
+<li class="toctree-l4"><a class="reference internal" href="core.html#external-solver-wrappers">External Solver Wrappers</a></li>
+<li class="toctree-l4"><a class="reference internal" href="core.html#specialized-solvers">Specialized Solvers</a></li>
+<li class="toctree-l4"><a class="reference internal" href="core.html#result-classes">Result Classes</a></li>
+<li class="toctree-l4"><a class="reference internal" href="core.html#solver-configuration">Solver Configuration</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="core.html#distributions-line-solver-distributions">Distributions (line_solver.distributions)</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="core.html#base-distribution-classes">Base Distribution Classes</a></li>
+<li class="toctree-l4"><a class="reference internal" href="core.html#continuous-distributions">Continuous Distributions</a></li>
+<li class="toctree-l4"><a class="reference internal" href="core.html#phase-type-distributions">Phase-Type Distributions</a></li>
+<li class="toctree-l4"><a class="reference internal" href="core.html#markovian-arrival-processes">Markovian Arrival Processes</a></li>
+<li class="toctree-l4"><a class="reference internal" href="core.html#discrete-distributions">Discrete Distributions</a></li>
+<li class="toctree-l4"><a class="reference internal" href="core.html#special-distributions">Special Distributions</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="core.html#layered-networks-line-solver-layered">Layered Networks (line_solver.layered)</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="core.html#id1">Main Classes</a></li>
+<li class="toctree-l4"><a class="reference internal" href="core.html#cache-tasks">Cache Tasks</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="cache.html">Cache Algorithms</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="cache.html#line_solver.api.cache.cache_mva"><code class="docutils literal notranslate"><span class="pre">cache_mva()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="cache.html#line_solver.api.cache.cache_prob_asy"><code class="docutils literal notranslate"><span class="pre">cache_prob_asy()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="cache.html#line_solver.api.cache.cache_gamma_lp"><code class="docutils literal notranslate"><span class="pre">cache_gamma_lp()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="cache.html#line_solver.api.cache.cache_spm"><code class="docutils literal notranslate"><span class="pre">cache_spm()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="cache.html#line_solver.api.cache.cache_xi_fp"><code class="docutils literal notranslate"><span class="pre">cache_xi_fp()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="cache.html#line_solver.api.cache.cache_prob_erec"><code class="docutils literal notranslate"><span class="pre">cache_prob_erec()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="cache.html#line_solver.api.cache.cache_prob_fpi"><code class="docutils literal notranslate"><span class="pre">cache_prob_fpi()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="cache.html#line_solver.api.cache.cache_prob_spm"><code class="docutils literal notranslate"><span class="pre">cache_prob_spm()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="cache.html#line_solver.api.cache.cache_erec"><code class="docutils literal notranslate"><span class="pre">cache_erec()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="cache.html#line_solver.api.cache.cache_t_hlru"><code class="docutils literal notranslate"><span class="pre">cache_t_hlru()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="cache.html#line_solver.api.cache.cache_t_lrum"><code class="docutils literal notranslate"><span class="pre">cache_t_lrum()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="cache.html#line_solver.api.cache.cache_t_lrum_map"><code class="docutils literal notranslate"><span class="pre">cache_t_lrum_map()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="cache.html#line_solver.api.cache.cache_ttl_hlru"><code class="docutils literal notranslate"><span class="pre">cache_ttl_hlru()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="cache.html#line_solver.api.cache.cache_ttl_lrua"><code class="docutils literal notranslate"><span class="pre">cache_ttl_lrua()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="cache.html#line_solver.api.cache.cache_ttl_lrum"><code class="docutils literal notranslate"><span class="pre">cache_ttl_lrum()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="cache.html#line_solver.api.cache.cache_ttl_lrum_map"><code class="docutils literal notranslate"><span class="pre">cache_ttl_lrum_map()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="cache.html#line_solver.api.cache.cache_ttl_tree"><code class="docutils literal notranslate"><span class="pre">cache_ttl_tree()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="cache.html#line_solver.api.cache.cache_xi_bvh"><code class="docutils literal notranslate"><span class="pre">cache_xi_bvh()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="cache.html#line_solver.api.cache.cache_miss"><code class="docutils literal notranslate"><span class="pre">cache_miss()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="cache.html#line_solver.api.cache.cache_mva_miss"><code class="docutils literal notranslate"><span class="pre">cache_mva_miss()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="cache.html#line_solver.api.cache.cache_miss_asy"><code class="docutils literal notranslate"><span class="pre">cache_miss_asy()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="cache.html#line_solver.api.cache.cache_erec_aux"><code class="docutils literal notranslate"><span class="pre">cache_erec_aux()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="cache.html#line_solver.api.cache.cache_miss_spm"><code class="docutils literal notranslate"><span class="pre">cache_miss_spm()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="cache.html#line_solver.api.cache.cache_par"><code class="docutils literal notranslate"><span class="pre">cache_par()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="cache.html#line_solver.api.cache.cache_t_hlru_aux"><code class="docutils literal notranslate"><span class="pre">cache_t_hlru_aux()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="cache.html#line_solver.api.cache.cache_t_lrum_aux"><code class="docutils literal notranslate"><span class="pre">cache_t_lrum_aux()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="cache.html#line_solver.api.cache.cache_gamma_approx"><code class="docutils literal notranslate"><span class="pre">cache_gamma_approx()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="cache.html#line_solver.api.cache.cache_opt_capacity"><code class="docutils literal notranslate"><span class="pre">cache_opt_capacity()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="cache.html#line_solver.api.cache.cache_gamma"><code class="docutils literal notranslate"><span class="pre">cache_gamma()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="cache.html#line_solver.api.cache.cache_miss_fpi"><code class="docutils literal notranslate"><span class="pre">cache_miss_fpi()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="cache.html#line_solver.api.cache.cache_rrm_meanfield_ode"><code class="docutils literal notranslate"><span class="pre">cache_rrm_meanfield_ode()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="cache.html#line_solver.api.cache.cache_rayint"><code class="docutils literal notranslate"><span class="pre">cache_rayint()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="cache.html#line_solver.api.cache.cache_miss_rayint"><code class="docutils literal notranslate"><span class="pre">cache_miss_rayint()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="cache.html#line_solver.api.cache.cache_prob_rayint"><code class="docutils literal notranslate"><span class="pre">cache_prob_rayint()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="cache.html#line_solver.api.cache.cache_is"><code class="docutils literal notranslate"><span class="pre">cache_is()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="cache.html#line_solver.api.cache.cache_prob_is"><code class="docutils literal notranslate"><span class="pre">cache_prob_is()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="cache.html#line_solver.api.cache.cache_miss_is"><code class="docutils literal notranslate"><span class="pre">cache_miss_is()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="lossn.html">Loss Networks</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="lossn.html#line_solver.api.lossn.lossn_erlangfp"><code class="docutils literal notranslate"><span class="pre">lossn_erlangfp()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Layered Stochastic Networks</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#line_solver.api.lsn.lsn_max_multiplicity"><code class="docutils literal notranslate"><span class="pre">lsn_max_multiplicity()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="mc.html">Markov Chain Utilities</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="mc.html#module-line_solver.api.mc">Markov Chain Analysis (line_solver.api.mc)</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="mc.html#line_solver.api.mc.ctmc_makeinfgen"><code class="docutils literal notranslate"><span class="pre">ctmc_makeinfgen()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mc.html#line_solver.api.mc.ctmc_solve"><code class="docutils literal notranslate"><span class="pre">ctmc_solve()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mc.html#line_solver.api.mc.ctmc_transient"><code class="docutils literal notranslate"><span class="pre">ctmc_transient()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mc.html#line_solver.api.mc.ctmc_simulate"><code class="docutils literal notranslate"><span class="pre">ctmc_simulate()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mc.html#line_solver.api.mc.ctmc_randomization"><code class="docutils literal notranslate"><span class="pre">ctmc_randomization()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mc.html#line_solver.api.mc.ctmc_uniformization"><code class="docutils literal notranslate"><span class="pre">ctmc_uniformization()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mc.html#line_solver.api.mc.ctmc_stochcomp"><code class="docutils literal notranslate"><span class="pre">ctmc_stochcomp()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mc.html#line_solver.api.mc.ctmc_timereverse"><code class="docutils literal notranslate"><span class="pre">ctmc_timereverse()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mc.html#line_solver.api.mc.ctmc_rand"><code class="docutils literal notranslate"><span class="pre">ctmc_rand()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mc.html#line_solver.api.mc.dtmc_solve"><code class="docutils literal notranslate"><span class="pre">dtmc_solve()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mc.html#line_solver.api.mc.dtmc_makestochastic"><code class="docutils literal notranslate"><span class="pre">dtmc_makestochastic()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mc.html#line_solver.api.mc.dtmc_isfeasible"><code class="docutils literal notranslate"><span class="pre">dtmc_isfeasible()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mc.html#line_solver.api.mc.dtmc_simulate"><code class="docutils literal notranslate"><span class="pre">dtmc_simulate()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mc.html#line_solver.api.mc.dtmc_rand"><code class="docutils literal notranslate"><span class="pre">dtmc_rand()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mc.html#line_solver.api.mc.dtmc_stochcomp"><code class="docutils literal notranslate"><span class="pre">dtmc_stochcomp()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mc.html#line_solver.api.mc.dtmc_timereverse"><code class="docutils literal notranslate"><span class="pre">dtmc_timereverse()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mc.html#line_solver.api.mc.ctmc_courtois"><code class="docutils literal notranslate"><span class="pre">ctmc_courtois()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mc.html#line_solver.api.mc.ctmc_kms"><code class="docutils literal notranslate"><span class="pre">ctmc_kms()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mc.html#line_solver.api.mc.ctmc_multi"><code class="docutils literal notranslate"><span class="pre">ctmc_multi()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mc.html#line_solver.api.mc.ctmc_pseudostochcomp"><code class="docutils literal notranslate"><span class="pre">ctmc_pseudostochcomp()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mc.html#line_solver.api.mc.ctmc_relsolve"><code class="docutils literal notranslate"><span class="pre">ctmc_relsolve()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mc.html#line_solver.api.mc.ctmc_solve_reducible"><code class="docutils literal notranslate"><span class="pre">ctmc_solve_reducible()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mc.html#line_solver.api.mc.ctmc_stmonotone"><code class="docutils literal notranslate"><span class="pre">ctmc_stmonotone()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mc.html#line_solver.api.mc.ctmc_takahashi"><code class="docutils literal notranslate"><span class="pre">ctmc_takahashi()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mc.html#line_solver.api.mc.ctmc_testpf_kolmogorov"><code class="docutils literal notranslate"><span class="pre">ctmc_testpf_kolmogorov()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mc.html#line_solver.api.mc.dtmc_solve_reducible"><code class="docutils literal notranslate"><span class="pre">dtmc_solve_reducible()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mc.html#line_solver.api.mc.dtmc_uniformization"><code class="docutils literal notranslate"><span class="pre">dtmc_uniformization()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="mc.html#continuous-time-markov-chains-line-solver-api-ctmc">Continuous-Time Markov Chains (line_solver.api.ctmc)</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="mc.html#line_solver.api.ctmc.ctmc_uniformization"><code class="docutils literal notranslate"><span class="pre">ctmc_uniformization()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mc.html#line_solver.api.ctmc.ctmc_timereverse"><code class="docutils literal notranslate"><span class="pre">ctmc_timereverse()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mc.html#line_solver.api.ctmc.ctmc_makeinfgen"><code class="docutils literal notranslate"><span class="pre">ctmc_makeinfgen()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mc.html#line_solver.api.ctmc.ctmc_solve"><code class="docutils literal notranslate"><span class="pre">ctmc_solve()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mc.html#line_solver.api.ctmc.ctmc_transient"><code class="docutils literal notranslate"><span class="pre">ctmc_transient()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mc.html#line_solver.api.ctmc.ctmc_simulate"><code class="docutils literal notranslate"><span class="pre">ctmc_simulate()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mc.html#line_solver.api.ctmc.ctmc_rand"><code class="docutils literal notranslate"><span class="pre">ctmc_rand()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mc.html#line_solver.api.ctmc.ctmc_ssg"><code class="docutils literal notranslate"><span class="pre">ctmc_ssg()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mc.html#line_solver.api.ctmc.ctmc_stochcomp"><code class="docutils literal notranslate"><span class="pre">ctmc_stochcomp()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mc.html#line_solver.api.ctmc.ctmc_ssg_reachability"><code class="docutils literal notranslate"><span class="pre">ctmc_ssg_reachability()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mc.html#line_solver.api.ctmc.ctmc_randomization"><code class="docutils literal notranslate"><span class="pre">ctmc_randomization()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mc.html#line_solver.api.ctmc.ctmc_krylov"><code class="docutils literal notranslate"><span class="pre">ctmc_krylov()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="mc.html#discrete-time-markov-chains-line-solver-api-dtmc">Discrete-Time Markov Chains (line_solver.api.dtmc)</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="mc.html#line_solver.api.dtmc.dtmc_solve"><code class="docutils literal notranslate"><span class="pre">dtmc_solve()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mc.html#line_solver.api.dtmc.dtmc_stochcomp"><code class="docutils literal notranslate"><span class="pre">dtmc_stochcomp()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mc.html#line_solver.api.dtmc.dtmc_timereverse"><code class="docutils literal notranslate"><span class="pre">dtmc_timereverse()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mc.html#line_solver.api.dtmc.dtmc_makestochastic"><code class="docutils literal notranslate"><span class="pre">dtmc_makestochastic()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mc.html#line_solver.api.dtmc.dtmc_rand"><code class="docutils literal notranslate"><span class="pre">dtmc_rand()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mc.html#line_solver.api.dtmc.dtmc_simulate"><code class="docutils literal notranslate"><span class="pre">dtmc_simulate()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="mc.html#line_solver.api.dtmc.dtmc_isfeasible"><code class="docutils literal notranslate"><span class="pre">dtmc_isfeasible()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="mam.html">Matrix-Analytic Methods</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.map_pie"><code class="docutils literal notranslate"><span class="pre">map_pie()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.map_mean"><code class="docutils literal notranslate"><span class="pre">map_mean()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.map_var"><code class="docutils literal notranslate"><span class="pre">map_var()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.map_scv"><code class="docutils literal notranslate"><span class="pre">map_scv()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.map_skew"><code class="docutils literal notranslate"><span class="pre">map_skew()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.map_moment"><code class="docutils literal notranslate"><span class="pre">map_moment()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.map_lambda"><code class="docutils literal notranslate"><span class="pre">map_lambda()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.map_acf"><code class="docutils literal notranslate"><span class="pre">map_acf()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.map_acfc"><code class="docutils literal notranslate"><span class="pre">map_acfc()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.map_idc"><code class="docutils literal notranslate"><span class="pre">map_idc()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.map_gamma"><code class="docutils literal notranslate"><span class="pre">map_gamma()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.map_gamma2"><code class="docutils literal notranslate"><span class="pre">map_gamma2()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.map_cdf"><code class="docutils literal notranslate"><span class="pre">map_cdf()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.map_piq"><code class="docutils literal notranslate"><span class="pre">map_piq()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.map_embedded"><code class="docutils literal notranslate"><span class="pre">map_embedded()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.map_count_mean"><code class="docutils literal notranslate"><span class="pre">map_count_mean()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.map_count_var"><code class="docutils literal notranslate"><span class="pre">map_count_var()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.map_varcount"><code class="docutils literal notranslate"><span class="pre">map_varcount()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.map2_fit"><code class="docutils literal notranslate"><span class="pre">map2_fit()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.aph_fit"><code class="docutils literal notranslate"><span class="pre">aph_fit()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.aph2_fit"><code class="docutils literal notranslate"><span class="pre">aph2_fit()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.aph2_fitall"><code class="docutils literal notranslate"><span class="pre">aph2_fitall()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.aph2_adjust"><code class="docutils literal notranslate"><span class="pre">aph2_adjust()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.mmpp2_fit"><code class="docutils literal notranslate"><span class="pre">mmpp2_fit()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.mmpp2_fit1"><code class="docutils literal notranslate"><span class="pre">mmpp2_fit1()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.mmap_mixture_fit"><code class="docutils literal notranslate"><span class="pre">mmap_mixture_fit()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.mmap_mixture_fit_mmap"><code class="docutils literal notranslate"><span class="pre">mmap_mixture_fit_mmap()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.mamap2m_fit_gamma_fb_mmap"><code class="docutils literal notranslate"><span class="pre">mamap2m_fit_gamma_fb_mmap()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.mamap2m_fit_gamma_fb"><code class="docutils literal notranslate"><span class="pre">mamap2m_fit_gamma_fb()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.map_exponential"><code class="docutils literal notranslate"><span class="pre">map_exponential()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.map_erlang"><code class="docutils literal notranslate"><span class="pre">map_erlang()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.map_hyperexp"><code class="docutils literal notranslate"><span class="pre">map_hyperexp()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.map_scale"><code class="docutils literal notranslate"><span class="pre">map_scale()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.map_normalize"><code class="docutils literal notranslate"><span class="pre">map_normalize()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.map_timereverse"><code class="docutils literal notranslate"><span class="pre">map_timereverse()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.map_mark"><code class="docutils literal notranslate"><span class="pre">map_mark()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.map_infgen"><code class="docutils literal notranslate"><span class="pre">map_infgen()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.map_super"><code class="docutils literal notranslate"><span class="pre">map_super()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.map_sum"><code class="docutils literal notranslate"><span class="pre">map_sum()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.map_sumind"><code class="docutils literal notranslate"><span class="pre">map_sumind()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.map_checkfeasible"><code class="docutils literal notranslate"><span class="pre">map_checkfeasible()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.map_isfeasible"><code class="docutils literal notranslate"><span class="pre">map_isfeasible()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.map_feastol"><code class="docutils literal notranslate"><span class="pre">map_feastol()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.map_largemap"><code class="docutils literal notranslate"><span class="pre">map_largemap()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.aph2_assemble"><code class="docutils literal notranslate"><span class="pre">aph2_assemble()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.ph_reindex"><code class="docutils literal notranslate"><span class="pre">ph_reindex()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.map_rand"><code class="docutils literal notranslate"><span class="pre">map_rand()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.map_randn"><code class="docutils literal notranslate"><span class="pre">map_randn()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.mmap_lambda"><code class="docutils literal notranslate"><span class="pre">mmap_lambda()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.mmap_count_mean"><code class="docutils literal notranslate"><span class="pre">mmap_count_mean()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.mmap_count_var"><code class="docutils literal notranslate"><span class="pre">mmap_count_var()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.mmap_count_idc"><code class="docutils literal notranslate"><span class="pre">mmap_count_idc()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.mmap_idc"><code class="docutils literal notranslate"><span class="pre">mmap_idc()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.mmap_sigma2"><code class="docutils literal notranslate"><span class="pre">mmap_sigma2()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.mmap_exponential"><code class="docutils literal notranslate"><span class="pre">mmap_exponential()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.mmap_mixture"><code class="docutils literal notranslate"><span class="pre">mmap_mixture()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.mmap_super"><code class="docutils literal notranslate"><span class="pre">mmap_super()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.mmap_super_safe"><code class="docutils literal notranslate"><span class="pre">mmap_super_safe()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.mmap_compress"><code class="docutils literal notranslate"><span class="pre">mmap_compress()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.mmap_normalize"><code class="docutils literal notranslate"><span class="pre">mmap_normalize()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.mmap_scale"><code class="docutils literal notranslate"><span class="pre">mmap_scale()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.mmap_timereverse"><code class="docutils literal notranslate"><span class="pre">mmap_timereverse()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.mmap_hide"><code class="docutils literal notranslate"><span class="pre">mmap_hide()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.mmap_shorten"><code class="docutils literal notranslate"><span class="pre">mmap_shorten()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.mmap_maps"><code class="docutils literal notranslate"><span class="pre">mmap_maps()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.mmap_pc"><code class="docutils literal notranslate"><span class="pre">mmap_pc()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.mmap_forward_moment"><code class="docutils literal notranslate"><span class="pre">mmap_forward_moment()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.mmap_backward_moment"><code class="docutils literal notranslate"><span class="pre">mmap_backward_moment()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.mmap_cross_moment"><code class="docutils literal notranslate"><span class="pre">mmap_cross_moment()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.mmap_sample"><code class="docutils literal notranslate"><span class="pre">mmap_sample()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.mmap_rand"><code class="docutils literal notranslate"><span class="pre">mmap_rand()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.map_sample"><code class="docutils literal notranslate"><span class="pre">map_sample()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.mmap_count_lambda"><code class="docutils literal notranslate"><span class="pre">mmap_count_lambda()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.mmap_isfeasible"><code class="docutils literal notranslate"><span class="pre">mmap_isfeasible()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.mmap_mark"><code class="docutils literal notranslate"><span class="pre">mmap_mark()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.aph_bernstein"><code class="docutils literal notranslate"><span class="pre">aph_bernstein()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.map_jointpdf_derivative"><code class="docutils literal notranslate"><span class="pre">map_jointpdf_derivative()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.map_ccdf_derivative"><code class="docutils literal notranslate"><span class="pre">map_ccdf_derivative()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.qbd_R"><code class="docutils literal notranslate"><span class="pre">qbd_R()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.qbd_R_logred"><code class="docutils literal notranslate"><span class="pre">qbd_R_logred()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.qbd_rg"><code class="docutils literal notranslate"><span class="pre">qbd_rg()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.map_pdf"><code class="docutils literal notranslate"><span class="pre">map_pdf()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.map_prob"><code class="docutils literal notranslate"><span class="pre">map_prob()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.map_joint"><code class="docutils literal notranslate"><span class="pre">map_joint()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.map_mixture"><code class="docutils literal notranslate"><span class="pre">map_mixture()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.map_max"><code class="docutils literal notranslate"><span class="pre">map_max()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.map_renewal"><code class="docutils literal notranslate"><span class="pre">map_renewal()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.map_stochcomp"><code class="docutils literal notranslate"><span class="pre">map_stochcomp()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.qbd_mapmap1"><code class="docutils literal notranslate"><span class="pre">qbd_mapmap1()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.qbd_raprap1"><code class="docutils literal notranslate"><span class="pre">qbd_raprap1()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.qbd_bmapbmap1"><code class="docutils literal notranslate"><span class="pre">qbd_bmapbmap1()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.qbd_setupdelayoff"><code class="docutils literal notranslate"><span class="pre">qbd_setupdelayoff()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.aph_simplify"><code class="docutils literal notranslate"><span class="pre">aph_simplify()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.randp"><code class="docutils literal notranslate"><span class="pre">randp()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.aph_rand"><code class="docutils literal notranslate"><span class="pre">aph_rand()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.amap2_fit_gamma"><code class="docutils literal notranslate"><span class="pre">amap2_fit_gamma()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.mamap2m_fit_fb_multiclass"><code class="docutils literal notranslate"><span class="pre">mamap2m_fit_fb_multiclass()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.mmpp_rand"><code class="docutils literal notranslate"><span class="pre">mmpp_rand()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.map_count_moment"><code class="docutils literal notranslate"><span class="pre">map_count_moment()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.map_kurt"><code class="docutils literal notranslate"><span class="pre">map_kurt()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.mmap_sigma2_cell"><code class="docutils literal notranslate"><span class="pre">mmap_sigma2_cell()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.amap2_adjust_gamma"><code class="docutils literal notranslate"><span class="pre">amap2_adjust_gamma()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.amap2_fitall_gamma"><code class="docutils literal notranslate"><span class="pre">amap2_fitall_gamma()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.mmpp2_fit_mu00"><code class="docutils literal notranslate"><span class="pre">mmpp2_fit_mu00()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.mmpp2_fit_mu11"><code class="docutils literal notranslate"><span class="pre">mmpp2_fit_mu11()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.mmpp2_fit_q01"><code class="docutils literal notranslate"><span class="pre">mmpp2_fit_q01()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.mmpp2_fit_q10"><code class="docutils literal notranslate"><span class="pre">mmpp2_fit_q10()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.assess_compression_quality"><code class="docutils literal notranslate"><span class="pre">assess_compression_quality()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.compress_adaptive"><code class="docutils literal notranslate"><span class="pre">compress_adaptive()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.compress_autocorrelation"><code class="docutils literal notranslate"><span class="pre">compress_autocorrelation()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.compress_spectral"><code class="docutils literal notranslate"><span class="pre">compress_spectral()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.compress_with_quality_control"><code class="docutils literal notranslate"><span class="pre">compress_with_quality_control()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.qbd_G"><code class="docutils literal notranslate"><span class="pre">qbd_G()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.ph_fit"><code class="docutils literal notranslate"><span class="pre">ph_fit()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.ph_mean"><code class="docutils literal notranslate"><span class="pre">ph_mean()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.ph_var"><code class="docutils literal notranslate"><span class="pre">ph_var()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.ph_pdf"><code class="docutils literal notranslate"><span class="pre">ph_pdf()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.ph_cdf"><code class="docutils literal notranslate"><span class="pre">ph_cdf()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.qbd_psif"><code class="docutils literal notranslate"><span class="pre">qbd_psif()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.qbd_psi"><code class="docutils literal notranslate"><span class="pre">qbd_psi()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.aph2_check_feasibility"><code class="docutils literal notranslate"><span class="pre">aph2_check_feasibility()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.aph2_canonical"><code class="docutils literal notranslate"><span class="pre">aph2_canonical()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.map_cdf_derivative"><code class="docutils literal notranslate"><span class="pre">map_cdf_derivative()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.map_rand_moment"><code class="docutils literal notranslate"><span class="pre">map_rand_moment()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.qbd_solve"><code class="docutils literal notranslate"><span class="pre">qbd_solve()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.amap2_fit_gamma_map"><code class="docutils literal notranslate"><span class="pre">amap2_fit_gamma_map()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.amap2_fit_gamma_trace"><code class="docutils literal notranslate"><span class="pre">amap2_fit_gamma_trace()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.aph2_fit_map"><code class="docutils literal notranslate"><span class="pre">aph2_fit_map()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.aph2_fit_trace"><code class="docutils literal notranslate"><span class="pre">aph2_fit_trace()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.qbd_r"><code class="docutils literal notranslate"><span class="pre">qbd_r()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.map_block"><code class="docutils literal notranslate"><span class="pre">map_block()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.map_feasblock"><code class="docutils literal notranslate"><span class="pre">map_feasblock()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.map_kpc"><code class="docutils literal notranslate"><span class="pre">map_kpc()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.map_pntiter"><code class="docutils literal notranslate"><span class="pre">map_pntiter()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.map_pntquad"><code class="docutils literal notranslate"><span class="pre">map_pntquad()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.map2mmpp"><code class="docutils literal notranslate"><span class="pre">map2mmpp()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.m3pp_rand"><code class="docutils literal notranslate"><span class="pre">m3pp_rand()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.m3pp_interleave_fitc_theoretical"><code class="docutils literal notranslate"><span class="pre">m3pp_interleave_fitc_theoretical()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.m3pp_interleave_fitc_trace"><code class="docutils literal notranslate"><span class="pre">m3pp_interleave_fitc_trace()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.m3pp_superpos_fitc"><code class="docutils literal notranslate"><span class="pre">m3pp_superpos_fitc()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.m3pp_superpos_fitc_theoretical"><code class="docutils literal notranslate"><span class="pre">m3pp_superpos_fitc_theoretical()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.maph2m_fit"><code class="docutils literal notranslate"><span class="pre">maph2m_fit()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.maph2m_fitc_approx"><code class="docutils literal notranslate"><span class="pre">maph2m_fitc_approx()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.maph2m_fitc_theoretical"><code class="docutils literal notranslate"><span class="pre">maph2m_fitc_theoretical()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.maph2m_fit_mmap"><code class="docutils literal notranslate"><span class="pre">maph2m_fit_mmap()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.maph2m_fit_multiclass"><code class="docutils literal notranslate"><span class="pre">maph2m_fit_multiclass()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.maph2m_fit_trace"><code class="docutils literal notranslate"><span class="pre">maph2m_fit_trace()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.mmap_embedded"><code class="docutils literal notranslate"><span class="pre">mmap_embedded()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.mmap_count_mcov"><code class="docutils literal notranslate"><span class="pre">mmap_count_mcov()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.mmap_issym"><code class="docutils literal notranslate"><span class="pre">mmap_issym()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.mmap_max"><code class="docutils literal notranslate"><span class="pre">mmap_max()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.mmap_mixture_order2"><code class="docutils literal notranslate"><span class="pre">mmap_mixture_order2()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.mmap_modulate"><code class="docutils literal notranslate"><span class="pre">mmap_modulate()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.mmap_pie"><code class="docutils literal notranslate"><span class="pre">mmap_pie()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.mmap_sigma"><code class="docutils literal notranslate"><span class="pre">mmap_sigma()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.mmap_sum"><code class="docutils literal notranslate"><span class="pre">mmap_sum()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.mmpp2_fitc"><code class="docutils literal notranslate"><span class="pre">mmpp2_fitc()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.mmpp2_fitc_approx"><code class="docutils literal notranslate"><span class="pre">mmpp2_fitc_approx()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.qbd_r_logred"><code class="docutils literal notranslate"><span class="pre">qbd_r_logred()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.mapqn_bnd_lr"><code class="docutils literal notranslate"><span class="pre">mapqn_bnd_lr()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.mapqn_bnd_lr_mva"><code class="docutils literal notranslate"><span class="pre">mapqn_bnd_lr_mva()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.mapqn_bnd_lr_pf"><code class="docutils literal notranslate"><span class="pre">mapqn_bnd_lr_pf()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.mapqn_bnd_qr"><code class="docutils literal notranslate"><span class="pre">mapqn_bnd_qr()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.mapqn_bnd_qr_delay"><code class="docutils literal notranslate"><span class="pre">mapqn_bnd_qr_delay()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.mapqn_bnd_qr_ld"><code class="docutils literal notranslate"><span class="pre">mapqn_bnd_qr_ld()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.mapqn_lpmodel"><code class="docutils literal notranslate"><span class="pre">mapqn_lpmodel()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.mapqn_parameters"><code class="docutils literal notranslate"><span class="pre">mapqn_parameters()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.mapqn_parameters_factory"><code class="docutils literal notranslate"><span class="pre">mapqn_parameters_factory()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.mapqn_qr_bounds_bas"><code class="docutils literal notranslate"><span class="pre">mapqn_qr_bounds_bas()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.mapqn_qr_bounds_rsrd"><code class="docutils literal notranslate"><span class="pre">mapqn_qr_bounds_rsrd()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.m3pp22_fitc_approx_cov"><code class="docutils literal notranslate"><span class="pre">m3pp22_fitc_approx_cov()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.mamap2m_coefficients"><code class="docutils literal notranslate"><span class="pre">mamap2m_coefficients()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.m3pp22_fitc_approx_cov_multiclass"><code class="docutils literal notranslate"><span class="pre">m3pp22_fitc_approx_cov_multiclass()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.m3pp22_interleave_fitc"><code class="docutils literal notranslate"><span class="pre">m3pp22_interleave_fitc()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.m3pp2m_fitc"><code class="docutils literal notranslate"><span class="pre">m3pp2m_fitc()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.m3pp2m_fitc_approx"><code class="docutils literal notranslate"><span class="pre">m3pp2m_fitc_approx()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.m3pp2m_fitc_approx_ag"><code class="docutils literal notranslate"><span class="pre">m3pp2m_fitc_approx_ag()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.m3pp2m_fitc_approx_ag_multiclass"><code class="docutils literal notranslate"><span class="pre">m3pp2m_fitc_approx_ag_multiclass()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.m3pp2m_interleave"><code class="docutils literal notranslate"><span class="pre">m3pp2m_interleave()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.m3pp_interleave_fitc"><code class="docutils literal notranslate"><span class="pre">m3pp_interleave_fitc()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.mamap22_fit_gamma_fs_trace"><code class="docutils literal notranslate"><span class="pre">mamap22_fit_gamma_fs_trace()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.mamap22_fit_multiclass"><code class="docutils literal notranslate"><span class="pre">mamap22_fit_multiclass()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.mamap2m_fit"><code class="docutils literal notranslate"><span class="pre">mamap2m_fit()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.mamap2m_fit_mmap"><code class="docutils literal notranslate"><span class="pre">mamap2m_fit_mmap()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="mam.html#line_solver.api.mam.mamap2m_fit_trace"><code class="docutils literal notranslate"><span class="pre">mamap2m_fit_trace()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="npfqn.html">Non-Product-Form Networks</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="npfqn.html#line_solver.api.npfqn.npfqn_nonexp_approx"><code class="docutils literal notranslate"><span class="pre">npfqn_nonexp_approx()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="npfqn.html#line_solver.api.npfqn.npfqn_traffic_merge"><code class="docutils literal notranslate"><span class="pre">npfqn_traffic_merge()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="npfqn.html#line_solver.api.npfqn.npfqn_traffic_merge_cs"><code class="docutils literal notranslate"><span class="pre">npfqn_traffic_merge_cs()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="npfqn.html#line_solver.api.npfqn.npfqn_traffic_split_cs"><code class="docutils literal notranslate"><span class="pre">npfqn_traffic_split_cs()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="polling.html">Polling Systems</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="polling.html#line_solver.api.polling.polling_qsys_1limited"><code class="docutils literal notranslate"><span class="pre">polling_qsys_1limited()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="polling.html#line_solver.api.polling.polling_qsys_exhaustive"><code class="docutils literal notranslate"><span class="pre">polling_qsys_exhaustive()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="polling.html#line_solver.api.polling.polling_qsys_gated"><code class="docutils literal notranslate"><span class="pre">polling_qsys_gated()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="pfqn.html">Product-Form Queueing Networks</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="pfqn.html#line_solver.api.pfqn.pfqn_ca"><code class="docutils literal notranslate"><span class="pre">pfqn_ca()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="pfqn.html#line_solver.api.pfqn.pfqn_panacea"><code class="docutils literal notranslate"><span class="pre">pfqn_panacea()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="pfqn.html#line_solver.api.pfqn.pfqn_bs"><code class="docutils literal notranslate"><span class="pre">pfqn_bs()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="pfqn.html#line_solver.api.pfqn.pfqn_mva"><code class="docutils literal notranslate"><span class="pre">pfqn_mva()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="pfqn.html#line_solver.api.pfqn.pfqn_aql"><code class="docutils literal notranslate"><span class="pre">pfqn_aql()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="pfqn.html#line_solver.api.pfqn.pfqn_mvald"><code class="docutils literal notranslate"><span class="pre">pfqn_mvald()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="pfqn.html#line_solver.api.pfqn.pfqn_mvaldms"><code class="docutils literal notranslate"><span class="pre">pfqn_mvaldms()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="pfqn.html#line_solver.api.pfqn.pfqn_mvaldmx"><code class="docutils literal notranslate"><span class="pre">pfqn_mvaldmx()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="pfqn.html#line_solver.api.pfqn.pfqn_mvams"><code class="docutils literal notranslate"><span class="pre">pfqn_mvams()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="pfqn.html#line_solver.api.pfqn.pfqn_mvamx"><code class="docutils literal notranslate"><span class="pre">pfqn_mvamx()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="pfqn.html#line_solver.api.pfqn.pfqn_gldsingle"><code class="docutils literal notranslate"><span class="pre">pfqn_gldsingle()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="pfqn.html#line_solver.api.pfqn.pfqn_comomrm"><code class="docutils literal notranslate"><span class="pre">pfqn_comomrm()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="pfqn.html#line_solver.api.pfqn.pfqn_linearizer"><code class="docutils literal notranslate"><span class="pre">pfqn_linearizer()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="pfqn.html#line_solver.api.pfqn.pfqn_linearizerms"><code class="docutils literal notranslate"><span class="pre">pfqn_linearizerms()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="pfqn.html#line_solver.api.pfqn.pfqn_linearizerpp"><code class="docutils literal notranslate"><span class="pre">pfqn_linearizerpp()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="pfqn.html#line_solver.api.pfqn.pfqn_linearizermx"><code class="docutils literal notranslate"><span class="pre">pfqn_linearizermx()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="pfqn.html#line_solver.api.pfqn.pfqn_kt"><code class="docutils literal notranslate"><span class="pre">pfqn_kt()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="pfqn.html#line_solver.api.pfqn.pfqn_recal"><code class="docutils literal notranslate"><span class="pre">pfqn_recal()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="pfqn.html#line_solver.api.pfqn.pfqn_cub"><code class="docutils literal notranslate"><span class="pre">pfqn_cub()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="pfqn.html#line_solver.api.pfqn.pfqn_mmint2"><code class="docutils literal notranslate"><span class="pre">pfqn_mmint2()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="pfqn.html#line_solver.api.pfqn.pfqn_ls"><code class="docutils literal notranslate"><span class="pre">pfqn_ls()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="pfqn.html#line_solver.api.pfqn.pfqn_rd"><code class="docutils literal notranslate"><span class="pre">pfqn_rd()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="pfqn.html#line_solver.api.pfqn.pfqn_fnc"><code class="docutils literal notranslate"><span class="pre">pfqn_fnc()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="pfqn.html#line_solver.api.pfqn.pfqn_propfair"><code class="docutils literal notranslate"><span class="pre">pfqn_propfair()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="pfqn.html#line_solver.api.pfqn.pfqn_xia"><code class="docutils literal notranslate"><span class="pre">pfqn_xia()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="pfqn.html#line_solver.api.pfqn.pfqn_xzabalow"><code class="docutils literal notranslate"><span class="pre">pfqn_xzabalow()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="pfqn.html#line_solver.api.pfqn.pfqn_xzabaup"><code class="docutils literal notranslate"><span class="pre">pfqn_xzabaup()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="pfqn.html#line_solver.api.pfqn.pfqn_xzgsblow"><code class="docutils literal notranslate"><span class="pre">pfqn_xzgsblow()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="pfqn.html#line_solver.api.pfqn.pfqn_xzgsbup"><code class="docutils literal notranslate"><span class="pre">pfqn_xzgsbup()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="pfqn.html#line_solver.api.pfqn.pfqn_egflinearizer"><code class="docutils literal notranslate"><span class="pre">pfqn_egflinearizer()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="pfqn.html#line_solver.api.pfqn.pfqn_gflinearizer"><code class="docutils literal notranslate"><span class="pre">pfqn_gflinearizer()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="pfqn.html#line_solver.api.pfqn.pfqn_gld_complex"><code class="docutils literal notranslate"><span class="pre">pfqn_gld_complex()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="pfqn.html#line_solver.api.pfqn.pfqn_gldsingle_complex"><code class="docutils literal notranslate"><span class="pre">pfqn_gldsingle_complex()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="pfqn.html#line_solver.api.pfqn.pfqn_mushift"><code class="docutils literal notranslate"><span class="pre">pfqn_mushift()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="pfqn.html#line_solver.api.pfqn.pfqn_le_fpiZ"><code class="docutils literal notranslate"><span class="pre">pfqn_le_fpiZ()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="pfqn.html#line_solver.api.pfqn.pfqn_le_hessian"><code class="docutils literal notranslate"><span class="pre">pfqn_le_hessian()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="pfqn.html#line_solver.api.pfqn.pfqn_le_hessianZ"><code class="docutils literal notranslate"><span class="pre">pfqn_le_hessianZ()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="pfqn.html#line_solver.api.pfqn.pfqn_lldfun"><code class="docutils literal notranslate"><span class="pre">pfqn_lldfun()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="pfqn.html#line_solver.api.pfqn.pfqn_mci"><code class="docutils literal notranslate"><span class="pre">pfqn_mci()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="pfqn.html#line_solver.api.pfqn.pfqn_mmint2_gausslegendre"><code class="docutils literal notranslate"><span class="pre">pfqn_mmint2_gausslegendre()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="pfqn.html#line_solver.api.pfqn.pfqn_mmsample2"><code class="docutils literal notranslate"><span class="pre">pfqn_mmsample2()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="pfqn.html#line_solver.api.pfqn.pfqn_nrl"><code class="docutils literal notranslate"><span class="pre">pfqn_nrl()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="pfqn.html#line_solver.api.pfqn.pfqn_nrp"><code class="docutils literal notranslate"><span class="pre">pfqn_nrp()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="pfqn.html#line_solver.api.pfqn.pfqn_stdf"><code class="docutils literal notranslate"><span class="pre">pfqn_stdf()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="pfqn.html#line_solver.api.pfqn.pfqn_stdf_heur"><code class="docutils literal notranslate"><span class="pre">pfqn_stdf_heur()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="pfqn.html#line_solver.api.pfqn.pfqn_conwayms_core"><code class="docutils literal notranslate"><span class="pre">pfqn_conwayms_core()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="pfqn.html#line_solver.api.pfqn.pfqn_conwayms_estimate"><code class="docutils literal notranslate"><span class="pre">pfqn_conwayms_estimate()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="pfqn.html#line_solver.api.pfqn.pfqn_conwayms_forwardmva"><code class="docutils literal notranslate"><span class="pre">pfqn_conwayms_forwardmva()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="pfqn.html#line_solver.api.pfqn.pfqn_mu_ms_gnaux"><code class="docutils literal notranslate"><span class="pre">pfqn_mu_ms_gnaux()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="pfqn.html#line_solver.api.pfqn.pfqn_nc"><code class="docutils literal notranslate"><span class="pre">pfqn_nc()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="pfqn.html#line_solver.api.pfqn.pfqn_gld"><code class="docutils literal notranslate"><span class="pre">pfqn_gld()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="pfqn.html#line_solver.api.pfqn.pfqn_conwayms"><code class="docutils literal notranslate"><span class="pre">pfqn_conwayms()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="pfqn.html#line_solver.api.pfqn.pfqn_cdfun"><code class="docutils literal notranslate"><span class="pre">pfqn_cdfun()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="pfqn.html#line_solver.api.pfqn.pfqn_nca"><code class="docutils literal notranslate"><span class="pre">pfqn_nca()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="pfqn.html#line_solver.api.pfqn.pfqn_ncld"><code class="docutils literal notranslate"><span class="pre">pfqn_ncld()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="pfqn.html#line_solver.api.pfqn.pfqn_pff_delay"><code class="docutils literal notranslate"><span class="pre">pfqn_pff_delay()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="pfqn.html#line_solver.api.pfqn.pfqn_sqni"><code class="docutils literal notranslate"><span class="pre">pfqn_sqni()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="pfqn.html#line_solver.api.pfqn.pfqn_qzgblow"><code class="docutils literal notranslate"><span class="pre">pfqn_qzgblow()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="pfqn.html#line_solver.api.pfqn.pfqn_qzgbup"><code class="docutils literal notranslate"><span class="pre">pfqn_qzgbup()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="pfqn.html#line_solver.api.pfqn.pfqn_nc_sanitize"><code class="docutils literal notranslate"><span class="pre">pfqn_nc_sanitize()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="pfqn.html#line_solver.api.pfqn.pfqn_comomrm_ld"><code class="docutils literal notranslate"><span class="pre">pfqn_comomrm_ld()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="pfqn.html#line_solver.api.pfqn.pfqn_mvaldmx_ec"><code class="docutils literal notranslate"><span class="pre">pfqn_mvaldmx_ec()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="pfqn.html#line_solver.api.pfqn.pfqn_ab"><code class="docutils literal notranslate"><span class="pre">pfqn_ab()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="pfqn.html#line_solver.api.pfqn.pfqn_le"><code class="docutils literal notranslate"><span class="pre">pfqn_le()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="pfqn.html#line_solver.api.pfqn.pfqn_le_fpi"><code class="docutils literal notranslate"><span class="pre">pfqn_le_fpi()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="pfqn.html#line_solver.api.pfqn.pfqn_le_fpiz"><code class="docutils literal notranslate"><span class="pre">pfqn_le_fpiz()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="pfqn.html#line_solver.api.pfqn.pfqn_le_hessianz"><code class="docutils literal notranslate"><span class="pre">pfqn_le_hessianz()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="pfqn.html#line_solver.api.pfqn.pfqn_mom"><code class="docutils literal notranslate"><span class="pre">pfqn_mom()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="pfqn.html#line_solver.api.pfqn.pfqn_mu_ms"><code class="docutils literal notranslate"><span class="pre">pfqn_mu_ms()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="pfqn.html#line_solver.api.pfqn.pfqn_procomom2"><code class="docutils literal notranslate"><span class="pre">pfqn_procomom2()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="pfqn.html#line_solver.api.pfqn.pfqn_schmidt"><code class="docutils literal notranslate"><span class="pre">pfqn_schmidt()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="pfqn.html#line_solver.api.pfqn.pfqn_lcfsqn_ca"><code class="docutils literal notranslate"><span class="pre">pfqn_lcfsqn_ca()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="pfqn.html#line_solver.api.pfqn.pfqn_lcfsqn_mva"><code class="docutils literal notranslate"><span class="pre">pfqn_lcfsqn_mva()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="pfqn.html#line_solver.api.pfqn.pfqn_lcfsqn_nc"><code class="docutils literal notranslate"><span class="pre">pfqn_lcfsqn_nc()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="qsys.html">Queueing Systems</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="qsys.html#line_solver.api.qsys.qsys_mm1"><code class="docutils literal notranslate"><span class="pre">qsys_mm1()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="qsys.html#line_solver.api.qsys.qsys_mmk"><code class="docutils literal notranslate"><span class="pre">qsys_mmk()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="qsys.html#line_solver.api.qsys.qsys_gm1"><code class="docutils literal notranslate"><span class="pre">qsys_gm1()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="qsys.html#line_solver.api.qsys.qsys_mg1"><code class="docutils literal notranslate"><span class="pre">qsys_mg1()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="qsys.html#line_solver.api.qsys.qsys_gig1_approx_lin"><code class="docutils literal notranslate"><span class="pre">qsys_gig1_approx_lin()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="qsys.html#line_solver.api.qsys.qsys_gig1_approx_kk"><code class="docutils literal notranslate"><span class="pre">qsys_gig1_approx_kk()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="qsys.html#line_solver.api.qsys.qsys_gig1_approx_whitt"><code class="docutils literal notranslate"><span class="pre">qsys_gig1_approx_whitt()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="qsys.html#line_solver.api.qsys.qsys_gig1_approx_allencunneen"><code class="docutils literal notranslate"><span class="pre">qsys_gig1_approx_allencunneen()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="qsys.html#line_solver.api.qsys.qsys_gig1_approx_heyman"><code class="docutils literal notranslate"><span class="pre">qsys_gig1_approx_heyman()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="qsys.html#line_solver.api.qsys.qsys_gig1_approx_kobayashi"><code class="docutils literal notranslate"><span class="pre">qsys_gig1_approx_kobayashi()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="qsys.html#line_solver.api.qsys.qsys_gig1_approx_marchal"><code class="docutils literal notranslate"><span class="pre">qsys_gig1_approx_marchal()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="qsys.html#line_solver.api.qsys.qsys_gig1_ubnd_kingman"><code class="docutils literal notranslate"><span class="pre">qsys_gig1_ubnd_kingman()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="qsys.html#line_solver.api.qsys.qsys_gigk_approx"><code class="docutils literal notranslate"><span class="pre">qsys_gigk_approx()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="qsys.html#line_solver.api.qsys.qsys_gigk_approx_kingman"><code class="docutils literal notranslate"><span class="pre">qsys_gigk_approx_kingman()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="qsys.html#line_solver.api.qsys.qsys_gg1"><code class="docutils literal notranslate"><span class="pre">qsys_gg1()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="qsys.html#line_solver.api.qsys.qsys_gig1_approx_gelenbe"><code class="docutils literal notranslate"><span class="pre">qsys_gig1_approx_gelenbe()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="qsys.html#line_solver.api.qsys.qsys_gig1_approx_kimura"><code class="docutils literal notranslate"><span class="pre">qsys_gig1_approx_kimura()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="qsys.html#line_solver.api.qsys.qsys_gig1_approx_klb"><code class="docutils literal notranslate"><span class="pre">qsys_gig1_approx_klb()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="qsys.html#line_solver.api.qsys.qsys_gig1_approx_myskja"><code class="docutils literal notranslate"><span class="pre">qsys_gig1_approx_myskja()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="qsys.html#line_solver.api.qsys.qsys_gig1_approx_myskja2"><code class="docutils literal notranslate"><span class="pre">qsys_gig1_approx_myskja2()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="qsys.html#line_solver.api.qsys.qsys_gig1_lbnd"><code class="docutils literal notranslate"><span class="pre">qsys_gig1_lbnd()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="qsys.html#line_solver.api.qsys.qsys_gigk_approx_cosmetatos"><code class="docutils literal notranslate"><span class="pre">qsys_gigk_approx_cosmetatos()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="qsys.html#line_solver.api.qsys.qsys_gigk_approx_whitt"><code class="docutils literal notranslate"><span class="pre">qsys_gigk_approx_whitt()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="qsys.html#line_solver.api.qsys.qsys_mg1k_loss"><code class="docutils literal notranslate"><span class="pre">qsys_mg1k_loss()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="qsys.html#line_solver.api.qsys.qsys_mmkk"><code class="docutils literal notranslate"><span class="pre">qsys_mmkk()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="qsys.html#line_solver.api.qsys.qsys_mmm"><code class="docutils literal notranslate"><span class="pre">qsys_mmm()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="qsys.html#line_solver.api.qsys.qsys_mminf"><code class="docutils literal notranslate"><span class="pre">qsys_mminf()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="qsys.html#line_solver.api.qsys.qsys_mginf"><code class="docutils literal notranslate"><span class="pre">qsys_mginf()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="qsys.html#line_solver.api.qsys.qsys_mm1k_loss"><code class="docutils literal notranslate"><span class="pre">qsys_mm1k_loss()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="qsys.html#line_solver.api.qsys.qsys_mg1k_loss_mgs"><code class="docutils literal notranslate"><span class="pre">qsys_mg1k_loss_mgs()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="qsys.html#line_solver.api.qsys.qsys_mg1_prio"><code class="docutils literal notranslate"><span class="pre">qsys_mg1_prio()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="qsys.html#line_solver.api.qsys.qsys_mapg1"><code class="docutils literal notranslate"><span class="pre">qsys_mapg1()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="qsys.html#line_solver.api.qsys.qsys_mapg1_cv"><code class="docutils literal notranslate"><span class="pre">qsys_mapg1_cv()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="qsys.html#line_solver.api.qsys.qsys_mapmap1"><code class="docutils literal notranslate"><span class="pre">qsys_mapmap1()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="qsys.html#line_solver.api.qsys.qsys_mapmc"><code class="docutils literal notranslate"><span class="pre">qsys_mapmc()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="qsys.html#line_solver.api.qsys.qsys_mapm1"><code class="docutils literal notranslate"><span class="pre">qsys_mapm1()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="qsys.html#line_solver.api.qsys.qsys_mapph1"><code class="docutils literal notranslate"><span class="pre">qsys_mapph1()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="qsys.html#line_solver.api.qsys.qsys_phph1"><code class="docutils literal notranslate"><span class="pre">qsys_phph1()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="qsys.html#line_solver.api.qsys.qsys_phm1"><code class="docutils literal notranslate"><span class="pre">qsys_phm1()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="qsys.html#line_solver.api.qsys.qsys_phmc"><code class="docutils literal notranslate"><span class="pre">qsys_phmc()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="rl.html">Reinforcement Learning</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="rl.html#line_solver.api.rl.RlEnv"><code class="docutils literal notranslate"><span class="pre">RlEnv</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="rl.html#line_solver.api.rl.RlEnv.__init__"><code class="docutils literal notranslate"><span class="pre">RlEnv.__init__()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="rl.html#line_solver.api.rl.RlEnv.model"><code class="docutils literal notranslate"><span class="pre">RlEnv.model</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="rl.html#line_solver.api.rl.RlEnv.action_size"><code class="docutils literal notranslate"><span class="pre">RlEnv.action_size</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="rl.html#line_solver.api.rl.RlEnv.is_in_state_space"><code class="docutils literal notranslate"><span class="pre">RlEnv.is_in_state_space()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="rl.html#line_solver.api.rl.RlEnv.is_in_action_space"><code class="docutils literal notranslate"><span class="pre">RlEnv.is_in_action_space()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="rl.html#line_solver.api.rl.RlEnv.sample"><code class="docutils literal notranslate"><span class="pre">RlEnv.sample()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="rl.html#line_solver.api.rl.RlEnv.update"><code class="docutils literal notranslate"><span class="pre">RlEnv.update()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="rl.html#line_solver.api.rl.RlEnv.reset"><code class="docutils literal notranslate"><span class="pre">RlEnv.reset()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="rl.html#line_solver.api.rl.RlEnvGeneral"><code class="docutils literal notranslate"><span class="pre">RlEnvGeneral</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="rl.html#line_solver.api.rl.RlEnvGeneral.__init__"><code class="docutils literal notranslate"><span class="pre">RlEnvGeneral.__init__()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="rl.html#line_solver.api.rl.RlEnvGeneral.model"><code class="docutils literal notranslate"><span class="pre">RlEnvGeneral.model</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="rl.html#line_solver.api.rl.RlEnvGeneral.nqueues"><code class="docutils literal notranslate"><span class="pre">RlEnvGeneral.nqueues</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="rl.html#line_solver.api.rl.RlEnvGeneral.action_space"><code class="docutils literal notranslate"><span class="pre">RlEnvGeneral.action_space</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="rl.html#line_solver.api.rl.RlEnvGeneral.is_in_state_space"><code class="docutils literal notranslate"><span class="pre">RlEnvGeneral.is_in_state_space()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="rl.html#line_solver.api.rl.RlEnvGeneral.is_in_action_space"><code class="docutils literal notranslate"><span class="pre">RlEnvGeneral.is_in_action_space()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="rl.html#line_solver.api.rl.RlEnvGeneral.sample"><code class="docutils literal notranslate"><span class="pre">RlEnvGeneral.sample()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="rl.html#line_solver.api.rl.RlEnvGeneral.update"><code class="docutils literal notranslate"><span class="pre">RlEnvGeneral.update()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="rl.html#line_solver.api.rl.RlEnvGeneral.reset"><code class="docutils literal notranslate"><span class="pre">RlEnvGeneral.reset()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="rl.html#line_solver.api.rl.RlTDAgent"><code class="docutils literal notranslate"><span class="pre">RlTDAgent</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="rl.html#line_solver.api.rl.RlTDAgent.__init__"><code class="docutils literal notranslate"><span class="pre">RlTDAgent.__init__()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="rl.html#line_solver.api.rl.RlTDAgent.reset"><code class="docutils literal notranslate"><span class="pre">RlTDAgent.reset()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="rl.html#line_solver.api.rl.RlTDAgent.get_value_function"><code class="docutils literal notranslate"><span class="pre">RlTDAgent.get_value_function()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="rl.html#line_solver.api.rl.RlTDAgent.get_q_function"><code class="docutils literal notranslate"><span class="pre">RlTDAgent.get_q_function()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="rl.html#line_solver.api.rl.RlTDAgent.solve"><code class="docutils literal notranslate"><span class="pre">RlTDAgent.solve()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="rl.html#line_solver.api.rl.RlTDAgent.create_greedy_policy"><code class="docutils literal notranslate"><span class="pre">RlTDAgent.create_greedy_policy()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="rl.html#line_solver.api.rl.RlTDAgent.get_state_from_loc"><code class="docutils literal notranslate"><span class="pre">RlTDAgent.get_state_from_loc()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="rl.html#line_solver.api.rl.RlTDAgentGeneral"><code class="docutils literal notranslate"><span class="pre">RlTDAgentGeneral</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="rl.html#line_solver.api.rl.RlTDAgentGeneral.__init__"><code class="docutils literal notranslate"><span class="pre">RlTDAgentGeneral.__init__()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="rl.html#line_solver.api.rl.RlTDAgentGeneral.reset"><code class="docutils literal notranslate"><span class="pre">RlTDAgentGeneral.reset()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="rl.html#line_solver.api.rl.RlTDAgentGeneral.get_value_function"><code class="docutils literal notranslate"><span class="pre">RlTDAgentGeneral.get_value_function()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="rl.html#line_solver.api.rl.RlTDAgentGeneral.solve_for_fixed_policy"><code class="docutils literal notranslate"><span class="pre">RlTDAgentGeneral.solve_for_fixed_policy()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="rl.html#line_solver.api.rl.RlTDAgentGeneral.solve"><code class="docutils literal notranslate"><span class="pre">RlTDAgentGeneral.solve()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="rl.html#line_solver.api.rl.RlTDAgentGeneral.solve_by_hashmap"><code class="docutils literal notranslate"><span class="pre">RlTDAgentGeneral.solve_by_hashmap()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="rl.html#line_solver.api.rl.RlTDAgentGeneral.solve_by_linear"><code class="docutils literal notranslate"><span class="pre">RlTDAgentGeneral.solve_by_linear()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="rl.html#line_solver.api.rl.RlTDAgentGeneral.solve_by_quad"><code class="docutils literal notranslate"><span class="pre">RlTDAgentGeneral.solve_by_quad()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="rl.html#line_solver.api.rl.RlTDAgentGeneral.create_greedy_policy"><code class="docutils literal notranslate"><span class="pre">RlTDAgentGeneral.create_greedy_policy()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="sn.html">Stochastic Network Utilities</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="sn.html#line_solver.api.sn.sn_deaggregate_chain_results"><code class="docutils literal notranslate"><span class="pre">sn_deaggregate_chain_results()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="sn.html#line_solver.api.sn.sn_get_arvr_from_tput"><code class="docutils literal notranslate"><span class="pre">sn_get_arvr_from_tput()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="sn.html#line_solver.api.sn.sn_get_demands_chain"><code class="docutils literal notranslate"><span class="pre">sn_get_demands_chain()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="sn.html#line_solver.api.sn.sn_get_node_arvr_from_tput"><code class="docutils literal notranslate"><span class="pre">sn_get_node_arvr_from_tput()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="sn.html#line_solver.api.sn.sn_get_node_tput_from_tput"><code class="docutils literal notranslate"><span class="pre">sn_get_node_tput_from_tput()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="sn.html#line_solver.api.sn.sn_get_product_form_chain_params"><code class="docutils literal notranslate"><span class="pre">sn_get_product_form_chain_params()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="sn.html#line_solver.api.sn.sn_get_product_form_params"><code class="docutils literal notranslate"><span class="pre">sn_get_product_form_params()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="sn.html#line_solver.api.sn.sn_get_residt_from_respt"><code class="docutils literal notranslate"><span class="pre">sn_get_residt_from_respt()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="sn.html#line_solver.api.sn.sn_get_state_aggr"><code class="docutils literal notranslate"><span class="pre">sn_get_state_aggr()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="sn.html#line_solver.api.sn.sn_is_state_valid"><code class="docutils literal notranslate"><span class="pre">sn_is_state_valid()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="sn.html#line_solver.api.sn.sn_refresh_visits"><code class="docutils literal notranslate"><span class="pre">sn_refresh_visits()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="sn.html#line_solver.api.sn.sn_has_class_switching"><code class="docutils literal notranslate"><span class="pre">sn_has_class_switching()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="sn.html#line_solver.api.sn.sn_has_fork_join"><code class="docutils literal notranslate"><span class="pre">sn_has_fork_join()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="sn.html#line_solver.api.sn.sn_has_load_dependence"><code class="docutils literal notranslate"><span class="pre">sn_has_load_dependence()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="sn.html#line_solver.api.sn.sn_has_multi_server"><code class="docutils literal notranslate"><span class="pre">sn_has_multi_server()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="sn.html#line_solver.api.sn.sn_has_priorities"><code class="docutils literal notranslate"><span class="pre">sn_has_priorities()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="sn.html#line_solver.api.sn.sn_has_product_form"><code class="docutils literal notranslate"><span class="pre">sn_has_product_form()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="sn.html#line_solver.api.sn.sn_has_closed_classes"><code class="docutils literal notranslate"><span class="pre">sn_has_closed_classes()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="sn.html#line_solver.api.sn.sn_has_open_classes"><code class="docutils literal notranslate"><span class="pre">sn_has_open_classes()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="sn.html#line_solver.api.sn.sn_has_mixed_classes"><code class="docutils literal notranslate"><span class="pre">sn_has_mixed_classes()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="sn.html#line_solver.api.sn.sn_has_multi_chain"><code class="docutils literal notranslate"><span class="pre">sn_has_multi_chain()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="sn.html#line_solver.api.sn.sn_is_closed_model"><code class="docutils literal notranslate"><span class="pre">sn_is_closed_model()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="sn.html#line_solver.api.sn.sn_is_open_model"><code class="docutils literal notranslate"><span class="pre">sn_is_open_model()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="sn.html#line_solver.api.sn.sn_is_mixed_model"><code class="docutils literal notranslate"><span class="pre">sn_is_mixed_model()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="sn.html#line_solver.api.sn.sn_has_product_form_not_het_fcfs"><code class="docutils literal notranslate"><span class="pre">sn_has_product_form_not_het_fcfs()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="sn.html#line_solver.api.sn.sn_print_routing_matrix"><code class="docutils literal notranslate"><span class="pre">sn_print_routing_matrix()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="sn.html#line_solver.api.sn.sn_has_fcfs"><code class="docutils literal notranslate"><span class="pre">sn_has_fcfs()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="sn.html#line_solver.api.sn.sn_has_lcfs"><code class="docutils literal notranslate"><span class="pre">sn_has_lcfs()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="sn.html#line_solver.api.sn.sn_has_lcfspr"><code class="docutils literal notranslate"><span class="pre">sn_has_lcfspr()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="sn.html#line_solver.api.sn.sn_has_ps"><code class="docutils literal notranslate"><span class="pre">sn_has_ps()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="sn.html#line_solver.api.sn.sn_has_dps"><code class="docutils literal notranslate"><span class="pre">sn_has_dps()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="sn.html#line_solver.api.sn.sn_has_gps"><code class="docutils literal notranslate"><span class="pre">sn_has_gps()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="sn.html#line_solver.api.sn.sn_has_inf"><code class="docutils literal notranslate"><span class="pre">sn_has_inf()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="sn.html#line_solver.api.sn.sn_has_hol"><code class="docutils literal notranslate"><span class="pre">sn_has_hol()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="sn.html#line_solver.api.sn.sn_has_sjf"><code class="docutils literal notranslate"><span class="pre">sn_has_sjf()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="sn.html#line_solver.api.sn.sn_has_ljf"><code class="docutils literal notranslate"><span class="pre">sn_has_ljf()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="sn.html#line_solver.api.sn.sn_has_sept"><code class="docutils literal notranslate"><span class="pre">sn_has_sept()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="sn.html#line_solver.api.sn.sn_has_lept"><code class="docutils literal notranslate"><span class="pre">sn_has_lept()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="sn.html#line_solver.api.sn.sn_has_siro"><code class="docutils literal notranslate"><span class="pre">sn_has_siro()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="sn.html#line_solver.api.sn.sn_has_dps_prio"><code class="docutils literal notranslate"><span class="pre">sn_has_dps_prio()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="sn.html#line_solver.api.sn.sn_has_gps_prio"><code class="docutils literal notranslate"><span class="pre">sn_has_gps_prio()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="sn.html#line_solver.api.sn.sn_has_ps_prio"><code class="docutils literal notranslate"><span class="pre">sn_has_ps_prio()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="sn.html#line_solver.api.sn.sn_has_single_class"><code class="docutils literal notranslate"><span class="pre">sn_has_single_class()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="sn.html#line_solver.api.sn.sn_has_single_chain"><code class="docutils literal notranslate"><span class="pre">sn_has_single_chain()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="sn.html#line_solver.api.sn.sn_has_fractional_populations"><code class="docutils literal notranslate"><span class="pre">sn_has_fractional_populations()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="sn.html#line_solver.api.sn.sn_has_multiple_closed_classes"><code class="docutils literal notranslate"><span class="pre">sn_has_multiple_closed_classes()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="sn.html#line_solver.api.sn.sn_has_multiclass_fcfs"><code class="docutils literal notranslate"><span class="pre">sn_has_multiclass_fcfs()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="sn.html#line_solver.api.sn.sn_has_multiclass_heter_fcfs"><code class="docutils literal notranslate"><span class="pre">sn_has_multiclass_heter_fcfs()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="sn.html#line_solver.api.sn.sn_has_multiclass_heter_exp_fcfs"><code class="docutils literal notranslate"><span class="pre">sn_has_multiclass_heter_exp_fcfs()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="sn.html#line_solver.api.sn.sn_has_homogeneous_scheduling"><code class="docutils literal notranslate"><span class="pre">sn_has_homogeneous_scheduling()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="sn.html#line_solver.api.sn.sn_has_multi_class"><code class="docutils literal notranslate"><span class="pre">sn_has_multi_class()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="sn.html#line_solver.api.sn.sn_chain_analysis"><code class="docutils literal notranslate"><span class="pre">sn_chain_analysis()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="sn.html#line_solver.api.sn.sn_get_demands"><code class="docutils literal notranslate"><span class="pre">sn_get_demands()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="sn.html#line_solver.api.sn.sn_get_visits_chain"><code class="docutils literal notranslate"><span class="pre">sn_get_visits_chain()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="sn.html#line_solver.api.sn.sn_check_balance"><code class="docutils literal notranslate"><span class="pre">sn_check_balance()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="sn.html#line_solver.api.sn.sn_check_consistency"><code class="docutils literal notranslate"><span class="pre">sn_check_consistency()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="sn.html#line_solver.api.sn.sn_check_feasibility"><code class="docutils literal notranslate"><span class="pre">sn_check_feasibility()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="sn.html#line_solver.api.sn.sn_has_blocking"><code class="docutils literal notranslate"><span class="pre">sn_has_blocking()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="sn.html#line_solver.api.sn.sn_has_caches"><code class="docutils literal notranslate"><span class="pre">sn_has_caches()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="sn.html#line_solver.api.sn.sn_has_delays"><code class="docutils literal notranslate"><span class="pre">sn_has_delays()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="sn.html#line_solver.api.sn.sn_has_finite_capacity"><code class="docutils literal notranslate"><span class="pre">sn_has_finite_capacity()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="sn.html#line_solver.api.sn.sn_has_loadindep"><code class="docutils literal notranslate"><span class="pre">sn_has_loadindep()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="sn.html#line_solver.api.sn.sn_has_state_dependent"><code class="docutils literal notranslate"><span class="pre">sn_has_state_dependent()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="sn.html#line_solver.api.sn.sn_validate_model"><code class="docutils literal notranslate"><span class="pre">sn_validate_model()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="sn.html#line_solver.api.sn.sn_has_polling"><code class="docutils literal notranslate"><span class="pre">sn_has_polling()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="sn.html#line_solver.api.sn.sn_has_rr"><code class="docutils literal notranslate"><span class="pre">sn_has_rr()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="sn.html#line_solver.api.sn.sn_has_slc"><code class="docutils literal notranslate"><span class="pre">sn_has_slc()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="sn.html#line_solver.api.sn.sn_has_snc"><code class="docutils literal notranslate"><span class="pre">sn_has_snc()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="sn.html#line_solver.api.sn.sn_has_srpt"><code class="docutils literal notranslate"><span class="pre">sn_has_srpt()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="sn.html#line_solver.api.sn.sn_has_state_dependence"><code class="docutils literal notranslate"><span class="pre">sn_has_state_dependence()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="sn.html#line_solver.api.sn.sn_print"><code class="docutils literal notranslate"><span class="pre">sn_print()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="sn.html#line_solver.api.sn.sn_summary"><code class="docutils literal notranslate"><span class="pre">sn_summary()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="sn.html#line_solver.api.sn.sn_validate"><code class="docutils literal notranslate"><span class="pre">sn_validate()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="sn.html#line_solver.api.sn.sn_get_arv_r_from_tput"><code class="docutils literal notranslate"><span class="pre">sn_get_arv_r_from_tput()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="sn.html#line_solver.api.sn.sn_get_node_arv_r_from_tput"><code class="docutils literal notranslate"><span class="pre">sn_get_node_arv_r_from_tput()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="sn.html#line_solver.api.sn.sn_has_lcfs_pr"><code class="docutils literal notranslate"><span class="pre">sn_has_lcfs_pr()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="sn.html#line_solver.api.sn.sn_has_multi_class_fcfs"><code class="docutils literal notranslate"><span class="pre">sn_has_multi_class_fcfs()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="sn.html#line_solver.api.sn.sn_has_multi_class_heter_exp_fcfs"><code class="docutils literal notranslate"><span class="pre">sn_has_multi_class_heter_exp_fcfs()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="sn.html#line_solver.api.sn.sn_has_multi_class_heter_fcfs"><code class="docutils literal notranslate"><span class="pre">sn_has_multi_class_heter_fcfs()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="sn.html#line_solver.api.sn.sn_is_population_model"><code class="docutils literal notranslate"><span class="pre">sn_is_population_model()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="sn.html#line_solver.api.sn.sn_rtnodes_to_rtorig"><code class="docutils literal notranslate"><span class="pre">sn_rtnodes_to_rtorig()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="utilities.html">Utilities and Constants</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="utilities.html#utility-functions-line-solver-utils">Utility Functions (line_solver.utils)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="utilities.html#constants-and-enumerations-line-solver-constants">Constants and Enumerations (line_solver.constants)</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="utilities.html#scheduling-strategies">Scheduling Strategies</a></li>
+<li class="toctree-l4"><a class="reference internal" href="utilities.html#distribution-and-process-types">Distribution and Process Types</a></li>
+<li class="toctree-l4"><a class="reference internal" href="utilities.html#node-types">Node Types</a></li>
+<li class="toctree-l4"><a class="reference internal" href="utilities.html#job-class-types">Job Class Types</a></li>
+<li class="toctree-l4"><a class="reference internal" href="utilities.html#routing-strategies">Routing Strategies</a></li>
+<li class="toctree-l4"><a class="reference internal" href="utilities.html#service-strategies">Service Strategies</a></li>
+<li class="toctree-l4"><a class="reference internal" href="utilities.html#solver-types">Solver Types</a></li>
+<li class="toctree-l4"><a class="reference internal" href="utilities.html#metric-types">Metric Types</a></li>
+<li class="toctree-l4"><a class="reference internal" href="utilities.html#drop-and-replacement-strategies">Drop and Replacement Strategies</a></li>
+<li class="toctree-l4"><a class="reference internal" href="utilities.html#join-strategies">Join Strategies</a></li>
+<li class="toctree-l4"><a class="reference internal" href="utilities.html#layered-network-types">Layered Network Types</a></li>
+<li class="toctree-l4"><a class="reference internal" href="utilities.html#polling-types">Polling Types</a></li>
+<li class="toctree-l4"><a class="reference internal" href="utilities.html#event-and-timing-types">Event and Timing Types</a></li>
+<li class="toctree-l4"><a class="reference internal" href="utilities.html#verbose-level">Verbose Level</a></li>
+<li class="toctree-l4"><a class="reference internal" href="utilities.html#global-constants">Global Constants</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="utilities.html#example-gallery-line-solver-gallery">Example Gallery (line_solver.gallery)</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#module-locations">Module Locations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="index.html#license">License</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../reference.html">Reference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../reference.html#scheduling-strategies">Scheduling Strategies</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../reference.html#distribution-types">Distribution Types</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../reference.html#node-types">Node Types</a></li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">LINE Solver (Python)</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">API Documentation</a></li>
+      <li class="breadcrumb-item active">Layered Stochastic Networks</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/api/lsn.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul><div class="rst-breadcrumbs-buttons" role="navigation" aria-label="Sequential page navigation">
+        <a href="lossn.html" class="btn btn-neutral float-left" title="Loss Networks" accesskey="p"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="mc.html" class="btn btn-neutral float-right" title="Markov Chain Utilities" accesskey="n">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+  </div>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="layered-stochastic-networks">
+<h1>Layered Stochastic Networks<a class="headerlink" href="#layered-stochastic-networks" title="Link to this heading"></a></h1>
+<p>Layered queueing network analysis.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">lsn</span></code> module provides algorithms for layered stochastic networks and
+layered queueing networks (LQNs).</p>
+<p><strong>Key function categories:</strong></p>
+<ul class="simple">
+<li><p><strong>Multiplicity analysis:</strong> <a class="reference internal" href="#line_solver.api.lsn.lsn_max_multiplicity" title="line_solver.api.lsn.lsn_max_multiplicity"><code class="xref py py-func docutils literal notranslate"><span class="pre">lsn_max_multiplicity()</span></code></a></p></li>
+</ul>
+<p id="module-line_solver.api.lsn">Layered stochastic network (LSN) analysis functions.</p>
+<p>This module provides utility functions for analyzing layered stochastic
+networks, which model systems with hierarchical service dependencies
+and multiplicities.</p>
+<p>Layered stochastic networks extend basic queueing networks to capture
+complex service dependencies and resource constraints in distributed
+systems and software architectures.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="line_solver.api.lsn.lsn_max_multiplicity">
+<span class="sig-name descname"><span class="pre">lsn_max_multiplicity</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">lsn</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/line_solver/api/lsn.html#lsn_max_multiplicity"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#line_solver.api.lsn.lsn_max_multiplicity" title="Link to this definition"></a></dt>
+<dd><p>Compute maximum multiplicity constraints for layered stochastic network.</p>
+<p>Determines the maximum allowable multiplicities for each layer
+in the stochastic network based on capacity and dependency constraints.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>lsn</strong> – Layered stochastic network object.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Maximum multiplicity values for each layer.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.3)">numpy.ndarray</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="lossn.html" class="btn btn-neutral float-left" title="Loss Networks" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="mc.html" class="btn btn-neutral float-right" title="Markov Chain Utilities" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Imperial College London.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

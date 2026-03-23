@@ -1,0 +1,96 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+<link rel="stylesheet" href="css/line-solver.css" />
+	<meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<meta name="description" content="LINE Solver - Getting Started Tutorials" />
+	<meta name="keywords" content="LINE solver, tutorials, queueing networks, getting started" />
+	<meta name="author" content="Giuliano Casale" />
+	<title>Tutorials - LINE Solver Documentation</title>
+	<script type="text/javascript" src="js/jquery-1.11.0.min.js"></script>
+	<script type="text/javascript" src="js/line-solver.js"></script>
+	<script type="text/javascript">
+		$(document).ready(function(){
+
+			$('.sidebar-nav .expandable > a').click(function(e){
+				e.preventDefault();
+				var parent = $(this).parent();
+				parent.toggleClass('open');
+			});
+		});
+	</script>
+</head>
+<body>
+<div id="wrap">
+
+<div id="header">
+	<p id="toplinks"><a href="index.html">Home</a> | <a href="tutorials.html">Tutorials</a> | <a href="index.html#solvers">Solvers</a></p>
+
+	<h1><a href="index.html">LINE Solver</a></h1>
+	<p id="slogan">Queueing Theory Algorithms</p>
+</div>
+
+<div id="sidebar">
+<div id="sidebar-content">
+<h2>Navigate</h2>
+<ul class="sidebar-nav">
+<li><a href="index.html">Home</a></li>
+<li><a href="index.html#overview">Overview</a></li>
+<li><a href="index.html#papers">Documentation</a></li>
+<li><a href="tutorials.html">Tutorials</a></li>
+<!-- Re-enable when 3.0.4 is out: <li><a href="mcp.html">MCP Integration</a></li> -->
+<li><a href="index.html#solvers">Solvers</a></li>
+</ul>
+
+<h2>Support</h2>
+<ul class="sidebar-links">
+<li><a href="https://sourceforge.net/projects/line-solver/" target="_blank">Sourceforge site</a></li>
+<li><a href="https://github.com/imperial-qore/line-solver" target="_blank">Github repo</a></li>
+</ul>
+
+<h2>News</h2>
+<ul class="sidebar-news">
+<li><strong>2026</strong> - <a href="https://sourceforge.net/projects/line-solver/files/latest/download">LINE 3.0.4</a> is out!</li>
+<li><strong>2025</strong> - First release of LINE 3.0.0</li>
+<li><strong>2019</strong> - First release of LINE 2.0.0</li>
+<li><strong>2016</strong> - First release of LINE 1.0.0</li>
+</ul>
+</div>
+</div>
+
+<div id="content">
+	<h2>Getting Started Tutorials</h2>
+
+	<p>These tutorials introduce the fundamental concepts and features of LINE through progressively more complex examples. Each tutorial is available in MATLAB, Java/Kotlin, and Python.</p>
+
+	<div class="toc">
+		<h3>Table of Contents</h3>
+		<ol>
+			<li><a href="tutorial-01.html">M/M/1 Queue</a> - Basic single-server queue</li>
+			<li><a href="tutorial-02.html">Multiclass M/G/1 Queue</a> - General service distributions and multiple solvers</li>
+			<li><a href="tutorial-03.html">Machine Interference Problem</a> - Closed queueing networks</li>
+			<li><a href="tutorial-04.html">Round-Robin Load Balancing</a> - Routing strategies</li>
+			<li><a href="tutorial-05.html">Re-entrant Line Modeling</a> - Class switching and completes flag</li>
+			<li><a href="tutorial-06.html">Queueing Network with Caching</a> - Cache modeling with LRU and Zipf</li>
+			<li><a href="tutorial-07.html">Response Time Distribution</a> - CDF analysis and percentiles</li>
+			<li><a href="tutorial-08.html">Optimizing Performance Metrics</a> - Load balancing optimization</li>
+			<li><a href="tutorial-09.html">Departure Process Analysis</a> - Studying departure processes</li>
+			<li><a href="tutorial-10.html">Basic Layered Queueing Network</a> - LQN modeling</li>
+		</ol>
+	</div>
+
+	<div class="back-link">
+		<a href="index.html">Return to Home</a>
+	</div>
+
+	<div id="footer">
+		<p>&copy; 2016-2025 LINE Project. Released under BSD-3 license.
+		<a href="https://github.com/imperial-qore/line-solver">GitHub</a> |
+		<a href="https://sourceforge.net/projects/line-solver/">SourceForge</a></p>
+	</div>
+</div>
+
+</div>
+</body>
+</html>
