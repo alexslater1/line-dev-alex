@@ -2145,7 +2145,7 @@ class LayeredNetwork:
         # additional reachable activities (e.g., phase 2 post-reply activities)
         for eoff in range(1, lqn.nentries + 1):
             eidx = eshift + eoff
-            tidx = int(lqn.parent[eidx])
+            tidx = int(lqn.parent[eidx, 0])
             visited = set()
             stack = [eidx]
             visited.add(eidx)
@@ -2157,7 +2157,7 @@ class LayeredNetwork:
                         stack.append(nbr)
             acts = [idx for idx in visited
                     if lqn.type[idx] == LayeredNetworkElement.ACTIVITY
-                    and int(lqn.parent[idx]) == tidx]
+                    and int(lqn.parent[idx, 0]) == tidx]
             lqn.actsof[eidx] = sorted(acts)
 
         # Correct multiplicity for INF-scheduled tasks (MATLAB getStruct.m lines 576-589)
