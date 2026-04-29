@@ -1,154 +1,312 @@
 package jline.solvers.ln_simple;
 
-import jline.lang.ClosedClass;
 import jline.lang.JobClass;
 import jline.lang.Network;
-import jline.lang.RoutingMatrix;
-import jline.lang.nodes.ServiceStation;
+import jline.lang.layered.Task;
 
-import java.util.Map;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.ArrayList;
+import java.util.Map;
 import jline.io.Ret;
 import jline.util.matrix.Matrix;
-import jline.api.pfqn.mva.Pfqn_mvamsKt;
-import jline.lang.constant.SchedStrategy;
+import jline.lang.layered.LayeredNetwork;
 import jline.lang.nodes.Delay;
 import jline.lang.nodes.Queue;
 import jline.lang.processes.Exp;
+import jline.solvers.ln_simple.utils.SolverLNSimpleResultsUtils;
+import jline.solvers.ln_simple.utils.MvaUtils;
+import jline.solvers.ln_simple.utils.LayeredNetworkTestExamples;
+
 
 public class SolverLNSimple {
 
-    private static final int SINGLE_CLASS_INDEX = 0;
-
     private int N_LAYERS;
-    private Network[] ensemble;
-    // name index: nodeName -> list of (layer, nodeIndex) pairs
-    private final Map<String, List<int[]>> nameIndexMap = new HashMap<String, List<int[]>>();
+    private List<Network> ensemble;
+    private final double[] baseClientsThink; // initial Clients Delay think per layer, used as base for coupling
+    private LayeredNetwork lqnModel; // Save the original LQN model
+    private final Map<String, String> taskToProcessor = new HashMap<String, String>();
+    private final Map<String, List<String>> processorToTasks = new HashMap<String, List<String>>();
+    private final Map<String, Integer> queueNameToLayer = new HashMap<String, Integer>();
+    private static final double EPS = 1e-12;
+    private static final double MAX_PROTECTION = 1e6;
 
-    private void buildTwoLayerModel() {
-        // Init configs
-        N_LAYERS = 2;
-        ensemble = new Network[N_LAYERS];
+    public SolverLNSimple(LayeredNetwork model) {
+        this.lqnModel = model;
+        ensemble = model.getEnsemble();
+        N_LAYERS = ensemble.size();
 
-        // Layer 0: t1 -> t3
-        Network layer0 = new Network("L0");
-        Delay t1Delay = new Delay(layer0, "t1");
-        Queue t3Queue = new Queue(layer0, "t3", SchedStrategy.FCFS);
-        t3Queue.setNumberOfServers(2);
-        ClosedClass class_l0 = new ClosedClass(layer0, "C1", 2, t1Delay);
-        t1Delay.setService(class_l0, Exp.fitMean(0.0001));
-        t3Queue.setService(class_l0, Exp.fitMean(0.0001));
-        RoutingMatrix P0 = layer0.initRoutingMatrix();
-        P0.addConnection(t1Delay, t3Queue);
-        P0.addConnection(t3Queue, t1Delay);
-        layer0.link(P0);
-        ensemble[0] = layer0;
-
-        // Layer 1: t3 -> p3
-        Network layer1 = new Network("L1");
-        Delay t3Delay = new Delay(layer1, "t3");
-        Queue p3Queue = new Queue(layer1, "p3", SchedStrategy.FCFS);
-        p3Queue.setNumberOfServers(2);
-        ClosedClass class_l1 = new ClosedClass(layer1, "C1", 2, t3Delay);
-        //When task m acts as a client: infinite server (demand = sum of the waiting times to all of its servers in all other submodels)
-        t3Delay.setService(class_l1, Exp.fitMean(0));
-        p3Queue.setService(class_l1, Exp.fitMean(0.9));
-        RoutingMatrix P1 = layer1.initRoutingMatrix();
-        P1.addConnection(t3Delay, p3Queue);
-        P1.addConnection(p3Queue, t3Delay);
-        layer1.link(P1);
-        ensemble[1] = layer1;
-    }
-
-    // Build a simple index of node names to their (layer,nodeIndex) locations
-    private void buildNameIndex() {
-        nameIndexMap.clear();
+        // Capture base Clients think times before any coupling modifies them
+        baseClientsThink = new double[N_LAYERS];
         for (int l = 0; l < N_LAYERS; l++) {
-            Network net = ensemble[l];
-            List<jline.lang.nodes.Node> nodes = net.getNodes();
-            for (int i = 0; i < nodes.size(); i++) {
-                String nm = nodes.get(i).getName();
-                List<int[]> list = nameIndexMap.computeIfAbsent(nm, k -> new ArrayList<>());
-                list.add(new int[]{l, i});
+            Delay d = findClientsDelay(ensemble.get(l));
+            if (d != null) {
+                JobClass mc = MvaUtils.getMainClass(ensemble.get(l));
+                double m = d.getServiceProcess(mc).getMean();
+                baseClientsThink[l] = Double.isNaN(m) ? 0.0 : m;
             }
+
+            Queue q = MvaUtils.findNonDelayQueue(ensemble.get(l));
+            if (q != null) {
+                queueNameToLayer.put(q.getName(), l);
+            }
+        }
+
+        for (Task task : lqnModel.getTasks().values()) {
+            if (task.getProcessor() == null) {
+                continue;
+            }
+            String taskName = task.getName();
+            String processorName = task.getProcessor().getName();
+            taskToProcessor.put(taskName, processorName);
+
+            List<String> hostedTasks = processorToTasks.get(processorName);
+            if (hostedTasks == null) {
+                hostedTasks = new ArrayList<String>();
+                processorToTasks.put(processorName, hostedTasks);
+            }
+            hostedTasks.add(taskName);
         }
     }
 
-    public SolverLNSimple() {
-        buildTwoLayerModel();
-        buildNameIndex();
-    }
-
     public static void main(String[] args) {
-        SolverLNSimple s = new SolverLNSimple();
-        s.iterateCoupledMva(10, 1e-4);
+        SolverLNSimple s = new SolverLNSimple(LayeredNetworkTestExamples.lqnBasic());
+        s.iterateCoupledMva(100, 1e-4);
     }
 
-    /**
-     * Iteratively solve submodels
-     * @param maxIter maximum number of fixed-point iterations
-     * @param tol convergence tolerance for Z updates
-     */
     public void iterateCoupledMva(int maxIter, double tol) {
-
-        // track per-layer throughput to check convergence on throughput changes
         double[] prevX = new double[N_LAYERS];
-        for (int i = 0; i < N_LAYERS; i++) prevX[i] = 0.0;
 
-        //outer loop
         for (int iter = 0; iter < maxIter; iter++) {
             System.out.println("iteration " + iter);
             double maxDeltaX = 0.0;
 
-            // solve layers
             int sweepLen = 2 * N_LAYERS - 1;
             for (int si = 0; si < sweepLen; si++) {
                 int l = computeSweepLayerIndex(si);
-                Network layer = ensemble[l];
-                List<jline.lang.nodes.Node> nodes = layer.getNodes();
-                int M = layer.getNumberOfNodes();
+                System.out.println("sweep layer index " + l);
+                Network layer = ensemble.get(l);
 
-                JobClass jc0 = getSingleClass(layer);
-                System.out.println(" Solving layer " + l + ": Z = " + ((ServiceStation) nodes.get(0)).getServiceProcess(jc0).getMean() + " S = " + ((ServiceStation) nodes.get(1)).getServiceProcess(jc0).getMean());
+                List<jline.lang.nodes.Node> nodes = MvaUtils.getQueueNodes(layer);
+                int M = nodes.size();
 
-                // set up mva matrices
-                Matrix N = buildN(layer);
-                Matrix Z = new Matrix(1, 1);
-                Z.set(0, 0, 0.0);
-                Matrix L = buildDemandMatrix(layer);
-                Matrix S = buildServerMatrix(layer, N);
+                Matrix N = MvaUtils.buildN(layer);
+                Matrix Z = MvaUtils.buildThinkTimeMatrix(layer);
+                Matrix L = MvaUtils.buildDemandMatrix(nodes, layer);
+                Matrix S = MvaUtils.buildServerMatrix(nodes, N);
 
-                // perform mva
-                Ret.pfqnMVA res = callMVA(L, N, Z, S);
+                // Print MVA input matrices for diagnostics
+                System.out.println("  MVA inputs for layer " + l + " (" + layer.getName() + "):");
+                System.out.println("   N =\n" + N.toString());
+                System.out.println("   Z =\n" + Z.toString());
+                System.out.println("   L =\n" + L.toString());
+                System.out.println("   S =\n" + S.toString());
+
+                // Print node index -> queue mapping and per-class service means
+                System.out.println("  Node index mapping:");
+                for (int i = 0; i < M; i++) {
+                    jline.lang.nodes.Node nd = nodes.get(i);
+                    System.out.println("   idx=" + i + " name=" + nd.getName() + " class=" + nd.getClass().getSimpleName());
+                    if (nd instanceof jline.lang.nodes.ServiceStation) {
+                        for (jline.lang.JobClass jc : layer.getClasses()) {
+                            double m = ((jline.lang.nodes.ServiceStation) nd).getServiceProcess(jc).getMean();
+                            System.out.println("    svc for class " + jc.getName() + " = " + m);
+                        }
+                    }
+                }
+
+                double firstService = (L.getNumRows() > 0) ? L.get(0, 0) : 0.0;
+                System.out.println(" Solving layer " + l + " (" + layer.getName() + "): Z=" + Z.get(0, 0) + " S=" + firstService);
+
+                Ret.pfqnMVA res = null;
+                try {
+                    res = MvaUtils.callMVA(L, N, Z, S);
+                } catch (Exception e) {
+                    System.out.println(" MVA threw exception for layer " + l + " (" + layer.getName() + "): " + e.getMessage());
+                    e.printStackTrace();
+                    return;
+                }
                 if (res == null) return;
 
-                // throughput for this layer
                 double throughput = res.X.get(0, 0);
+                System.out.println(" Layer " + l + " throughput X=" + throughput);
 
-                System.out.println(" Layer " + l + " throughput X=" + throughput);  
+                // Print per-node MVA results with mapping
+                System.out.println("  MVA per-node results (index:name):");
+                for (int i = 0; i < M; i++) {
+                    String nname = nodes.get(i).getName();
+                    double qi = Double.NaN;
+                    double ui = Double.NaN;
+                    try { qi = res.Q.get(i, 0); } catch (Exception ex) {}
+                    try { ui = res.U.get(i, 0); } catch (Exception ex) {}
+                    System.out.println("   idx=" + i + " name=" + nname + " Q=" + qi + " U=" + ui);
+                }
 
-                // update convergence metric: change in throughput for this layer
                 double deltaX = Math.abs(throughput - prevX[l]);
                 if (deltaX > maxDeltaX) maxDeltaX = deltaX;
                 prevX[l] = throughput;
 
-                // Node-based coupling: propagate per-station residence times to mapped nodes in other layers
+                // --- Coupling ---
+                Queue serverQueue = MvaUtils.findNonDelayQueue(layer);
+                if (serverQueue == null) continue;
+
+                if (!Double.isFinite(throughput) || throughput <= EPS) {
+                    System.out.println(" Warning: non-finite or zero throughput for layer " + l + " (" + layer.getName() + ") -> skipping coupling updates");
+                    continue;
+                }
+
+                // Index of the non-Delay Queue in the MVA node list
+                int serverNodeIndex = -1;
                 for (int i = 0; i < M; i++) {
-                    String name = nodes.get(i).getName();
-                    List<int[]> mapped = nameIndexMap.get(name);
-                    if (mapped == null) {
+                    if (!(nodes.get(i) instanceof Delay)) { serverNodeIndex = i; break; }
+                }
+                if (serverNodeIndex < 0) continue;
+
+                String serverQueueName = serverQueue.getName();
+                String layerName = layer.getName();
+                String layerBase = stripPrefix(layerName);
+                boolean isFcfsLayer = serverQueueName.startsWith("T:");
+
+                if (isFcfsLayer) {
+                    // Task submodel: feed back to host layers
+                    double R_task_total = 0.0;
+                    if (Double.isFinite(throughput) && throughput > EPS) {
+                        for (int j = 0; j < M; j++) {
+                            double qj = res.Q.get(j, 0);
+                            if (!Double.isFinite(qj)) continue;
+                            R_task_total += qj / throughput;
+                        }
+
+                        // If nested sync-call blocking has been propagated into Clients delay,
+                        // include only the incremental part over the baseline think time.
+                        JobClass layerMain = MvaUtils.getMainClass(layer);
+                        if (layerMain != null && layerMain.getName().startsWith("R:")) {
+                            Delay layerClients = findClientsDelay(layer);
+                            if (layerClients != null) {
+                                double clientMean = layerClients.getServiceProcess(layerMain).getMean();
+                                if (Double.isFinite(clientMean)) {
+                                    double extraBlocking = clientMean - baseClientsThink[l];
+                                    if (extraBlocking > 0) {
+                                        R_task_total += extraBlocking;
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        R_task_total = Double.NaN;
+                    }
+
+                    if (!Double.isFinite(R_task_total)) {
+                        System.out.println("  Warning: computed NaN/Inf R_task_total for layer " + l + " -> skipping task->host updates");
                         continue;
                     }
-                    for (int[] location : mapped) {
-                        int targetLayer = location[0];
-                        int targetNodeIndex = location[1];
-                        if (targetLayer == l + 1) {
-                            updateThinkTimeFromUtilization(name, i, targetLayer, targetNodeIndex, throughput, res);
-                        } else if (targetLayer == l - 1) {
-                            updateServiceTimeFromResidence(name, targetLayer, targetNodeIndex, M, res);
+
+                    String callerTask = stripPrefix(MvaUtils.getMainClass(layer).getName());
+
+                    Integer callerTaskLayer = queueNameToLayer.get("T:" + callerTask);
+                    if (callerTaskLayer != null && callerTaskLayer != l) {
+                        Delay callerTaskClients = findClientsDelay(ensemble.get(callerTaskLayer));
+                        if (callerTaskClients != null) {
+                            JobClass callerTaskMain = MvaUtils.getMainClass(ensemble.get(callerTaskLayer));
+                            double callerTaskThink = Math.max(1e-9, Math.min(baseClientsThink[callerTaskLayer] + R_task_total, MAX_PROTECTION));
+                            callerTaskClients.setService(callerTaskMain, Exp.fitMean(callerTaskThink));
+                            System.out.println(" [task->caller-task] " + layerName + " -> L" + callerTaskLayer + " think=" + callerTaskThink);
                         }
+
+                        Delay calleeClients = findClientsDelay(layer);
+                        if (calleeClients != null) {
+                            JobClass calleeMain = MvaUtils.getMainClass(layer);
+                            double calleeThink = Math.max(1e-9, Math.min(baseClientsThink[callerTaskLayer], MAX_PROTECTION));
+                            calleeClients.setService(calleeMain, Exp.fitMean(calleeThink));
+                            System.out.println(" [caller->callee-think] " + layerName + " think=" + calleeThink);
+                        }
+                    }
+
+                    // Update callee's host (P:P2) think time.
+                    // Z_callee_host = (N - Q_server) / X = Q_delay / X = caller's think time.
+                    // This reflects the time callee task spends idle (not consuming callee's processor).
+                    String calleeTask = stripPrefix(serverQueueName);
+                    String calleeProcessor = taskToProcessor.get(calleeTask);
+                    if (calleeProcessor != null) {
+                        Integer calleeHostLayer = queueNameToLayer.get("P:" + calleeProcessor);
+                        if (calleeHostLayer != null && calleeHostLayer != l) {
+                            double Q_server = res.Q.get(serverNodeIndex, 0);
+                            double N_task = N.get(0, 0);
+                            if (Double.isFinite(Q_server) && throughput > EPS) {
+                                double Z_callee_host = Math.max(1e-9, Math.min((N_task - Q_server) / throughput, MAX_PROTECTION));
+                                Delay calleeHostClients = findClientsDelay(ensemble.get(calleeHostLayer));
+                                if (calleeHostClients != null) {
+                                    JobClass calleeHostMain = MvaUtils.getMainClass(ensemble.get(calleeHostLayer));
+                                    calleeHostClients.setService(calleeHostMain, Exp.fitMean(Z_callee_host));
+                                    System.out.println(" [task->callee-host] " + layerName + " callee=" + calleeTask + " -> L" + calleeHostLayer + " Z=" + Z_callee_host);
+                                }
+                            }
+                        }
+                    }
+
+                    String callerProcessor = taskToProcessor.get(callerTask);
+                    if (callerProcessor == null) {
+                        continue;
+                    }
+
+                    Integer hostLayer = queueNameToLayer.get("P:" + callerProcessor);
+                    if (hostLayer == null || hostLayer == l) {
+                        continue;
+                    }
+
+                    Delay targetClients = findClientsDelay(ensemble.get(hostLayer));
+                    if (targetClients == null) {
+                        continue;
+                    }
+
+                    JobClass targetMain = MvaUtils.getMainClass(ensemble.get(hostLayer));
+                    double newThink = baseClientsThink[hostLayer] + R_task_total;
+                    if (!Double.isFinite(newThink)) {
+                        continue;
+                    }
+                    newThink = Math.max(1e-9, Math.min(newThink, MAX_PROTECTION));
+                    targetClients.setService(targetMain, Exp.fitMean(newThink));
+                    System.out.println(" [task->host] " + layerName + " callerTask=" + callerTask + " callerProcessor=" + callerProcessor + " think=" + newThink);
+                } else {
+                    // Host submodel: feed R_proc into the matching task layer
+                    double R_proc = Double.NaN;
+                    if (Double.isFinite(throughput) && throughput > EPS) {
+                        double q = res.Q.get(serverNodeIndex, 0);
+                        if (Double.isFinite(q)) R_proc = q / throughput;
+                    }
+
+                    if (!Double.isFinite(R_proc)) {
+                        System.out.println("  Warning: computed NaN/Inf R_proc for layer " + l + " -> skipping host->task updates");
+                        continue;
+                    }
+
+                    if (R_proc <= EPS) {
+                        continue;
+                    }
+
+                    String processorName = layerBase;
+                    List<String> hostedTasks = processorToTasks.get(processorName);
+                    if (hostedTasks == null) {
+                        continue;
+                    }
+
+                    for (String hostedTask : hostedTasks) {
+                        Integer taskLayer = queueNameToLayer.get("T:" + hostedTask);
+                        if (taskLayer == null || taskLayer == l) {
+                            continue;
+                        }
+                        Queue tq = MvaUtils.findNonDelayQueue(ensemble.get(taskLayer));
+                        if (tq == null) {
+                            continue;
+                        }
+
+                        JobClass activeClass = findActiveQueueClass(ensemble.get(taskLayer));
+                        if (activeClass == null) {
+                            continue;
+                        }
+                        double safeR = Math.max(1e-9, Math.min(R_proc, MAX_PROTECTION));
+                        tq.setService(activeClass, Exp.fitMean(safeR));
+                        System.out.println(" [host->task] " + layerName + " -> " + tq.getName() + " service=" + safeR);
                     }
                 }
             }
@@ -158,102 +316,45 @@ public class SolverLNSimple {
                 break;
             }
         }
+
+        // Collect final results and print using LayeredNetworkAvgTable
+        SolverLNSimpleResultsUtils.collectAndPrintFinalResults(lqnModel, ensemble, N_LAYERS);
     }
 
-    // --- Helper methods ---
-    // Single-class demand matrix: one column only (class index 0)
-    private Matrix buildDemandMatrix(Network net) {
-        int M = net.getNumberOfNodes();
-        Matrix L = new Matrix(M, 1);
-        JobClass jc = getSingleClass(net);
-        for (int i = 0; i < M; i++) {
-            jline.lang.nodes.Node node = net.getNodes().get(i);
-            double mean = 0.0;
-            if (node instanceof ServiceStation) {
-                mean = ((ServiceStation) node).getServiceProcess(jc).getMean();
-            }
-            L.set(i, 0, mean);
+    private String stripPrefix(String name) {
+        int idx = name.indexOf(':');
+        if (idx >= 0 && idx + 1 < name.length()) {
+            return name.substring(idx + 1);
         }
-        return L;
+        return name;
     }
 
-    // Single-class population vector (1 x 1)
-    private Matrix buildN(Network net) {
-        Matrix N = new Matrix(1, 1);
-        JobClass jc = getSingleClass(net);
-        if (jc instanceof ClosedClass) {
-            double nj = ((ClosedClass) jc).getNumberOfJobs();
-            N.set(0, 0, nj);
-        } else {
-            N.set(0, 0, Double.POSITIVE_INFINITY);
+    // --- MVA matrix builders ---
+
+    // Delegated to MvaUtils
+
+    // --- Node/class lookup helpers ---
+
+    private Delay findClientsDelay(Network net) {
+        for (jline.lang.nodes.Node node : net.getNodes()) {
+            if (node instanceof Delay && "Clients".equals(node.getName())) return (Delay) node;
         }
-        return N;
+        return null;
     }
 
-    private Matrix buildServerMatrix(Network net, Matrix N) {
-        int M = net.getNumberOfNodes();
-        Matrix S = new Matrix(M, 1);
-        double Ntot = 0.0;
-        for (int r = 0; r < N.getNumCols(); r++) Ntot += N.get(0, r);
-        if (Ntot < 1.0) Ntot = 1.0;
-        for (int i = 0; i < M; i++) {
-            jline.lang.nodes.Node node = net.getNodes().get(i);
-            double servers = 1.0;
-            if (node instanceof jline.lang.nodes.Station) {
-                int nserv = ((jline.lang.nodes.Station) node).getNumberOfServers();
-                if (nserv == Integer.MAX_VALUE) {
-                    servers = Ntot;
-                } else {
-                    servers = (double) nserv;
-                }
-            }
-            S.set(i, 0, servers);
+    // findNonDelayQueue delegated to MvaUtils; keep this helper removed to avoid duplication
+
+    private JobClass findActiveQueueClass(Network net) {
+        Queue q = MvaUtils.findNonDelayQueue(net);
+        if (q == null) return null;
+        for (JobClass jc : net.getClasses()) {
+            double m = q.getServiceProcess(jc).getMean();
+            if (!Double.isNaN(m)) return jc;
         }
-        return S;
-    }
-
-    private Ret.pfqnMVA callMVA(Matrix L, Matrix N, Matrix Z, Matrix S) {
-        try {
-            Matrix lambda = new Matrix(1, N.getNumCols());
-            return Pfqn_mvamsKt.pfqn_mvams(lambda, L, N, Z, Matrix.ones(L.getNumRows(), 1), S);
-        } catch (Exception e) {
-            System.out.println("pfqn_mva call failed: " + e.getMessage());
-            e.printStackTrace();
-            return null;
-        }
-    }
-
-    private JobClass getSingleClass(Network net) {
-        return net.getClasses().get(SINGLE_CLASS_INDEX);
+        return null;
     }
 
     private int computeSweepLayerIndex(int sweepIndex) {
-        if (sweepIndex < N_LAYERS) {
-            return sweepIndex;
-        }
-        return 2 * N_LAYERS - 2 - sweepIndex;
-    }
-
-    private void updateThinkTimeFromUtilization(String nodeName, int sourceNodeIndex, int targetLayer, int targetNodeIndex,
-                                                double throughput, Ret.pfqnMVA res) {
-        JobClass jc = getSingleClass(ensemble[targetLayer]);
-        double pop = ((ClosedClass) jc).getNumberOfJobs();
-        double util = res.U.get(sourceNodeIndex, SINGLE_CLASS_INDEX);
-        double z = pop * (1 - util) / throughput;
-        Delay dstNode = (Delay) ensemble[targetLayer].getNodes().get(targetNodeIndex);
-        dstNode.setService(jc, Exp.fitMean(z));
-        System.out.println(" Updating think time for node " + nodeName + " in layer " + targetLayer + " to Z=" + z);
-    }
-
-    private void updateServiceTimeFromResidence(String nodeName, int targetLayer, int targetNodeIndex, int nodeCount, Ret.pfqnMVA res) {
-        double layerThroughput = res.X.get(SINGLE_CLASS_INDEX, SINGLE_CLASS_INDEX);
-        double s = 0.0;
-        for (int j = 0; j < nodeCount; j++) {
-            s += res.Q.get(j, SINGLE_CLASS_INDEX) / layerThroughput;
-        }
-        JobClass jc = getSingleClass(ensemble[targetLayer]);
-        Queue dstNode = (Queue) ensemble[targetLayer].getNodes().get(targetNodeIndex);
-        dstNode.setService(jc, Exp.fitMean(s));
-        System.out.println(" Updating service time for node " + nodeName + " in layer " + targetLayer + " to S=" + s);
+        return (sweepIndex < N_LAYERS) ? sweepIndex : 2 * N_LAYERS - 2 - sweepIndex;
     }
 }
