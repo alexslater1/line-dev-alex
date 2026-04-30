@@ -23,7 +23,7 @@ public final class MvaUtils {
     public static List<Node> getQueueNodes(Network layer) {
         List<Node> nodes = new ArrayList<Node>();
         for (Node node : layer.getNodes()) {
-            if (node instanceof Queue) {
+            if (node instanceof Queue || node instanceof Delay) {
                 nodes.add(node);
             }
         }

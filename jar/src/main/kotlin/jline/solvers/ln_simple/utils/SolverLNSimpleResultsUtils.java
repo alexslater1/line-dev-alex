@@ -28,7 +28,7 @@ public final class SolverLNSimpleResultsUtils {
     private SolverLNSimpleResultsUtils() {
     }
 
-    public static void collectAndPrintFinalResults(LayeredNetwork lqnModel, List<Network> ensemble, int nLayers) {
+    public static LayeredNetworkAvgTable collectAndPrintFinalResults(LayeredNetwork lqnModel, List<Network> ensemble, int nLayers) {
         List<String> finalNodeNames = new ArrayList<>();
         List<String> finalNodeTypes = new ArrayList<>();
         List<Double> finalQLen = new ArrayList<>();
@@ -39,12 +39,14 @@ public final class SolverLNSimpleResultsUtils {
         List<Double> finalTput = new ArrayList<>();
 
         Map<String, Double> processorUtil = new HashMap<>();
+        Map<String, Double> refTaskProcQLen = new HashMap<>();
 
         Map<String, Double> taskQLen = new HashMap<>();
         Map<String, Double> taskUtil = new HashMap<>();
         Map<String, Double> taskRespT = new HashMap<>();
         Map<String, Double> taskResidT = new HashMap<>();
         Map<String, Double> taskTput = new HashMap<>();
+        Map<String, Double> hostLayerTput = new HashMap<>();
 
         Map<String, String> refTaskCalledTask = buildRefTaskCalledTaskMap(lqnModel);
         Map<String, String> taskCalledTask = buildTaskCalledTaskMap(lqnModel);
@@ -96,12 +98,19 @@ public final class SolverLNSimpleResultsUtils {
                 processorUtil.put(taskName, u_per_server);
 
                 for (Task task : lqnModel.getTasks().values()) {
-                    if (task.getName().equals(mainClassTaskName) && task.getScheduling() == SchedStrategy.REF) {
-                        taskQLen.put(task.getName(), q);
-                        taskUtil.put(task.getName(), 0.0);
-                        taskRespT.put(task.getName(), Double.NaN);
-                        taskResidT.put(task.getName(), 0.0);
-                        taskTput.put(task.getName(), x);
+                    if (task.getName().equals(mainClassTaskName)) {
+                        if (task.getScheduling() == SchedStrategy.REF) {
+                            refTaskProcQLen.put(task.getName(), q);
+                            taskUtil.put(task.getName(), u_per_server);
+                            taskRespT.put(task.getName(), Double.NaN);
+                            taskResidT.put(task.getName(), r);
+                            taskTput.put(task.getName(), x);
+                        } else if (Double.isFinite(x) && x > 0) {
+                            // Record the host-layer throughput for non-REF tasks; this captures
+                            // the task's own cycle (including its think time) and is used below
+                            // to override the task-layer throughput, which reflects the caller's rate.
+                            hostLayerTput.put(task.getName(), x);
+                        }
                         break;
                     }
                 }
@@ -126,6 +135,12 @@ public final class SolverLNSimpleResultsUtils {
             }
         }
 
+        // For non-REF tasks, the host layer gives the task's own throughput (accounting for its
+        // think time), while the task layer gives the caller's throughput. Prefer the host layer.
+        for (Map.Entry<String, Double> e : hostLayerTput.entrySet()) {
+            taskTput.put(e.getKey(), e.getValue());
+        }
+
         applyRefTaskInheritance(lqnModel, taskQLen, taskResidT, taskTput, refTaskCalledTask);
 
         for (Task task : lqnModel.getTasks().values()) {
@@ -142,6 +157,19 @@ public final class SolverLNSimpleResultsUtils {
 
         // Refresh ref-task metrics after non-ref queue lengths have been derived.
         applyRefTaskInheritance(lqnModel, taskQLen, taskResidT, taskTput, refTaskCalledTask);
+
+        // Add the REF task's processor queue contribution (Q_proc) to its QLen.
+        // After applyRefTaskInheritance, taskQLen[T1] = callee QLen (X*R_T2).
+        // The total is X*(R_P1 + R_T2) = Q_P1 + Q_T2, so we add Q_P1 here.
+        for (Task task : lqnModel.getTasks().values()) {
+            if (task.getScheduling() == SchedStrategy.REF) {
+                Double qlenCallee = taskQLen.get(task.getName());
+                Double qlenProc = refTaskProcQLen.get(task.getName());
+                if (qlenCallee != null && qlenProc != null && qlenProc > 0) {
+                    taskQLen.put(task.getName(), qlenCallee + qlenProc);
+                }
+            }
+        }
 
         Map<String, Double> entryRespT = new HashMap<>();
 
@@ -192,7 +220,7 @@ public final class SolverLNSimpleResultsUtils {
 
             double q = (parentTaskName != null && taskQLen.containsKey(parentTaskName)) ? taskQLen.get(parentTaskName) : 0.0;
             double util = (parentTaskName != null && taskUtil.containsKey(parentTaskName)) ? taskUtil.get(parentTaskName) : 0.0;
-            if (isRefTaskActivity || act.getHostDemandMean() <= 1e-8) {
+            if (act.getHostDemandMean() <= 1e-8) {
                 util = 0.0;
             }
 
@@ -206,13 +234,19 @@ public final class SolverLNSimpleResultsUtils {
                         count++;
                     }
                 }
-                resp = (count > 0) ? (sumResp / count) : Double.NaN;
+                if (count > 0) {
+                    // Include local processor service time in the activity response time.
+                    double localTime = (parentTaskName != null && taskResidT.containsKey(parentTaskName)) ? taskResidT.get(parentTaskName) : 0.0;
+                    resp = localTime + sumResp / count;
+                } else {
+                    resp = Double.NaN;
+                }
             } else {
                 resp = (parentTaskName != null && taskResidT.containsKey(parentTaskName)) ? taskResidT.get(parentTaskName) : Double.NaN;
             }
 
             double resid = (parentTaskName != null && taskResidT.containsKey(parentTaskName)) ? taskResidT.get(parentTaskName) : 0.0;
-            if (isRefTaskActivity) {
+            if (isRefTaskActivity && act.getHostDemandMean() <= 1e-8) {
                 resid = 0.0;
             }
             double t = (parentTaskName != null && taskTput.containsKey(parentTaskName)) ? taskTput.get(parentTaskName) : 0.0;
@@ -233,6 +267,7 @@ public final class SolverLNSimpleResultsUtils {
         SolverOptions opts = new SolverOptions();
         opts.verbose = VerboseLevel.STD;
         table.print(opts, true);
+        return table;
     }
 
     private static String stripPrefix(String name) {
@@ -285,17 +320,33 @@ public final class SolverLNSimpleResultsUtils {
                 continue;
             }
 
-            Double calledTput = taskTput.get(calledTaskName);
-            if (calledTput != null) {
-                taskTput.put(task.getName(), calledTput);
+            // T1.tput is already set from its processor host layer; only fall back to callee's
+            // tput if T1 has no host layer (e.g. no processor assigned).
+            if (!taskTput.containsKey(task.getName())) {
+                Double calledTput = taskTput.get(calledTaskName);
+                if (calledTput != null) {
+                    taskTput.put(task.getName(), calledTput);
+                }
             }
 
-            Double calledQLen = taskQLen.get(calledTaskName);
-            if (calledQLen != null) {
-                taskQLen.put(task.getName(), calledQLen);
+            // T1.QLen callee contribution = T1.tput * R_callee, not T2.tput * R_callee.
+            // When T2 has a think time, T2.tput < T1.tput and we must use T1's own rate.
+            Double t1Tput = taskTput.get(task.getName());
+            Double calleeResidT = taskResidT.get(calledTaskName);
+            if (t1Tput != null && t1Tput > 0 && calleeResidT != null
+                    && !Double.isNaN(calleeResidT) && calleeResidT > 0) {
+                taskQLen.put(task.getName(), t1Tput * calleeResidT);
+            } else {
+                Double calledQLen = taskQLen.get(calledTaskName);
+                if (calledQLen != null) {
+                    taskQLen.put(task.getName(), calledQLen);
+                }
             }
 
-            taskResidT.put(task.getName(), 0.0);
+            // Only zero out ResidT if not already set (e.g., from a non-Immediate processor layer).
+            if (!taskResidT.containsKey(task.getName())) {
+                taskResidT.put(task.getName(), 0.0);
+            }
         }
     }
 
@@ -316,6 +367,15 @@ public final class SolverLNSimpleResultsUtils {
         }
 
         if (!Double.isNaN(resp) && resp > 0) {
+            // Add the callee's response time so the entry response time reflects
+            // both the local processor service and any synchronous call chain.
+            String calledTask = taskCalledTask.get(parentTaskName);
+            if (calledTask != null) {
+                double calleeResid = resolveEffectiveResid(calledTask, taskResidT, taskCalledTask, new HashSet<String>());
+                if (!Double.isNaN(calleeResid) && calleeResid > 0) {
+                    return resp + calleeResid;
+                }
+            }
             return resp;
         }
 

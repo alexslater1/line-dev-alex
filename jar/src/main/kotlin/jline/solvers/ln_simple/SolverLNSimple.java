@@ -9,14 +9,15 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import jline.io.Ret;
+import jline.solvers.ln_simple.utils.SolverLnSimpleBugModels;
 import jline.util.matrix.Matrix;
 import jline.lang.layered.LayeredNetwork;
 import jline.lang.nodes.Delay;
 import jline.lang.nodes.Queue;
 import jline.lang.processes.Exp;
+import jline.solvers.LayeredNetworkAvgTable;
 import jline.solvers.ln_simple.utils.SolverLNSimpleResultsUtils;
 import jline.solvers.ln_simple.utils.MvaUtils;
-import jline.solvers.ln_simple.utils.LayeredNetworkTestExamples;
 
 
 public class SolverLNSimple {
@@ -24,7 +25,9 @@ public class SolverLNSimple {
     private int N_LAYERS;
     private List<Network> ensemble;
     private final double[] baseClientsThink; // initial Clients Delay think per layer, used as base for coupling
+    private double[] hostContribToCalleeClients; // R_proc added to each callee-layer's Clients via host->callee coupling
     private LayeredNetwork lqnModel; // Save the original LQN model
+    private LayeredNetworkAvgTable lastAvgTable;
     private final Map<String, String> taskToProcessor = new HashMap<String, String>();
     private final Map<String, List<String>> processorToTasks = new HashMap<String, List<String>>();
     private final Map<String, Integer> queueNameToLayer = new HashMap<String, Integer>();
@@ -38,6 +41,7 @@ public class SolverLNSimple {
 
         // Capture base Clients think times before any coupling modifies them
         baseClientsThink = new double[N_LAYERS];
+        hostContribToCalleeClients = new double[N_LAYERS];
         for (int l = 0; l < N_LAYERS; l++) {
             Delay d = findClientsDelay(ensemble.get(l));
             if (d != null) {
@@ -69,12 +73,24 @@ public class SolverLNSimple {
         }
     }
 
-    public static void main(String[] args) {
-        SolverLNSimple s = new SolverLNSimple(LayeredNetworkTestExamples.lqnBasic());
+    public static void main(String[] args) throws Exception {
+        SolverLNSimple s = new SolverLNSimple(SolverLnSimpleBugModels.bug1network3());
         s.iterateCoupledMva(100, 1e-4);
     }
 
+    public LayeredNetworkAvgTable getAvgTable() {
+        return lastAvgTable;
+    }
+
+    public List<Network> getEnsemble() {
+        return ensemble;
+    }
+
     public void iterateCoupledMva(int maxIter, double tol) {
+        iterateCoupledMva(maxIter, tol, null);
+    }
+
+    public void iterateCoupledMva(int maxIter, double tol, Runnable afterIteration) {
         double[] prevX = new double[N_LAYERS];
 
         for (int iter = 0; iter < maxIter; iter++) {
@@ -185,7 +201,9 @@ public class SolverLNSimple {
                             if (layerClients != null) {
                                 double clientMean = layerClients.getServiceProcess(layerMain).getMean();
                                 if (Double.isFinite(clientMean)) {
-                                    double extraBlocking = clientMean - baseClientsThink[l];
+                                    // Subtract any R_proc contribution added via host->callee-clients
+                                    // coupling so it is not double-counted in the P1 Clients update.
+                                    double extraBlocking = clientMean - baseClientsThink[l] - hostContribToCalleeClients[l];
                                     if (extraBlocking > 0) {
                                         R_task_total += extraBlocking;
                                     }
@@ -223,8 +241,9 @@ public class SolverLNSimple {
                     }
 
                     // Update callee's host (P:P2) think time.
-                    // Z_callee_host = (N - Q_server) / X = Q_delay / X = caller's think time.
-                    // This reflects the time callee task spends idle (not consuming callee's processor).
+                    // Z_callee_host = max(calleeTask.thinkTime, (N - Q_server) / X).
+                    // The callee task's own think time sets a lower bound: even if the caller's
+                    // cycle is fast, the callee is unavailable for at least its own think period.
                     String calleeTask = stripPrefix(serverQueueName);
                     String calleeProcessor = taskToProcessor.get(calleeTask);
                     if (calleeProcessor != null) {
@@ -233,7 +252,16 @@ public class SolverLNSimple {
                             double Q_server = res.Q.get(serverNodeIndex, 0);
                             double N_task = N.get(0, 0);
                             if (Double.isFinite(Q_server) && throughput > EPS) {
-                                double Z_callee_host = Math.max(1e-9, Math.min((N_task - Q_server) / throughput, MAX_PROTECTION));
+                                double calleeThinkTime = 0.0;
+                                for (Task t : lqnModel.getTasks().values()) {
+                                    if (calleeTask.equals(t.getName())) {
+                                        double m = t.getThinkTimeMean();
+                                        if (!Double.isNaN(m)) calleeThinkTime = m;
+                                        break;
+                                    }
+                                }
+                                double Z_callee_host = Math.max(calleeThinkTime, (N_task - Q_server) / throughput);
+                                Z_callee_host = Math.max(1e-9, Math.min(Z_callee_host, MAX_PROTECTION));
                                 Delay calleeHostClients = findClientsDelay(ensemble.get(calleeHostLayer));
                                 if (calleeHostClients != null) {
                                     JobClass calleeHostMain = MvaUtils.getMainClass(ensemble.get(calleeHostLayer));
@@ -292,7 +320,28 @@ public class SolverLNSimple {
 
                     for (String hostedTask : hostedTasks) {
                         Integer taskLayer = queueNameToLayer.get("T:" + hostedTask);
-                        if (taskLayer == null || taskLayer == l) {
+                        if (taskLayer == null) {
+                            // hostedTask is a REF task with no own task layer.
+                            // Propagate R_proc into the Clients delay of every task layer
+                            // where this REF task is the caller (e.g. T2 layer driven by T1).
+                            double safeR = Math.max(1e-9, Math.min(R_proc, MAX_PROTECTION));
+                            for (Map.Entry<String, Integer> entry : queueNameToLayer.entrySet()) {
+                                if (!entry.getKey().startsWith("T:")) continue;
+                                int calleeLay = entry.getValue();
+                                Network calleeNet = ensemble.get(calleeLay);
+                                JobClass calleeMain = MvaUtils.getMainClass(calleeNet);
+                                if (calleeMain == null) continue;
+                                if (!hostedTask.equals(stripPrefix(calleeMain.getName()))) continue;
+                                Delay calleeClients = findClientsDelay(calleeNet);
+                                if (calleeClients == null) continue;
+                                double newThink = Math.max(1e-9, Math.min(baseClientsThink[calleeLay] + safeR, MAX_PROTECTION));
+                                calleeClients.setService(calleeMain, Exp.fitMean(newThink));
+                                hostContribToCalleeClients[calleeLay] = safeR;
+                                System.out.println(" [host->callee-clients via ref] " + layerName + " hostedTask=" + hostedTask + " -> L" + calleeLay + " think=" + newThink);
+                            }
+                            continue;
+                        }
+                        if (taskLayer == l) {
                             continue;
                         }
                         Queue tq = MvaUtils.findNonDelayQueue(ensemble.get(taskLayer));
@@ -309,6 +358,13 @@ public class SolverLNSimple {
                         System.out.println(" [host->task] " + layerName + " -> " + tq.getName() + " service=" + safeR);
                     }
                 }
+
+            }
+
+            refreshEnsemble();
+
+            if (afterIteration != null) {
+                afterIteration.run();
             }
 
             if (maxDeltaX < tol) {
@@ -318,7 +374,13 @@ public class SolverLNSimple {
         }
 
         // Collect final results and print using LayeredNetworkAvgTable
-        SolverLNSimpleResultsUtils.collectAndPrintFinalResults(lqnModel, ensemble, N_LAYERS);
+        lastAvgTable = SolverLNSimpleResultsUtils.collectAndPrintFinalResults(lqnModel, ensemble, N_LAYERS);
+    }
+
+    private void refreshEnsemble() {
+        for (Network layer : ensemble) {
+            layer.refreshProcesses();
+        }
     }
 
     private String stripPrefix(String name) {
