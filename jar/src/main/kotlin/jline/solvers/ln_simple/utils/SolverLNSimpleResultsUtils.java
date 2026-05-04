@@ -47,6 +47,9 @@ public final class SolverLNSimpleResultsUtils {
         Map<String, Double> taskResidT = new HashMap<>();
         Map<String, Double> taskTput = new HashMap<>();
         Map<String, Double> hostLayerTput = new HashMap<>();
+        Map<String, Double> hostLayerResid = new HashMap<>();
+        Map<String, Double> processorDemand = new HashMap<>();
+        Map<String, Double> processorServers = new HashMap<>();
 
         Map<String, String> refTaskCalledTask = buildRefTaskCalledTaskMap(lqnModel);
         Map<String, String> taskCalledTask = buildTaskCalledTaskMap(lqnModel);
@@ -94,6 +97,8 @@ public final class SolverLNSimpleResultsUtils {
                 // Compute per-server utilization: X * D / c (pfqn_mvald returns 1-P(idle) which differs for c>1).
                 double d = demand.get(serverNodeIndex, 0);
                 double c = servers.get(serverNodeIndex, 0);
+                processorDemand.put(taskName, d);
+                processorServers.put(taskName, c);
                 double u_per_server = (c > 0 && x > 0) ? Math.min(x * d / c, 1.0) : u;
                 processorUtil.put(taskName, u_per_server);
 
@@ -110,6 +115,9 @@ public final class SolverLNSimpleResultsUtils {
                             // the task's own cycle (including its think time) and is used below
                             // to override the task-layer throughput, which reflects the caller's rate.
                             hostLayerTput.put(task.getName(), x);
+                            if (Double.isFinite(r) && r > 0) {
+                                hostLayerResid.put(task.getName(), r);
+                            }
                         }
                         break;
                     }
@@ -129,16 +137,63 @@ public final class SolverLNSimpleResultsUtils {
                     taskRespT.put(taskName, Double.NaN);
                 }
                 if (!isRefTask(currentTask)) {
-                    taskResidT.put(taskName, r);
+                    // For immediate tasks (zero host demand), the residual time is 0,
+                    // not the callee response propagated into the server queue by coupling.
+                    double taskHostDemand = computeTaskHostDemand(currentTask);
+                    taskResidT.put(taskName, taskHostDemand <= 1e-7 ? 0.0 : r);
                 }
                 taskTput.put(taskName, x);
             }
         }
 
-        // For non-REF tasks, the host layer gives the task's own throughput (accounting for its
-        // think time), while the task layer gives the caller's throughput. Prefer the host layer.
+        // For non-REF tasks, the host layer gives the task's own throughput only when the
+        // processor has non-zero service demand. For intermediate immediate tasks (D=0 processor),
+        // the host layer runs unconstrained and gives the wrong throughput; use the task-layer
+        // solve instead (Fix 3).
+        Map<String, String> taskNameToProc = new HashMap<String, String>();
+        for (Task task : lqnModel.getTasks().values()) {
+            if (task.getProcessor() != null) {
+                taskNameToProc.put(task.getName(), task.getProcessor().getName());
+            }
+        }
         for (Map.Entry<String, Double> e : hostLayerTput.entrySet()) {
-            taskTput.put(e.getKey(), e.getValue());
+            String tName = e.getKey();
+            String procName = taskNameToProc.get(tName);
+            Double d = (procName != null) ? processorDemand.get(procName) : null;
+            if (d != null && d > 0) {
+                taskTput.put(tName, e.getValue());
+            }
+        }
+
+        // For processors hosting a single non-REF task, align utilization with the
+        // resolved task throughput used in the final table.
+        Map<String, List<Task>> processorToNonRefTasks = new HashMap<String, List<Task>>();
+        for (Task task : lqnModel.getTasks().values()) {
+            if (task.getScheduling() == SchedStrategy.REF || task.getProcessor() == null) {
+                continue;
+            }
+            String procName = task.getProcessor().getName();
+            List<Task> hosted = processorToNonRefTasks.get(procName);
+            if (hosted == null) {
+                hosted = new ArrayList<Task>();
+                processorToNonRefTasks.put(procName, hosted);
+            }
+            hosted.add(task);
+        }
+        for (Map.Entry<String, List<Task>> e : processorToNonRefTasks.entrySet()) {
+            String procName = e.getKey();
+            List<Task> hosted = e.getValue();
+            if (hosted.size() != 1) {
+                continue;
+            }
+            Task hostedTask = hosted.get(0);
+            Double tx = taskTput.get(hostedTask.getName());
+            Double d = processorDemand.get(procName);
+            Double c = processorServers.get(procName);
+            if (tx != null && tx > 0 && d != null && c != null && c > 0) {
+                processorUtil.put(procName, Math.min(tx * d / c, 1.0));
+                taskUtil.put(hostedTask.getName(), processorUtil.get(procName));
+            }
         }
 
         applyRefTaskInheritance(lqnModel, taskQLen, taskResidT, taskTput, refTaskCalledTask);
@@ -147,7 +202,12 @@ public final class SolverLNSimpleResultsUtils {
             if (task.getScheduling() != SchedStrategy.REF) {
                 Double x = taskTput.get(task.getName());
                 if (x != null && x > 0) {
-                    double effR = resolveEffectiveResid(task.getName(), taskResidT, taskCalledTask, new HashSet<String>());
+                    double effR;
+                    if (isLeafNonRefTask(task, taskCalledTask) && hostLayerResid.containsKey(task.getName())) {
+                        effR = hostLayerResid.get(task.getName());
+                    } else {
+                        effR = resolveEffectiveResid(task.getName(), taskResidT, taskCalledTask, new HashSet<String>());
+                    }
                     if (!Double.isNaN(effR) && effR >= 0) {
                         taskQLen.put(task.getName(), x * effR);
                     }
@@ -185,12 +245,19 @@ public final class SolverLNSimpleResultsUtils {
         }
 
         for (Task task : lqnModel.getTasks().values()) {
+            double resid = taskResidT.containsKey(task.getName()) ? taskResidT.get(task.getName()) : 0.0;
+            if (task.getScheduling() != SchedStrategy.REF
+                    && isLeafNonRefTask(task, taskCalledTask)
+                    && hostLayerResid.containsKey(task.getName())) {
+                resid = hostLayerResid.get(task.getName());
+            }
+
             finalNodeNames.add(task.getName());
             finalNodeTypes.add(task.getScheduling() == SchedStrategy.REF ? "RefTask" : "Task");
             finalQLen.add(taskQLen.containsKey(task.getName()) ? taskQLen.get(task.getName()) : 0.0);
             finalUtil.add(taskUtil.containsKey(task.getName()) ? taskUtil.get(task.getName()) : 0.0);
             finalRespT.add(taskRespT.containsKey(task.getName()) ? taskRespT.get(task.getName()) : Double.NaN);
-            finalResidT.add(taskResidT.containsKey(task.getName()) ? taskResidT.get(task.getName()) : 0.0);
+            finalResidT.add(resid);
             finalArvR.add(Double.NaN);
             finalTput.add(taskTput.containsKey(task.getName()) ? taskTput.get(task.getName()) : 0.0);
         }
@@ -198,7 +265,15 @@ public final class SolverLNSimpleResultsUtils {
         for (Entry entry : lqnModel.getEntries().values()) {
             String parentTaskName = (entry.getParent() != null) ? entry.getParent().getName() : null;
             double q = (parentTaskName != null && taskQLen.containsKey(parentTaskName)) ? taskQLen.get(parentTaskName) : 0.0;
-            double resp = resolveEntryRespTime(lqnModel, parentTaskName, taskResidT, taskCalledTask, refTaskCalledTask);
+            double resp;
+            Task parentTask = findTaskByName(lqnModel, parentTaskName);
+            if (parentTask != null
+                    && parentTask.getScheduling() != SchedStrategy.REF
+                    && !taskHasExternalSyncCall(lqnModel, parentTaskName)) {
+                resp = deriveLocalTaskResid(parentTaskName, taskQLen, taskTput, taskResidT);
+            } else {
+                resp = resolveEntryRespTime(lqnModel, parentTaskName, taskResidT, taskCalledTask, refTaskCalledTask);
+            }
             double t = (parentTaskName != null && taskTput.containsKey(parentTaskName)) ? taskTput.get(parentTaskName) : 0.0;
 
             finalNodeNames.add(entry.getName());
@@ -215,8 +290,9 @@ public final class SolverLNSimpleResultsUtils {
 
         for (Activity act : lqnModel.getActivities().values()) {
             String parentTaskName = (act.getParent() != null) ? act.getParent().getName() : null;
+            Task parentTask = (act.getParent() != null) ? findTaskByName(lqnModel, parentTaskName) : null;
             boolean isRefTaskActivity = act.getParent() != null && act.getParent().getScheduling() == SchedStrategy.REF;
-            boolean hasSyncCall = act.getSyncCallDests() != null && !act.getSyncCallDests().isEmpty();
+            boolean hasSyncCall = hasExternalSyncCall(lqnModel, act, parentTaskName);
 
             double q = (parentTaskName != null && taskQLen.containsKey(parentTaskName)) ? taskQLen.get(parentTaskName) : 0.0;
             double util = (parentTaskName != null && taskUtil.containsKey(parentTaskName)) ? taskUtil.get(parentTaskName) : 0.0;
@@ -226,9 +302,43 @@ public final class SolverLNSimpleResultsUtils {
 
             double resp;
             if (hasSyncCall) {
+                double parentEntryResp = Double.NaN;
+                if (parentTask != null && !parentTask.getEntries().isEmpty()) {
+                    Entry parentEntry = parentTask.getEntries().get(0);
+                    if (entryRespT.containsKey(parentEntry.getName())) {
+                        parentEntryResp = entryRespT.get(parentEntry.getName());
+                    }
+                }
+
+                if (Double.isFinite(parentEntryResp)) {
+                    resp = parentEntryResp;
+                } else {
                 double sumResp = 0.0;
                 int count = 0;
                 for (String dest : act.getSyncCallDests().values()) {
+                    Entry calledEntry = findEntryByName(lqnModel, dest);
+                    if (calledEntry == null || calledEntry.getParent() == null) {
+                        continue;
+                    }
+                    String calledTaskName = calledEntry.getParent().getName();
+                    if (parentTaskName != null && parentTaskName.equals(calledTaskName)) {
+                        // Ignore self-calls in response aggregation to avoid local-time double counting.
+                        continue;
+                    }
+
+                    if (isRefTaskActivity) {
+                        double calledChainResp = resolveEffectiveResid(
+                                calledTaskName,
+                                taskResidT,
+                                taskCalledTask,
+                                new HashSet<String>());
+                        if (!Double.isNaN(calledChainResp)) {
+                            sumResp += calledChainResp;
+                            count++;
+                            continue;
+                        }
+                    }
+
                     if (entryRespT.containsKey(dest) && !Double.isNaN(entryRespT.get(dest))) {
                         sumResp += entryRespT.get(dest);
                         count++;
@@ -236,16 +346,31 @@ public final class SolverLNSimpleResultsUtils {
                 }
                 if (count > 0) {
                     // Include local processor service time in the activity response time.
-                    double localTime = (parentTaskName != null && taskResidT.containsKey(parentTaskName)) ? taskResidT.get(parentTaskName) : 0.0;
+                    double localTime;
+                    localTime = (parentTaskName != null && taskResidT.containsKey(parentTaskName)) ? taskResidT.get(parentTaskName) : 0.0;
                     resp = localTime + sumResp / count;
                 } else {
                     resp = Double.NaN;
                 }
+                }
             } else {
-                resp = (parentTaskName != null && taskResidT.containsKey(parentTaskName)) ? taskResidT.get(parentTaskName) : Double.NaN;
+                if (parentTask != null
+                        && parentTask.getScheduling() != SchedStrategy.REF
+                        && !taskHasExternalSyncCall(lqnModel, parentTaskName)) {
+                    resp = deriveLocalTaskResid(parentTaskName, taskQLen, taskTput, taskResidT);
+                } else {
+                    resp = (parentTaskName != null && taskResidT.containsKey(parentTaskName)) ? taskResidT.get(parentTaskName) : Double.NaN;
+                }
             }
 
-            double resid = (parentTaskName != null && taskResidT.containsKey(parentTaskName)) ? taskResidT.get(parentTaskName) : 0.0;
+            double resid;
+            if (parentTask != null
+                    && parentTask.getScheduling() != SchedStrategy.REF
+                    && !taskHasExternalSyncCall(lqnModel, parentTaskName)) {
+                resid = deriveLocalTaskResid(parentTaskName, taskQLen, taskTput, taskResidT);
+            } else {
+                resid = (parentTaskName != null && taskResidT.containsKey(parentTaskName)) ? taskResidT.get(parentTaskName) : 0.0;
+            }
             if (isRefTaskActivity && act.getHostDemandMean() <= 1e-8) {
                 resid = 0.0;
             }
@@ -268,6 +393,18 @@ public final class SolverLNSimpleResultsUtils {
         opts.verbose = VerboseLevel.STD;
         table.print(opts, true);
         return table;
+    }
+
+    private static double computeTaskHostDemand(Task task) {
+        if (task == null) return 0.0;
+        double total = 0.0;
+        for (Activity act : task.getActivities()) {
+            double m = act.getHostDemandMean();
+            if (!Double.isNaN(m) && Double.isFinite(m)) {
+                total += m;
+            }
+        }
+        return total;
     }
 
     private static String stripPrefix(String name) {
@@ -294,7 +431,10 @@ public final class SolverLNSimpleResultsUtils {
                 for (String callDest : activity.getSyncCallDests().values()) {
                     Entry calledEntry = findEntryByName(lqnModel, callDest);
                     if (calledEntry != null && calledEntry.getParent() != null) {
-                        refTaskCalledTask.put(task.getName(), calledEntry.getParent().getName());
+                        String calledTaskName = calledEntry.getParent().getName();
+                        if (!task.getName().equals(calledTaskName)) {
+                            refTaskCalledTask.put(task.getName(), calledTaskName);
+                        }
                     }
                 }
             }
@@ -350,7 +490,7 @@ public final class SolverLNSimpleResultsUtils {
         }
     }
 
-        public static double resolveEntryRespTime(
+    public static double resolveEntryRespTime(
             LayeredNetwork lqnModel,
             String parentTaskName,
             Map<String, Double> taskResidT,
@@ -370,7 +510,9 @@ public final class SolverLNSimpleResultsUtils {
             // Add the callee's response time so the entry response time reflects
             // both the local processor service and any synchronous call chain.
             String calledTask = taskCalledTask.get(parentTaskName);
-            if (calledTask != null) {
+            if (taskHasExternalSyncCall(lqnModel, parentTaskName)
+                    && calledTask != null
+                    && !calledTask.equals(parentTaskName)) {
                 double calleeResid = resolveEffectiveResid(calledTask, taskResidT, taskCalledTask, new HashSet<String>());
                 if (!Double.isNaN(calleeResid) && calleeResid > 0) {
                     return resp + calleeResid;
@@ -384,8 +526,8 @@ public final class SolverLNSimpleResultsUtils {
             return inherited;
         }
 
-        Task parentTask = findTaskByName(lqnModel, parentTaskName);
-        if (isRefTask(parentTask)) {
+        Task currentTask = findTaskByName(lqnModel, parentTaskName);
+        if (isRefTask(currentTask)) {
             String calledTaskName = refTaskCalledTask.get(parentTaskName);
             if (calledTaskName != null && taskResidT.containsKey(calledTaskName)) {
                 return taskResidT.get(calledTaskName);
@@ -430,7 +572,10 @@ public final class SolverLNSimpleResultsUtils {
                 for (String callDest : activity.getSyncCallDests().values()) {
                     Entry calledEntry = findEntryByName(lqnModel, callDest);
                     if (calledEntry != null && calledEntry.getParent() != null) {
-                        taskCalledTask.put(task.getName(), calledEntry.getParent().getName());
+                        String calledTaskName = calledEntry.getParent().getName();
+                        if (!task.getName().equals(calledTaskName)) {
+                            taskCalledTask.put(task.getName(), calledTaskName);
+                        }
                     }
                 }
             }
@@ -451,6 +596,56 @@ public final class SolverLNSimpleResultsUtils {
 
     public static boolean isRefTask(Task task) {
         return task != null && task.getScheduling() == SchedStrategy.REF;
+    }
+
+    private static boolean isLeafNonRefTask(Task task, Map<String, String> taskCalledTask) {
+        return task != null
+                && task.getScheduling() != SchedStrategy.REF
+                && !taskCalledTask.containsKey(task.getName());
+    }
+
+    private static boolean hasExternalSyncCall(LayeredNetwork lqnModel, Activity activity, String parentTaskName) {
+        if (activity == null || activity.getSyncCallDests() == null || activity.getSyncCallDests().isEmpty()) {
+            return false;
+        }
+        for (String dest : activity.getSyncCallDests().values()) {
+            Entry calledEntry = findEntryByName(lqnModel, dest);
+            if (calledEntry == null || calledEntry.getParent() == null) {
+                continue;
+            }
+            String calledTaskName = calledEntry.getParent().getName();
+            if (parentTaskName == null || !parentTaskName.equals(calledTaskName)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean taskHasExternalSyncCall(LayeredNetwork lqnModel, String taskName) {
+        Task task = findTaskByName(lqnModel, taskName);
+        if (task == null) {
+            return false;
+        }
+        for (Activity activity : task.getActivities()) {
+            if (hasExternalSyncCall(lqnModel, activity, taskName)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static double deriveLocalTaskResid(
+            String taskName,
+            Map<String, Double> taskQLen,
+            Map<String, Double> taskTput,
+            Map<String, Double> taskResidT) {
+        Double q = taskQLen.get(taskName);
+        Double x = taskTput.get(taskName);
+        if (q != null && x != null && x > 0 && Double.isFinite(q) && Double.isFinite(x)) {
+            return q / x;
+        }
+        Double r = taskResidT.get(taskName);
+        return (r != null) ? r : Double.NaN;
     }
 
     private static Entry findEntryByName(LayeredNetwork lqnModel, String entryName) {

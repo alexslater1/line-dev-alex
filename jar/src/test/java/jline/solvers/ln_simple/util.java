@@ -15,6 +15,7 @@ import jline.lang.constant.SolverType;
 import jline.lang.layered.LayeredNetwork;
 import jline.solvers.LayeredNetworkAvgTable;
 import jline.solvers.ln.SolverLN;
+import jline.solvers.lqns.SolverLQNS;
 
 public class util {
 
@@ -76,7 +77,16 @@ public class util {
     public static LayeredNetworkAvgTable runSolverLN(LayeredNetwork model) {
         final LayeredNetworkAvgTable[] holder = new LayeredNetworkAvgTable[1];
         suppressOutput(() -> {
-            SolverLN solver = new SolverLN(model, SolverType.MVA);
+            SolverLN solver = new SolverLN(model);
+            holder[0] = (LayeredNetworkAvgTable) solver.getAvgTable();
+        });
+        return holder[0];
+    }
+
+    public static LayeredNetworkAvgTable runSolverLQNS(LayeredNetwork model) {
+        final LayeredNetworkAvgTable[] holder = new LayeredNetworkAvgTable[1];
+        suppressOutput(() -> {
+            SolverLQNS solver = new SolverLQNS(model);
             holder[0] = (LayeredNetworkAvgTable) solver.getAvgTable();
         });
         return holder[0];

@@ -57,6 +57,7 @@ public class SolverLnSimpleBugModels {
         return model;
     }
 
+    //perhaps: getting repsonse time t3 (service time t2), mva t2 response time > service time
     public static LayeredNetwork bug1network3() {
         LayeredNetwork model = new LayeredNetwork("Decreasing Task Multiplicity (Failing)");
 
@@ -64,7 +65,7 @@ public class SolverLnSimpleBugModels {
         Processor P2 = new Processor(model, "P2", 2, SchedStrategy.PS);
         Processor P3 = new Processor(model, "P3", 2, SchedStrategy.PS);
 
-        Task T1 = new Task(model, "T1", 3, SchedStrategy.REF).on(P1).setThinkTime(new Exp(1.0/4));
+        Task T1 = new Task(model, "T1", 2, SchedStrategy.REF).on(P1);
         Task T2 = new Task(model, "T2", 2, SchedStrategy.FCFS).on(P2);
         Task T3 = new Task(model, "T3", 1, SchedStrategy.FCFS).on(P3);
 

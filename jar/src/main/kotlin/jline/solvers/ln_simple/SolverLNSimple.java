@@ -73,11 +73,6 @@ public class SolverLNSimple {
         }
     }
 
-    public static void main(String[] args) throws Exception {
-        SolverLNSimple s = new SolverLNSimple(SolverLnSimpleBugModels.bug1network3());
-        s.iterateCoupledMva(100, 1e-4);
-    }
-
     public LayeredNetworkAvgTable getAvgTable() {
         return lastAvgTable;
     }
@@ -231,10 +226,29 @@ public class SolverLNSimple {
                             System.out.println(" [task->caller-task] " + layerName + " -> L" + callerTaskLayer + " think=" + callerTaskThink);
                         }
 
+                        // Fix 2: for intermediate "T:"-driven caller layers, also set the server
+                        // queue service demand to R_task_total so the callee response time is
+                        // visible to the MVA solve (not just in the Clients think time).
+                        JobClass callerMainClass = MvaUtils.getMainClass(ensemble.get(callerTaskLayer));
+                        if (callerMainClass.getName().startsWith("T:")) {
+                            Queue callerServerQueue = MvaUtils.findNonDelayQueue(ensemble.get(callerTaskLayer));
+                            if (callerServerQueue != null) {
+                                JobClass callerServerClass = findActiveQueueClass(ensemble.get(callerTaskLayer));
+                                if (callerServerClass != null) {
+                                    double safeD = Math.max(1e-9, Math.min(R_task_total, MAX_PROTECTION));
+                                    callerServerQueue.setService(callerServerClass, Exp.fitMean(safeD));
+                                    System.out.println(" [task->caller-service] " + layerName + " -> L" + callerTaskLayer + " D=" + safeD);
+                                }
+                            }
+                        }
+
+                        // Fix 1: inject the root REF-layer think time so that deep task layers
+                        // (depth > 3) are constrained by T1's population, not just the direct
+                        // caller's (potentially zero) think time.
                         Delay calleeClients = findClientsDelay(layer);
                         if (calleeClients != null) {
                             JobClass calleeMain = MvaUtils.getMainClass(layer);
-                            double calleeThink = Math.max(1e-9, Math.min(baseClientsThink[callerTaskLayer], MAX_PROTECTION));
+                            double calleeThink = Math.max(1e-9, Math.min(findRootThink(callerTaskLayer), MAX_PROTECTION));
                             calleeClients.setService(calleeMain, Exp.fitMean(calleeThink));
                             System.out.println(" [caller->callee-think] " + layerName + " think=" + calleeThink);
                         }
@@ -418,5 +432,29 @@ public class SolverLNSimple {
 
     private int computeSweepLayerIndex(int sweepIndex) {
         return (sweepIndex < N_LAYERS) ? sweepIndex : 2 * N_LAYERS - 2 - sweepIndex;
+    }
+
+    // Walk up the task-layer chain from startLayer until we reach an "R:"-driven
+    // (REF task) layer and return its base Clients think time. This is T1's think
+    // time and is the correct Z to inject into deep callee layers so that they are
+    // constrained by the root population rather than a zero intermediate think.
+    private double findRootThink(int startLayer) {
+        int cur = startLayer;
+        java.util.Set<Integer> visited = new java.util.HashSet<Integer>();
+        while (!visited.contains(cur)) {
+            visited.add(cur);
+            Network net = ensemble.get(cur);
+            JobClass main = MvaUtils.getMainClass(net);
+            if (main.getName().startsWith("R:")) {
+                return baseClientsThink[cur];
+            }
+            String callerName = stripPrefix(main.getName());
+            Integer upper = queueNameToLayer.get("T:" + callerName);
+            if (upper == null) {
+                return baseClientsThink[cur];
+            }
+            cur = upper;
+        }
+        return baseClientsThink[startLayer];
     }
 }

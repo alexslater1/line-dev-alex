@@ -42,6 +42,7 @@ public final class MvaUtils {
     public static Matrix buildDemandMatrix(List<Node> mvaNodes, Network net) {
         int m = mvaNodes.size();
         Matrix l = new Matrix(m, 1);
+        JobClass main = getMainClass(net);
         for (int i = 0; i < m; i++) {
             Node node = mvaNodes.get(i);
             double mean = 0.0;
@@ -50,10 +51,19 @@ public final class MvaUtils {
                     // Delay nodes represent think time; do not place their service time into the demand matrix L
                     mean = 0.0;
                 } else {
-                    for (JobClass jc : net.getClasses()) {
-                        double serviceMean = ((ServiceStation) node).getServiceProcess(jc).getMean();
-                        if (!Double.isNaN(serviceMean)) {
-                            mean += serviceMean;
+                    // SolverLNSimple runs a one-class MVA solve per layer (see buildN/getMainClass),
+                    // so the service demand must be taken from that same active class only.
+                    mean = ((ServiceStation) node).getServiceProcess(main).getMean();
+                    if (Double.isNaN(mean)) {
+                        for (JobClass jc : net.getClasses()) {
+                            double serviceMean = ((ServiceStation) node).getServiceProcess(jc).getMean();
+                            if (!Double.isNaN(serviceMean)) {
+                                mean = serviceMean;
+                                break;
+                            }
+                        }
+                        if (Double.isNaN(mean)) {
+                            mean = 0.0;
                         }
                     }
                 }
@@ -69,7 +79,7 @@ public final class MvaUtils {
         if (jc instanceof ClosedClass) {
             n.set(0, 0, ((ClosedClass) jc).getNumberOfJobs());
         } else {
-            n.set(0, 0, Double.POSITIVE_INFINITY);
+            throw new IllegalArgumentException("Main class must be a closed class with a positive number of jobs");
         }
         return n;
     }
