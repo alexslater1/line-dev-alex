@@ -5,20 +5,19 @@ import jline.VerboseLevel;
 import jline.solvers.ln_simple.utils.LayeredNetworkTestExamples;
 import jline.solvers.ln_simple.utils.SolverLnSimpleBugModels;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
 import static jline.solvers.ln_simple.util.assertResultsMatchSolverLN;
 
 public class SolverLNSimpleTest {
+    //PASSING TESTS - USED TO MAKE SURE ANY NEW CHANGES DONT BREAK THE SOLVER
 
     @BeforeAll
     public static void setUp() {
         GlobalConstants.setVerbose(VerboseLevel.SILENT);
     }
 
-    //PASSES
     @Test
     @Timeout(120)
     public void testTwoLayerSingleProcessorNetwork() {
@@ -26,7 +25,6 @@ public class SolverLNSimpleTest {
                 LayeredNetworkTestExamples.twoLayerSingleProcessorNetwork());
     }
 
-    //PASSES
     @Test
     @Timeout(120)
     public void testThreeLayerSingleProcessorNetwork() {
@@ -34,7 +32,6 @@ public class SolverLNSimpleTest {
                 LayeredNetworkTestExamples.threeLayerSingleProcessorNetwork());
     }
 
-    //PASSES
     @Test
     @Timeout(120)
     public void testTwoLayerMultiProcessorNetwork() {
@@ -42,7 +39,6 @@ public class SolverLNSimpleTest {
                 LayeredNetworkTestExamples.twoLayerMultiProcessorNetwork());
     }
 
-    //PASSES
     @Test
     @Timeout(120)
     public void testThreeLayerMultiProcessorNetwork() {
@@ -50,7 +46,6 @@ public class SolverLNSimpleTest {
                 LayeredNetworkTestExamples.threeLayerMultiProcessorNetwork());
     }
 
-    //PASSES
     @Test
     @Timeout(120)
     public void testTwoLayerSingleProcessorNetworkUPDATED() {
@@ -58,12 +53,18 @@ public class SolverLNSimpleTest {
                 LayeredNetworkTestExamples.twoLayerSingleProcessorNetworkUPDATED());
     }
 
-    //PASSES
     @Test
     @Timeout(120)
     public void testTwoLayerSingleProcessorNetworkUPDATED2() {
         assertResultsMatchSolverLN(
                 LayeredNetworkTestExamples.twoLayerSingleProcessorNetworkUPDATED2());
+    }
+
+    @Test
+    @Timeout(120)
+    public void testThreeLayerSingleProcessorNetworkUPDATED() {
+        assertResultsMatchSolverLN(
+                LayeredNetworkTestExamples.threeLayerSingleProcessorNetworkUPDATED());
     }
 
     @Test
@@ -100,5 +101,23 @@ public class SolverLNSimpleTest {
     @Timeout(120)
     public void testBug2Network3() {
         assertResultsMatchSolverLN(LayeredNetworkTestExamples.bug2network3());
+    }
+
+    @Test
+    @Timeout(120)
+    public void testMultiCall() {
+        assertResultsMatchSolverLN(LayeredNetworkTestExamples.multiCallNetwork());
+    }
+
+    @Test
+    @Timeout(120)
+    public void testBug4OnlyLast() {
+        assertResultsMatchSolverLN(SolverLnSimpleBugModels.bug4network1());
+    }
+
+    @Test
+    @Timeout(120)
+    public void testBug4FirstAndLast() {
+        assertResultsMatchSolverLN(SolverLnSimpleBugModels.bug4network2());
     }
 }

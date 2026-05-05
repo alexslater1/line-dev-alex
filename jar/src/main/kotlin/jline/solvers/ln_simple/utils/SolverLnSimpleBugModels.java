@@ -143,10 +143,10 @@ public class SolverLnSimpleBugModels {
 
 
 
-    // BUG 4: correct if only last think time set, incorrect if any others are
+    // BUG 4: correct if only last acticity service demand set, incorrect if any others are
 
     public static LayeredNetwork bug4network1() {
-        LayeredNetwork model = new LayeredNetwork("Only Last Think Time Set (Passing)");
+        LayeredNetwork model = new LayeredNetwork("Only Last Service Demand Set (Passing)");
 
         Processor P1 = new Processor(model, "P1", 2, SchedStrategy.PS);
         Processor P2 = new Processor(model, "P2", 3, SchedStrategy.PS);
@@ -169,7 +169,7 @@ public class SolverLnSimpleBugModels {
     }
 
     public static LayeredNetwork bug4network2() {
-        LayeredNetwork model = new LayeredNetwork("First and Last Think Time Set (Failing)");
+        LayeredNetwork model = new LayeredNetwork("First and Last Service Demand Set (Failing)");
 
         Processor P1 = new Processor(model, "P1", 2, SchedStrategy.PS);
         Processor P2 = new Processor(model, "P2", 3, SchedStrategy.PS);
@@ -192,7 +192,7 @@ public class SolverLnSimpleBugModels {
     }
 
     public static LayeredNetwork bug4network3() {
-        LayeredNetwork model = new LayeredNetwork("Second Think Time Set (Failing)");
+        LayeredNetwork model = new LayeredNetwork("Second Service Demand Set (Failing)");
 
         Processor P1 = new Processor(model, "P1", 2, SchedStrategy.PS);
         Processor P2 = new Processor(model, "P2", 3, SchedStrategy.PS);

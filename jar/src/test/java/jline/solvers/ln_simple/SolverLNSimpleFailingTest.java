@@ -12,7 +12,7 @@ import org.junit.jupiter.api.Timeout;
 import static jline.solvers.ln_simple.util.assertResultsMatchSolverLN;
 
 public class SolverLNSimpleFailingTest {
-    //ALL THESE TESTS FAIL CURRENTLY
+    //FAILING TESTS - USED TO STORE KNOWN FAILURES
 
     @Disabled
     @Test
@@ -38,17 +38,5 @@ public class SolverLNSimpleFailingTest {
 
         assertResultsMatchSolverLN(model);
     }
-
-    @Disabled
-    @Test
-    @Timeout(120)
-    public void testThreeLayerSingleProcessorNetworkUPDATED() {
-        assertResultsMatchSolverLN(
-                LayeredNetworkTestExamples.threeLayerSingleProcessorNetworkUPDATED());
-    }
-
-
-
-
     
 }

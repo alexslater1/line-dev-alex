@@ -147,6 +147,20 @@ public final class SolverLNSimpleResultsUtils {
             }
         }
 
+        // For intermediate non-REF tasks (those that have sync callees), taskResidT was set
+        // from the task-layer server demand D_local + R_callee (Fix 2). Override with
+        // hostLayerResid (= D_local only) so resolveTaskResponseTime doesn't double-count R_callee
+        // when it adds the callee's response on top.
+        for (Task task : lqnModel.getTasks().values()) {
+            if (isRefTask(task) || isLeafNonRefTask(task, taskCalledTask)) {
+                continue;
+            }
+            String tName = task.getName();
+            if (hostLayerResid.containsKey(tName)) {
+                taskResidT.put(tName, hostLayerResid.get(tName));
+            }
+        }
+
         // For non-REF tasks, the host layer gives the task's own throughput only when the
         // processor has non-zero service demand. For intermediate immediate tasks (D=0 processor),
         // the host layer runs unconstrained and gives the wrong throughput; use the task-layer

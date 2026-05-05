@@ -89,13 +89,11 @@ public class SolverLNSimple {
         double[] prevX = new double[N_LAYERS];
 
         for (int iter = 0; iter < maxIter; iter++) {
-            System.out.println("iteration " + iter);
             double maxDeltaX = 0.0;
 
             int sweepLen = 2 * N_LAYERS - 1;
             for (int si = 0; si < sweepLen; si++) {
                 int l = computeSweepLayerIndex(si);
-                System.out.println("sweep layer index " + l);
                 Network layer = ensemble.get(l);
 
                 List<jline.lang.nodes.Node> nodes = MvaUtils.getQueueNodes(layer);
@@ -106,53 +104,16 @@ public class SolverLNSimple {
                 Matrix L = MvaUtils.buildDemandMatrix(nodes, layer);
                 Matrix S = MvaUtils.buildServerMatrix(nodes, N);
 
-                // Print MVA input matrices for diagnostics
-                System.out.println("  MVA inputs for layer " + l + " (" + layer.getName() + "):");
-                System.out.println("   N =\n" + N.toString());
-                System.out.println("   Z =\n" + Z.toString());
-                System.out.println("   L =\n" + L.toString());
-                System.out.println("   S =\n" + S.toString());
-
-                // Print node index -> queue mapping and per-class service means
-                System.out.println("  Node index mapping:");
-                for (int i = 0; i < M; i++) {
-                    jline.lang.nodes.Node nd = nodes.get(i);
-                    System.out.println("   idx=" + i + " name=" + nd.getName() + " class=" + nd.getClass().getSimpleName());
-                    if (nd instanceof jline.lang.nodes.ServiceStation) {
-                        for (jline.lang.JobClass jc : layer.getClasses()) {
-                            double m = ((jline.lang.nodes.ServiceStation) nd).getServiceProcess(jc).getMean();
-                            System.out.println("    svc for class " + jc.getName() + " = " + m);
-                        }
-                    }
-                }
-
-                double firstService = (L.getNumRows() > 0) ? L.get(0, 0) : 0.0;
-                System.out.println(" Solving layer " + l + " (" + layer.getName() + "): Z=" + Z.get(0, 0) + " S=" + firstService);
-
                 Ret.pfqnMVA res = null;
                 try {
                     res = MvaUtils.callMVA(L, N, Z, S);
                 } catch (Exception e) {
-                    System.out.println(" MVA threw exception for layer " + l + " (" + layer.getName() + "): " + e.getMessage());
                     e.printStackTrace();
                     return;
                 }
                 if (res == null) return;
 
                 double throughput = res.X.get(0, 0);
-                System.out.println(" Layer " + l + " throughput X=" + throughput);
-
-                // Print per-node MVA results with mapping
-                System.out.println("  MVA per-node results (index:name):");
-                for (int i = 0; i < M; i++) {
-                    String nname = nodes.get(i).getName();
-                    double qi = Double.NaN;
-                    double ui = Double.NaN;
-                    try { qi = res.Q.get(i, 0); } catch (Exception ex) {}
-                    try { ui = res.U.get(i, 0); } catch (Exception ex) {}
-                    System.out.println("   idx=" + i + " name=" + nname + " Q=" + qi + " U=" + ui);
-                }
-
                 double deltaX = Math.abs(throughput - prevX[l]);
                 if (deltaX > maxDeltaX) maxDeltaX = deltaX;
                 prevX[l] = throughput;
@@ -162,7 +123,6 @@ public class SolverLNSimple {
                 if (serverQueue == null) continue;
 
                 if (!Double.isFinite(throughput) || throughput <= EPS) {
-                    System.out.println(" Warning: non-finite or zero throughput for layer " + l + " (" + layer.getName() + ") -> skipping coupling updates");
                     continue;
                 }
 
@@ -179,38 +139,18 @@ public class SolverLNSimple {
                 boolean isFcfsLayer = serverQueueName.startsWith("T:");
 
                 if (isFcfsLayer) {
-                    // Task submodel: feed back to host layers
-                    double R_task_total = 0.0;
+                    // Task submodel: feed back to host layers.
+                    // Use server-only response (Q_server/X) so that Clients think time injected
+                    // by Fix 1 is not double-counted when propagating response to caller/host layers.
+                    double R_task_total = Double.NaN;
                     if (Double.isFinite(throughput) && throughput > EPS) {
-                        for (int j = 0; j < M; j++) {
-                            double qj = res.Q.get(j, 0);
-                            if (!Double.isFinite(qj)) continue;
-                            R_task_total += qj / throughput;
+                        double q_server = res.Q.get(serverNodeIndex, 0);
+                        if (Double.isFinite(q_server)) {
+                            R_task_total = q_server / throughput;
                         }
-
-                        // If nested sync-call blocking has been propagated into Clients delay,
-                        // include only the incremental part over the baseline think time.
-                        JobClass layerMain = MvaUtils.getMainClass(layer);
-                        if (layerMain != null && layerMain.getName().startsWith("R:")) {
-                            Delay layerClients = findClientsDelay(layer);
-                            if (layerClients != null) {
-                                double clientMean = layerClients.getServiceProcess(layerMain).getMean();
-                                if (Double.isFinite(clientMean)) {
-                                    // Subtract any R_proc contribution added via host->callee-clients
-                                    // coupling so it is not double-counted in the P1 Clients update.
-                                    double extraBlocking = clientMean - baseClientsThink[l] - hostContribToCalleeClients[l];
-                                    if (extraBlocking > 0) {
-                                        R_task_total += extraBlocking;
-                                    }
-                                }
-                            }
-                        }
-                    } else {
-                        R_task_total = Double.NaN;
                     }
 
                     if (!Double.isFinite(R_task_total)) {
-                        System.out.println("  Warning: computed NaN/Inf R_task_total for layer " + l + " -> skipping task->host updates");
                         continue;
                     }
 
@@ -219,50 +159,48 @@ public class SolverLNSimple {
                     double syncCallMean = getSyncCallMean(callerTask, calleeTask);
                     double propagatedTaskResp = R_task_total * syncCallMean;
 
+                    // ALWAYS set callee's Clients think time to the full caller chain demand.
+                    // This is independent of whether the caller has its own task layer (it may not,
+                    // e.g. when the caller task uses Immediate service and SolverLN optimises it away).
+                    Delay calleeClients = findClientsDelay(layer);
+                    if (calleeClients != null) {
+                        JobClass calleeMain = MvaUtils.getMainClass(layer);
+                        double calleeThink = Math.max(1e-9, Math.min(
+                                getRootRefThinkTime(calleeTask) + computeCallerChainDemand(calleeTask), MAX_PROTECTION));
+                        calleeClients.setService(calleeMain, Exp.fitMean(calleeThink));
+                    }
+
                     Integer callerTaskLayer = queueNameToLayer.get("T:" + callerTask);
                     if (callerTaskLayer != null && callerTaskLayer != l) {
                         Delay callerTaskClients = findClientsDelay(ensemble.get(callerTaskLayer));
                         if (callerTaskClients != null) {
                             JobClass callerTaskMain = MvaUtils.getMainClass(ensemble.get(callerTaskLayer));
-                            double callerTaskThink = Math.max(1e-9, Math.min(baseClientsThink[callerTaskLayer] + propagatedTaskResp, MAX_PROTECTION));
+                            // Caller's Clients = time caller spends not at callee = Z_REF + sum of demands above caller
+                            double callerTaskThink = Math.max(1e-9, Math.min(
+                                    getRootRefThinkTime(callerTask) + computeCallerChainDemand(callerTask), MAX_PROTECTION));
                             callerTaskClients.setService(callerTaskMain, Exp.fitMean(callerTaskThink));
-                            System.out.println(" [task->caller-task] " + layerName + " -> L" + callerTaskLayer + " think=" + callerTaskThink);
                         }
 
-                        // Fix 2: for intermediate "T:"-driven caller layers, also set the server
-                        // queue service demand to R_task_total so the callee response time is
-                        // visible to the MVA solve (not just in the Clients think time).
-                        JobClass callerMainClass = MvaUtils.getMainClass(ensemble.get(callerTaskLayer));
-                        if (callerMainClass.getName().startsWith("T:")) {
-                            Queue callerServerQueue = MvaUtils.findNonDelayQueue(ensemble.get(callerTaskLayer));
-                            if (callerServerQueue != null) {
-                                JobClass callerServerClass = findActiveQueueClass(ensemble.get(callerTaskLayer));
-                                if (callerServerClass != null) {
-                                    double safeD = Math.max(1e-9, Math.min(propagatedTaskResp, MAX_PROTECTION));
-                                    callerServerQueue.setService(callerServerClass, Exp.fitMean(safeD));
-                                    System.out.println(" [task->caller-service] " + layerName + " -> L" + callerTaskLayer + " D=" + safeD);
-                                }
+                        // Set caller's task layer server to D_local + R_callee so that the callee
+                        // response time is visible to the MVA solve (works for all caller types).
+                        Queue callerServerQueue = MvaUtils.findNonDelayQueue(ensemble.get(callerTaskLayer));
+                        if (callerServerQueue != null) {
+                            JobClass callerServerClass = findActiveQueueClass(ensemble.get(callerTaskLayer));
+                            if (callerServerClass != null) {
+                                double localDemand = computeLocalDemand(callerTask);
+                                double safeD = Math.max(1e-9, Math.min(localDemand + propagatedTaskResp, MAX_PROTECTION));
+                                callerServerQueue.setService(callerServerClass, Exp.fitMean(safeD));
                             }
-                        }
-
-                        // Fix 1: inject the root REF-layer think time so that deep task layers
-                        // (depth > 3) are constrained by T1's population, not just the direct
-                        // caller's (potentially zero) think time.
-                        Delay calleeClients = findClientsDelay(layer);
-                        if (calleeClients != null) {
-                            JobClass calleeMain = MvaUtils.getMainClass(layer);
-                            double calleeThink = Math.max(1e-9, Math.min(findRootThink(callerTaskLayer), MAX_PROTECTION));
-                            calleeClients.setService(calleeMain, Exp.fitMean(calleeThink));
-                            System.out.println(" [caller->callee-think] " + layerName + " think=" + calleeThink);
                         }
                     }
 
-                    // Update callee's host (P:P2) think time.
-                    // Z_callee_host = max(calleeTask.thinkTime, (N - Q_server) / X).
-                    // The callee task's own think time sets a lower bound: even if the caller's
-                    // cycle is fast, the callee is unavailable for at least its own think period.
+                    // Update callee's host (P:P3) think time for LEAF tasks only.
+                    // For intermediate tasks (calleeTask has sync callees) the host Clients is
+                    // managed by Bug 4 fix (computeCallerChainDemand + R_callee), so skip here
+                    // to avoid overwriting with the task-layer (N-Q)/X formula that only works
+                    // when the server demand is D_local (not D_local+R_nested).
                     String calleeProcessor = taskToProcessor.get(calleeTask);
-                    if (calleeProcessor != null) {
+                    if (calleeProcessor != null && !taskHasSyncCallees(calleeTask)) {
                         Integer calleeHostLayer = queueNameToLayer.get("P:" + calleeProcessor);
                         if (calleeHostLayer != null && calleeHostLayer != l) {
                             double Q_server = res.Q.get(serverNodeIndex, 0);
@@ -282,7 +220,6 @@ public class SolverLNSimple {
                                 if (calleeHostClients != null) {
                                     JobClass calleeHostMain = MvaUtils.getMainClass(ensemble.get(calleeHostLayer));
                                     calleeHostClients.setService(calleeHostMain, Exp.fitMean(Z_callee_host));
-                                    System.out.println(" [task->callee-host] " + layerName + " callee=" + calleeTask + " -> L" + calleeHostLayer + " Z=" + Z_callee_host);
                                 }
                             }
                         }
@@ -304,13 +241,12 @@ public class SolverLNSimple {
                     }
 
                     JobClass targetMain = MvaUtils.getMainClass(ensemble.get(hostLayer));
-                    double newThink = baseClientsThink[hostLayer] + propagatedTaskResp;
+                    double newThink = getRootRefThinkTime(callerTask) + computeCallerChainDemand(callerTask) + propagatedTaskResp;
                     if (!Double.isFinite(newThink)) {
                         continue;
                     }
                     newThink = Math.max(1e-9, Math.min(newThink, MAX_PROTECTION));
                     targetClients.setService(targetMain, Exp.fitMean(newThink));
-                    System.out.println(" [task->host] " + layerName + " callerTask=" + callerTask + " callerProcessor=" + callerProcessor + " think=" + newThink);
                 } else {
                     // Host submodel: feed R_proc into the matching task layer
                     double R_proc = Double.NaN;
@@ -320,7 +256,6 @@ public class SolverLNSimple {
                     }
 
                     if (!Double.isFinite(R_proc)) {
-                        System.out.println("  Warning: computed NaN/Inf R_proc for layer " + l + " -> skipping host->task updates");
                         continue;
                     }
 
@@ -353,11 +288,16 @@ public class SolverLNSimple {
                                 double newThink = Math.max(1e-9, Math.min(baseClientsThink[calleeLay] + safeR, MAX_PROTECTION));
                                 calleeClients.setService(calleeMain, Exp.fitMean(newThink));
                                 hostContribToCalleeClients[calleeLay] = safeR;
-                                System.out.println(" [host->callee-clients via ref] " + layerName + " hostedTask=" + hostedTask + " -> L" + calleeLay + " think=" + newThink);
                             }
                             continue;
                         }
                         if (taskLayer == l) {
+                            continue;
+                        }
+                        // Skip intermediate tasks: their server service (D_local + R_callee) is
+                        // set correctly by the task->caller-service coupling; overwriting with
+                        // R_proc (D_local only) would drop the callee response contribution.
+                        if (taskHasSyncCallees(hostedTask)) {
                             continue;
                         }
                         Queue tq = MvaUtils.findNonDelayQueue(ensemble.get(taskLayer));
@@ -371,7 +311,6 @@ public class SolverLNSimple {
                         }
                         double safeR = Math.max(1e-9, Math.min(R_proc, MAX_PROTECTION));
                         tq.setService(activeClass, Exp.fitMean(safeR));
-                        System.out.println(" [host->task] " + layerName + " -> " + tq.getName() + " service=" + safeR);
                     }
                 }
 
@@ -384,7 +323,6 @@ public class SolverLNSimple {
             }
 
             if (maxDeltaX < tol) {
-                System.out.println(" iterateCoupledMva: converged after " + (iter + 1) + " iterations");
                 break;
             }
         }
@@ -436,28 +374,86 @@ public class SolverLNSimple {
         return (sweepIndex < N_LAYERS) ? sweepIndex : 2 * N_LAYERS - 2 - sweepIndex;
     }
 
-    // Walk up the task-layer chain from startLayer until we reach an "R:"-driven
-    // (REF task) layer and return its base Clients think time. This is T1's think
-    // time and is the correct Z to inject into deep callee layers so that they are
-    // constrained by the root population rather than a zero intermediate think.
-    private double findRootThink(int startLayer) {
-        int cur = startLayer;
-        java.util.Set<Integer> visited = new java.util.HashSet<Integer>();
-        while (!visited.contains(cur)) {
-            visited.add(cur);
-            Network net = ensemble.get(cur);
-            JobClass main = MvaUtils.getMainClass(net);
-            if (main.getName().startsWith("R:")) {
-                return baseClientsThink[cur];
+    private double computeLocalDemand(String taskName) {
+        for (Task task : lqnModel.getTasks().values()) {
+            if (taskName.equals(task.getName())) {
+                double total = 0.0;
+                for (jline.lang.layered.Activity act : task.getActivities()) {
+                    double m = act.getHostDemandMean();
+                    if (!Double.isNaN(m) && m > 1e-7) {
+                        total += m;
+                    }
+                }
+                return total;
             }
-            String callerName = stripPrefix(main.getName());
-            Integer upper = queueNameToLayer.get("T:" + callerName);
-            if (upper == null) {
-                return baseClientsThink[cur];
-            }
-            cur = upper;
         }
-        return baseClientsThink[startLayer];
+        return 0.0;
+    }
+
+    private String findCallerTask(String calleeName) {
+        for (Task task : lqnModel.getTasks().values()) {
+            for (jline.lang.layered.Activity act : task.getActivities()) {
+                for (Map.Entry<Integer, String> e : act.getSyncCallDests().entrySet()) {
+                    for (jline.lang.layered.Entry entry : lqnModel.getEntries().values()) {
+                        if (e.getValue().equals(entry.getName())) {
+                            if (entry.getParent() != null && calleeName.equals(entry.getParent().getName())) {
+                                return task.getName();
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    private double getRootRefThinkTime(String taskName) {
+        String current = taskName;
+        java.util.Set<String> visited = new java.util.HashSet<String>();
+        while (current != null && !visited.contains(current)) {
+            visited.add(current);
+            for (Task t : lqnModel.getTasks().values()) {
+                if (current.equals(t.getName())) {
+                    if (t.getScheduling() == jline.lang.constant.SchedStrategy.REF) {
+                        double m = t.getThinkTimeMean();
+                        return (Double.isNaN(m) || !Double.isFinite(m)) ? 0.0 : m;
+                    }
+                    break;
+                }
+            }
+            String caller = findCallerTask(current);
+            if (caller == null) break;
+            current = caller;
+        }
+        return 0.0;
+    }
+
+    private double computeCallerChainDemand(String taskName) {
+        double total = 0.0;
+        String current = taskName;
+        java.util.Set<String> visited = new java.util.HashSet<String>();
+        while (current != null && !visited.contains(current)) {
+            visited.add(current);
+            String caller = findCallerTask(current);
+            if (caller == null) break;
+            total += computeLocalDemand(caller);
+            current = caller;
+        }
+        return total;
+    }
+
+    private boolean taskHasSyncCallees(String taskName) {
+        for (Task task : lqnModel.getTasks().values()) {
+            if (taskName.equals(task.getName())) {
+                for (jline.lang.layered.Activity act : task.getActivities()) {
+                    if (act.getSyncCallDests() != null && !act.getSyncCallDests().isEmpty()) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+        }
+        return false;
     }
 
     private double getSyncCallMean(String callerTask, String calleeTask) {
