@@ -1,66 +1,42 @@
 package jline.solvers.ln_simple;
 
-import jline.lang.constant.SchedStrategy;
-import jline.lang.layered.*;
-import jline.lang.processes.Exp;
-import jline.lang.processes.Immediate;
+import static jline.solvers.ln_simple.util.assertResultsMatchSolverLN;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
-import static jline.solvers.ln_simple.util.assertResultsMatchSolverLN;
+import jline.lang.constant.SchedStrategy;
+import jline.lang.layered.Activity;
+import jline.lang.layered.Entry;
+import jline.lang.layered.LayeredNetwork;
+import jline.lang.layered.Processor;
+import jline.lang.layered.Task;
+import jline.lang.processes.Exp;
+import jline.lang.processes.Immediate;
 
 public class SolverLNSimpleDebugTest {
-
-//=== SolverLN ===
-//    Node      	NodeType  	QLen      	Util      	RespT     	ResidT    	ArvR      	Tput
-//    P1        	Processor 	NaN       	0         	NaN       	NaN       	NaN       	NaN
-//    P2        	Processor 	NaN       	0         	NaN       	NaN       	NaN       	NaN
-//    P3        	Processor 	NaN       	1.00000   	NaN       	NaN       	NaN       	NaN
-//    T1        	RefTask   	3.00000   	0         	NaN       	0         	NaN       	1.11111
-//    T2        	Task      	2.00000   	0         	NaN       	0         	NaN       	1.11111
-//    T3        	Task      	1.00000   	1.00000   	NaN       	0.90000   	NaN       	1.11111
-//    E1        	Entry     	3.00000   	NaN       	2.70000   	NaN       	NaN       	1.11111
-//    E2        	Entry     	2.00000   	NaN       	1.80000   	NaN       	NaN       	1.11111
-//    E3        	Entry     	1.00000   	NaN       	0.90000   	NaN       	NaN       	1.11111
-//    AS1       	Activity  	3.00000   	0         	2.70000   	0         	NaN       	1.11111
-//    AS2       	Activity  	2.00000   	0         	1.80000   	0         	NaN       	1.11111
-//    AS3       	Activity  	1.00000   	1.00000   	0.90000   	0.90000   	NaN       	1.11111
-//
-//            === SolverLNSimple ===
-//    Node      	NodeType  	QLen      	Util      	RespT     	ResidT    	ArvR      	Tput
-//    P1        	Processor 	NaN       	0         	NaN       	NaN       	NaN       	NaN
-//    P2        	Processor 	NaN       	0         	NaN       	NaN       	NaN       	NaN
-//    P3        	Processor 	NaN       	1.00000   	NaN       	NaN       	NaN       	NaN
-//    T1        	RefTask   	3.00000   	0         	NaN       	0         	NaN       	1.66667
-//    T2        	Task      	3.00000   	0         	NaN       	0         	NaN       	1.66667
-//    T3        	Task      	1.00000   	1.00000   	NaN       	0.90000   	NaN       	1.11111
-//    E1        	Entry     	3.00000   	NaN       	1.80000   	NaN       	NaN       	1.66667
-//    E2        	Entry     	3.00000   	NaN       	1.80000   	NaN       	NaN       	1.66667
-//    E3        	Entry     	1.00000   	NaN       	0.90000   	NaN       	NaN       	1.11111
-//    AS1       	Activity  	3.00000   	0         	1.80000   	0         	NaN       	1.66667
-//    AS2       	Activity  	3.00000   	0         	1.80000   	0         	NaN       	1.66667
-//    AS3       	Activity  	1.00000   	1.00000   	0.90000   	0.90000   	NaN       	1.11111
     @Test
     @Timeout(120)
-    public void testBugDecreasingTaskMultiplicity() {
-        LayeredNetwork model = new LayeredNetwork("Decreasing Task Multiplicity (Failing)");
-
-        Processor P1 = new Processor(model, "P1", 2, SchedStrategy.PS);
-        Processor P2 = new Processor(model, "P2", 2, SchedStrategy.PS);
-        Processor P3 = new Processor(model, "P3", 2, SchedStrategy.PS);
-
-        Task T1 = new Task(model, "T1", 3, SchedStrategy.REF).on(P1);
-        Task T2 = new Task(model, "T2", 2, SchedStrategy.FCFS).on(P2);
-        Task T3 = new Task(model, "T3", 1, SchedStrategy.FCFS).on(P3);
-
-        Entry E1 = new Entry(model, "E1").on(T1);
-        Entry E2 = new Entry(model, "E2").on(T2);
-        Entry E3 = new Entry(model, "E3").on(T3);
-
-        new Activity(model, "AS1", Immediate.getInstance()).on(T1).boundTo(E1).synchCall(E2, 1);
-        new Activity(model, "AS2", Immediate.getInstance()).on(T2).boundTo(E2).synchCall(E3, 1).repliesTo(E1);
-        new Activity(model, "AS3", Exp.fitMean(0.9)).on(T3).boundTo(E3).repliesTo(E2);
+    public void testDebug() {
+        LayeredNetwork  model = new LayeredNetwork("test");
+        Processor p1 = new Processor(model, "P1", 2, SchedStrategy.PS);
+        Processor p2 = new Processor(model, "P2", 1, SchedStrategy.PS);
+        Processor p3 = new Processor(model, "P3", 3, SchedStrategy.PS);
+        Processor p4 = new Processor(model, "P4", 2, SchedStrategy.PS);
+        Task t1 = new Task(model, "T1", 2, SchedStrategy.REF).on(p1);
+        Task t2 = new Task(model, "T2", 2, SchedStrategy.FCFS).on(p2);
+        Task t3 = new Task(model, "T3", 2, SchedStrategy.FCFS).on(p3);
+        Task t4 = new Task(model, "T4", 2, SchedStrategy.FCFS).on(p4);
+        Entry e1 = new Entry(model, "E1").on(t1);
+        Entry e2 = new Entry(model, "E2").on(t2);
+        Entry e3 = new Entry(model, "E3").on(t3);
+        Entry e4 = new Entry(model, "E4").on(t4);
+        new Activity(model, "AS1", Immediate.getInstance()).on(t1).boundTo(e1).synchCall(e2, 5);
+        new Activity(model, "AS2", Immediate.getInstance()).on(t2).boundTo(e2).synchCall(e3, 4);
+        new Activity(model, "AS3", Immediate.getInstance()).on(t3).boundTo(e3).synchCall(e4, 7);
+        new Activity(model, "AS4", Exp.fitMean(0.9)).on(t4).boundTo(e4).repliesTo(e3);
 
         assertResultsMatchSolverLN(model);
     }
+
 }

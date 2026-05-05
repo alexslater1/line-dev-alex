@@ -215,13 +215,16 @@ public class SolverLNSimple {
                     }
 
                     String callerTask = stripPrefix(MvaUtils.getMainClass(layer).getName());
+                    String calleeTask = stripPrefix(serverQueueName);
+                    double syncCallMean = getSyncCallMean(callerTask, calleeTask);
+                    double propagatedTaskResp = R_task_total * syncCallMean;
 
                     Integer callerTaskLayer = queueNameToLayer.get("T:" + callerTask);
                     if (callerTaskLayer != null && callerTaskLayer != l) {
                         Delay callerTaskClients = findClientsDelay(ensemble.get(callerTaskLayer));
                         if (callerTaskClients != null) {
                             JobClass callerTaskMain = MvaUtils.getMainClass(ensemble.get(callerTaskLayer));
-                            double callerTaskThink = Math.max(1e-9, Math.min(baseClientsThink[callerTaskLayer] + R_task_total, MAX_PROTECTION));
+                            double callerTaskThink = Math.max(1e-9, Math.min(baseClientsThink[callerTaskLayer] + propagatedTaskResp, MAX_PROTECTION));
                             callerTaskClients.setService(callerTaskMain, Exp.fitMean(callerTaskThink));
                             System.out.println(" [task->caller-task] " + layerName + " -> L" + callerTaskLayer + " think=" + callerTaskThink);
                         }
@@ -235,7 +238,7 @@ public class SolverLNSimple {
                             if (callerServerQueue != null) {
                                 JobClass callerServerClass = findActiveQueueClass(ensemble.get(callerTaskLayer));
                                 if (callerServerClass != null) {
-                                    double safeD = Math.max(1e-9, Math.min(R_task_total, MAX_PROTECTION));
+                                    double safeD = Math.max(1e-9, Math.min(propagatedTaskResp, MAX_PROTECTION));
                                     callerServerQueue.setService(callerServerClass, Exp.fitMean(safeD));
                                     System.out.println(" [task->caller-service] " + layerName + " -> L" + callerTaskLayer + " D=" + safeD);
                                 }
@@ -258,7 +261,6 @@ public class SolverLNSimple {
                     // Z_callee_host = max(calleeTask.thinkTime, (N - Q_server) / X).
                     // The callee task's own think time sets a lower bound: even if the caller's
                     // cycle is fast, the callee is unavailable for at least its own think period.
-                    String calleeTask = stripPrefix(serverQueueName);
                     String calleeProcessor = taskToProcessor.get(calleeTask);
                     if (calleeProcessor != null) {
                         Integer calleeHostLayer = queueNameToLayer.get("P:" + calleeProcessor);
@@ -302,7 +304,7 @@ public class SolverLNSimple {
                     }
 
                     JobClass targetMain = MvaUtils.getMainClass(ensemble.get(hostLayer));
-                    double newThink = baseClientsThink[hostLayer] + R_task_total;
+                    double newThink = baseClientsThink[hostLayer] + propagatedTaskResp;
                     if (!Double.isFinite(newThink)) {
                         continue;
                     }
@@ -456,5 +458,54 @@ public class SolverLNSimple {
             cur = upper;
         }
         return baseClientsThink[startLayer];
+    }
+
+    private double getSyncCallMean(String callerTask, String calleeTask) {
+        if (callerTask == null || calleeTask == null) {
+            return 1.0;
+        }
+        Task caller = null;
+        for (Task task : lqnModel.getTasks().values()) {
+            if (callerTask.equals(task.getName())) {
+                caller = task;
+                break;
+            }
+        }
+        if (caller == null) {
+            return 1.0;
+        }
+
+        double totalCallMean = 0.0;
+        for (jline.lang.layered.Activity activity : caller.getActivities()) {
+            Map<Integer, String> dests = activity.getSyncCallDests();
+            if (dests == null || dests.isEmpty()) {
+                continue;
+            }
+            Matrix means = activity.getSyncCallMeans();
+            for (Map.Entry<Integer, String> entry : dests.entrySet()) {
+                jline.lang.layered.Entry calledEntry = null;
+                for (jline.lang.layered.Entry candidate : lqnModel.getEntries().values()) {
+                    if (entry.getValue().equals(candidate.getName())) {
+                        calledEntry = candidate;
+                        break;
+                    }
+                }
+                if (calledEntry == null || calledEntry.getParent() == null) {
+                    continue;
+                }
+                if (!calleeTask.equals(calledEntry.getParent().getName())) {
+                    continue;
+                }
+                int idx = entry.getKey();
+                double m = 1.0;
+                if (means != null && means.getNumCols() > idx) {
+                    m = means.get(0, idx);
+                }
+                if (Double.isFinite(m) && m > 0) {
+                    totalCallMean += m;
+                }
+            }
+        }
+        return totalCallMean > 0 ? totalCallMean : 1.0;
     }
 }

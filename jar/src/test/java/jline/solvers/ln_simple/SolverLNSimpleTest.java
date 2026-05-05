@@ -3,6 +3,7 @@ package jline.solvers.ln_simple;
 import jline.GlobalConstants;
 import jline.VerboseLevel;
 import jline.solvers.ln_simple.utils.LayeredNetworkTestExamples;
+import jline.solvers.ln_simple.utils.SolverLnSimpleBugModels;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
@@ -65,12 +66,39 @@ public class SolverLNSimpleTest {
                 LayeredNetworkTestExamples.twoLayerSingleProcessorNetworkUPDATED2());
     }
 
-    //FAILS
-    @Disabled
     @Test
     @Timeout(120)
-    public void testThreeLayerSingleProcessorNetworkUPDATED() {
-        assertResultsMatchSolverLN(
-                LayeredNetworkTestExamples.threeLayerSingleProcessorNetworkUPDATED());
+    public void testBug1Network1() {
+        assertResultsMatchSolverLN(LayeredNetworkTestExamples.bug1network1());
+    }
+
+    @Test
+    @Timeout(120)
+    public void testBug1Network2() {
+        assertResultsMatchSolverLN(LayeredNetworkTestExamples.bug1network2());
+    }
+
+    @Test
+    @Timeout(120)
+    public void testBug1Network3() {
+        assertResultsMatchSolverLN(LayeredNetworkTestExamples.bug1network3());
+    }
+
+    @Test
+    @Timeout(120)
+    public void testBug2Network1() {
+        assertResultsMatchSolverLN(LayeredNetworkTestExamples.bug2network1());
+    }
+
+    @Test
+    @Timeout(120)
+    public void testBug2Network2() {
+        assertResultsMatchSolverLN(LayeredNetworkTestExamples.bug2network2());
+    }
+
+    @Test
+    @Timeout(120)
+    public void testBug2Network3() {
+        assertResultsMatchSolverLN(LayeredNetworkTestExamples.bug2network3());
     }
 }

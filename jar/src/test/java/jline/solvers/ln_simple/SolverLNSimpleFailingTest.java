@@ -1,17 +1,23 @@
-package jline.solvers.ln_simple.utils;
+package jline.solvers.ln_simple;
 
-import jline.lang.Network;
 import jline.lang.constant.SchedStrategy;
 import jline.lang.layered.*;
 import jline.lang.processes.Exp;
 import jline.lang.processes.Immediate;
-import jline.solvers.AvgTable;
-import jline.solvers.LayeredNetworkAvgTable;
-import jline.solvers.ln.SolverLN;
-import jline.solvers.ln_simple.SolverLNSimple;
+import jline.solvers.ln_simple.utils.LayeredNetworkTestExamples;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
-public class SolverLNRunner {
-    public static void main(String[] args) {
+import static jline.solvers.ln_simple.util.assertResultsMatchSolverLN;
+
+public class SolverLNSimpleFailingTest {
+    //ALL THESE TESTS FAIL CURRENTLY
+
+    @Disabled
+    @Test
+    @Timeout(120)
+    public void testBugDecreasingTaskMultiplicity() {
         LayeredNetwork model = new LayeredNetwork("Decreasing Task Multiplicity (Failing)");
 
         Processor P1 = new Processor(model, "P1", 2, SchedStrategy.PS);
@@ -30,30 +36,19 @@ public class SolverLNRunner {
         new Activity(model, "AS2", Immediate.getInstance()).on(T2).boundTo(E2).synchCall(E3, 1).repliesTo(E1);
         new Activity(model, "AS3", Exp.fitMean(0.9)).on(T3).boundTo(E3).repliesTo(E2);
 
-        try {
-            runSolverLNSimple(model);
-        } catch (Exception e) {
-            System.err.println("SolverLNSimple failed: " + e.getMessage());
-            e.printStackTrace();
-        }
+        assertResultsMatchSolverLN(model);
     }
 
-    public static void runSolverLNSimple(LayeredNetwork model) {
-        final SolverLNSimple solver = new SolverLNSimple(model);
-        solver.iterateCoupledMva(100, 1e-4);
-        LayeredNetworkAvgTable avg = solver.getAvgTable();
-        if (avg != null) avg.print();
+    @Disabled
+    @Test
+    @Timeout(120)
+    public void testThreeLayerSingleProcessorNetworkUPDATED() {
+        assertResultsMatchSolverLN(
+                LayeredNetworkTestExamples.threeLayerSingleProcessorNetworkUPDATED());
     }
 
-    public static void runSolverLN(LayeredNetwork model) {
-        SolverLN solver = new SolverLN(model) {};
-        AvgTable avg = solver.getAvgTable();
-        if (avg != null) avg.print();
-    }
 
-    private static void viewEnsemble(Iterable<Network> ensemble) {
-        for (Network layer : ensemble) {
-            layer.view();
-        }
-    }
+
+
+    
 }
