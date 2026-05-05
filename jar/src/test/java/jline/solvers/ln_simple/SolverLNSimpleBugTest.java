@@ -59,7 +59,6 @@ public class SolverLNSimpleBugTest {
 //    AS1       	Activity  	2.00000   	0         	0.90000   	0         	NaN       	2.22222
 //    AS2       	Activity  	2.00000   	0         	0.90000   	0         	NaN       	2.22222
 //    AS3       	Activity  	2.00000   	1.00000   	0.90000   	0.90000   	NaN       	2.22222
-    @Disabled
     @Test
     @Timeout(120)
     public void testBug3NotEqual1() {
@@ -96,7 +95,6 @@ public class SolverLNSimpleBugTest {
 //    AS1       	Activity  	0.36735   	0         	0.90000   	0         	NaN       	0.40816
 //    AS2       	Activity  	0.36735   	0         	0.90000   	0         	NaN       	0.40816
 //    AS3       	Activity  	0.36735   	0.18367   	0.90000   	0.90000   	NaN       	0.40816
-    @Disabled
     @Test
     @Timeout(120)
     public void testBug3NotEqual2() {

@@ -139,8 +139,12 @@ public class SolverLNSimple {
                     Delay calleeClients = findClientsDelay(layer);
                     if (calleeClients != null) {
                         JobClass calleeMain = MvaUtils.getMainClass(layer);
+                        // Use max of (REF-chain think + chain demands) and (direct caller's think +
+                        // local demand) so that intermediate caller think times are not silently dropped.
+                        double refChainThink = getRootRefThinkTime(calleeTask) + computeCallerChainDemand(calleeTask);
+                        double directCallerThink = getTaskThinkTimeSafe(callerTask) + computeLocalDemand(callerTask);
                         double calleeThink = Math.max(1e-9, Math.min(
-                                getRootRefThinkTime(calleeTask) + computeCallerChainDemand(calleeTask), MAX_PROTECTION));
+                                Math.max(refChainThink, directCallerThink), MAX_PROTECTION));
                         calleeClients.setService(calleeMain, Exp.fitMean(calleeThink));
                     }
 
@@ -201,11 +205,7 @@ public class SolverLNSimple {
                         }
                     }
 
-                    // Update callee's host (P:P3) think time for LEAF tasks only.
-                    // For intermediate tasks (calleeTask has sync callees) the host Clients is
-                    // managed by Bug 4 fix (computeCallerChainDemand + R_callee), so skip here
-                    // to avoid overwriting with the task-layer (N-Q)/X formula that only works
-                    // when the server demand is D_local (not D_local+R_nested).
+                    // Update callee's host think time.
                     String calleeProcessor = taskToProcessor.get(calleeTask);
                     if (calleeProcessor != null && !taskHasSyncCallees(calleeTask)) {
                         Integer calleeHostLayer = queueNameToLayer.get("P:" + calleeProcessor);
@@ -239,6 +239,31 @@ public class SolverLNSimple {
                                     JobClass calleeHostMain = MvaUtils.getMainClass(ensemble.get(calleeHostLayer));
                                     calleeHostClients.setService(calleeHostMain, Exp.fitMean(Z_callee_host));
                                 }
+                            }
+                        }
+                    } else if (calleeProcessor != null && taskHasSyncCallees(calleeTask)) {
+                        // Intermediate callee: its host Clients = max(callee think, caller-chain think)
+                        // + time the callee waits for its own callees (R_task_total minus D_local).
+                        // This covers both the callee-bottleneck and caller-bottleneck cases.
+                        Integer calleeHostLayer = queueNameToLayer.get("P:" + calleeProcessor);
+                        if (calleeHostLayer != null && calleeHostLayer != l) {
+                            double calleeThinkTime = 0.0;
+                            for (Task t : lqnModel.getTasks().values()) {
+                                if (calleeTask.equals(t.getName())) {
+                                    double m = t.getThinkTimeMean();
+                                    if (!Double.isNaN(m)) calleeThinkTime = m;
+                                    break;
+                                }
+                            }
+                            double calleeLocalDemand = computeLocalDemand(calleeTask);
+                            double callerChainZ = getRootRefThinkTime(calleeTask) + computeCallerChainDemand(calleeTask);
+                            double Z_callee_host = Math.max(calleeThinkTime, callerChainZ)
+                                    + (R_task_total - calleeLocalDemand);
+                            Z_callee_host = Math.max(1e-9, Math.min(Z_callee_host, MAX_PROTECTION));
+                            Delay calleeHostClients = findClientsDelay(ensemble.get(calleeHostLayer));
+                            if (calleeHostClients != null) {
+                                JobClass calleeHostMain = MvaUtils.getMainClass(ensemble.get(calleeHostLayer));
+                                calleeHostClients.setService(calleeHostMain, Exp.fitMean(Z_callee_host));
                             }
                         }
                     }
@@ -423,6 +448,16 @@ public class SolverLNSimple {
             }
         }
         return null;
+    }
+
+    private double getTaskThinkTimeSafe(String taskName) {
+        for (Task t : lqnModel.getTasks().values()) {
+            if (taskName.equals(t.getName())) {
+                double m = t.getThinkTimeMean();
+                return (Double.isNaN(m) || !Double.isFinite(m)) ? 0.0 : m;
+            }
+        }
+        return 0.0;
     }
 
     private double getRootRefThinkTime(String taskName) {
