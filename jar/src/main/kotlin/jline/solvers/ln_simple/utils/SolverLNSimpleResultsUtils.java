@@ -100,7 +100,14 @@ public final class SolverLNSimpleResultsUtils {
                 double c = servers.get(serverNodeIndex, 0);
                 processorDemand.put(taskName, d);
                 processorServers.put(taskName, c);
-                double u_per_server = (c > 0 && x > 0) ? Math.min(x * d / c, 1.0) : u;
+                double u_per_server;
+                if (c > 0 && Double.isFinite(x) && x > 0) {
+                    u_per_server = Math.min(x * d / c, 1.0);
+                } else if (Double.isFinite(u) && u >= 0) {
+                    u_per_server = u;
+                } else {
+                    u_per_server = 0.0;
+                }
                 processorUtil.put(taskName, u_per_server);
 
                 for (Task task : lqnModel.getTasks().values()) {
@@ -175,7 +182,9 @@ public final class SolverLNSimpleResultsUtils {
             String tName = e.getKey();
             String procName = taskNameToProc.get(tName);
             Double d = (procName != null) ? processorDemand.get(procName) : null;
-            if (d != null && d > 0) {
+            Task t = findTaskByName(lqnModel, tName);
+            double think = (t != null && Double.isFinite(t.getThinkTimeMean())) ? t.getThinkTimeMean() : 0.0;
+            if ((d != null && d > 0) || think > 1e-9) {
                 taskTput.put(tName, e.getValue());
             }
         }
@@ -240,8 +249,9 @@ public final class SolverLNSimpleResultsUtils {
             if (task.getScheduling() == SchedStrategy.REF) {
                 Double qlenCallee = taskQLen.get(task.getName());
                 Double qlenProc = refTaskProcQLen.get(task.getName());
-                if (qlenCallee != null && qlenProc != null && qlenProc > 0) {
-                    taskQLen.put(task.getName(), qlenCallee + qlenProc);
+                if (qlenProc != null && qlenProc > 0) {
+                    double baseQ = (qlenCallee != null && Double.isFinite(qlenCallee)) ? qlenCallee : 0.0;
+                    taskQLen.put(task.getName(), baseQ + qlenProc);
                 }
             }
         }

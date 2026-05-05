@@ -122,6 +122,40 @@ public class SolverLNSimple {
                 Queue serverQueue = MvaUtils.findNonDelayQueue(layer);
                 if (serverQueue == null) continue;
 
+                String serverQueueName = serverQueue.getName();
+                String layerName = layer.getName();
+                String layerBase = stripPrefix(layerName);
+                boolean isFcfsLayer = serverQueueName.startsWith("T:");
+
+                String callerTask = null;
+                String calleeTask = null;
+                if (isFcfsLayer) {
+                    callerTask = stripPrefix(MvaUtils.getMainClass(layer).getName());
+                    calleeTask = stripPrefix(serverQueueName);
+
+                    // Keep task-layer Clients updated even when the current solve is degenerate
+                    // (e.g. D=0 and stale Z causes non-finite X). This lets subsequent sweeps
+                    // recover to finite values.
+                    Delay calleeClients = findClientsDelay(layer);
+                    if (calleeClients != null) {
+                        JobClass calleeMain = MvaUtils.getMainClass(layer);
+                        double calleeThink = Math.max(1e-9, Math.min(
+                                getRootRefThinkTime(calleeTask) + computeCallerChainDemand(calleeTask), MAX_PROTECTION));
+                        calleeClients.setService(calleeMain, Exp.fitMean(calleeThink));
+                    }
+
+                    Integer callerTaskLayer = queueNameToLayer.get("T:" + callerTask);
+                    if (callerTaskLayer != null && callerTaskLayer != l) {
+                        Delay callerTaskClients = findClientsDelay(ensemble.get(callerTaskLayer));
+                        if (callerTaskClients != null) {
+                            JobClass callerTaskMain = MvaUtils.getMainClass(ensemble.get(callerTaskLayer));
+                            double callerTaskThink = Math.max(1e-9, Math.min(
+                                    getRootRefThinkTime(callerTask) + computeCallerChainDemand(callerTask), MAX_PROTECTION));
+                            callerTaskClients.setService(callerTaskMain, Exp.fitMean(callerTaskThink));
+                        }
+                    }
+                }
+
                 if (!Double.isFinite(throughput) || throughput <= EPS) {
                     continue;
                 }
@@ -132,11 +166,6 @@ public class SolverLNSimple {
                     if (!(nodes.get(i) instanceof Delay)) { serverNodeIndex = i; break; }
                 }
                 if (serverNodeIndex < 0) continue;
-
-                String serverQueueName = serverQueue.getName();
-                String layerName = layer.getName();
-                String layerBase = stripPrefix(layerName);
-                boolean isFcfsLayer = serverQueueName.startsWith("T:");
 
                 if (isFcfsLayer) {
                     // Task submodel: feed back to host layers.
@@ -154,33 +183,11 @@ public class SolverLNSimple {
                         continue;
                     }
 
-                    String callerTask = stripPrefix(MvaUtils.getMainClass(layer).getName());
-                    String calleeTask = stripPrefix(serverQueueName);
                     double syncCallMean = getSyncCallMean(callerTask, calleeTask);
                     double propagatedTaskResp = R_task_total * syncCallMean;
 
-                    // ALWAYS set callee's Clients think time to the full caller chain demand.
-                    // This is independent of whether the caller has its own task layer (it may not,
-                    // e.g. when the caller task uses Immediate service and SolverLN optimises it away).
-                    Delay calleeClients = findClientsDelay(layer);
-                    if (calleeClients != null) {
-                        JobClass calleeMain = MvaUtils.getMainClass(layer);
-                        double calleeThink = Math.max(1e-9, Math.min(
-                                getRootRefThinkTime(calleeTask) + computeCallerChainDemand(calleeTask), MAX_PROTECTION));
-                        calleeClients.setService(calleeMain, Exp.fitMean(calleeThink));
-                    }
-
                     Integer callerTaskLayer = queueNameToLayer.get("T:" + callerTask);
                     if (callerTaskLayer != null && callerTaskLayer != l) {
-                        Delay callerTaskClients = findClientsDelay(ensemble.get(callerTaskLayer));
-                        if (callerTaskClients != null) {
-                            JobClass callerTaskMain = MvaUtils.getMainClass(ensemble.get(callerTaskLayer));
-                            // Caller's Clients = time caller spends not at callee = Z_REF + sum of demands above caller
-                            double callerTaskThink = Math.max(1e-9, Math.min(
-                                    getRootRefThinkTime(callerTask) + computeCallerChainDemand(callerTask), MAX_PROTECTION));
-                            callerTaskClients.setService(callerTaskMain, Exp.fitMean(callerTaskThink));
-                        }
-
                         // Set caller's task layer server to D_local + R_callee so that the callee
                         // response time is visible to the MVA solve (works for all caller types).
                         Queue callerServerQueue = MvaUtils.findNonDelayQueue(ensemble.get(callerTaskLayer));
@@ -214,8 +221,19 @@ public class SolverLNSimple {
                                         break;
                                     }
                                 }
-                                double Z_callee_host = Math.max(calleeThinkTime, (N_task - Q_server) / throughput);
-                                Z_callee_host = Math.max(1e-9, Math.min(Z_callee_host, MAX_PROTECTION));
+                                double Z_callee_host;
+                                // If the callee task and its synchronous callees have no server demand,
+                                // skip the (N-Q)/X formula which degenerates when D=0 and instead
+                                // use the task's think/root-ref-chain demand (no server-side queuing).
+                                if (!hasServerDemandInSubtree(calleeTask)) {
+                                    // No server-side demand in callee subtree: only the callee's own
+                                    // think time contributes at the host. Avoid using chain-level
+                                    // demands which create tautologies when D=0.
+                                    Z_callee_host = Math.max(1e-9, Math.min(calleeThinkTime, MAX_PROTECTION));
+                                } else {
+                                    Z_callee_host = Math.max(calleeThinkTime, (N_task - Q_server) / throughput);
+                                    Z_callee_host = Math.max(1e-9, Math.min(Z_callee_host, MAX_PROTECTION));
+                                }
                                 Delay calleeHostClients = findClientsDelay(ensemble.get(calleeHostLayer));
                                 if (calleeHostClients != null) {
                                     JobClass calleeHostMain = MvaUtils.getMainClass(ensemble.get(calleeHostLayer));
@@ -451,6 +469,41 @@ public class SolverLNSimple {
                     }
                 }
                 return false;
+            }
+        }
+        return false;
+    }
+
+    // Returns true if the given task or any of its synchronous callees (recursively)
+    // have host/server demand (i.e., computeLocalDemand > EPS). This helps detect
+    // whether a callee subtree contributes any server-side queuing; if not, host-level
+    // Clients should not rely on the (N-Q)/X formula.
+    private boolean hasServerDemandInSubtree(String taskName) {
+        java.util.Set<String> visited = new java.util.HashSet<String>();
+        return hasServerDemandInSubtree(taskName, visited);
+    }
+
+    private boolean hasServerDemandInSubtree(String taskName, java.util.Set<String> visited) {
+        if (taskName == null || visited.contains(taskName)) return false;
+        visited.add(taskName);
+
+        double local = computeLocalDemand(taskName);
+        if (local > 1e-9) return true;
+
+        // Check synchronous callees recursively
+        for (Task task : lqnModel.getTasks().values()) {
+            if (!taskName.equals(task.getName())) continue;
+            for (jline.lang.layered.Activity act : task.getActivities()) {
+                Map<Integer, String> dests = act.getSyncCallDests();
+                if (dests == null || dests.isEmpty()) continue;
+                for (Map.Entry<Integer, String> e : dests.entrySet()) {
+                    for (jline.lang.layered.Entry entry : lqnModel.getEntries().values()) {
+                        if (!e.getValue().equals(entry.getName())) continue;
+                        if (entry.getParent() == null) continue;
+                        String calleeTask = entry.getParent().getName();
+                        if (hasServerDemandInSubtree(calleeTask, visited)) return true;
+                    }
+                }
             }
         }
         return false;
