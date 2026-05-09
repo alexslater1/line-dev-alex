@@ -120,4 +120,34 @@ public class SolverLNSimpleTest {
     public void testBug4FirstAndLast() {
         assertResultsMatchSolverLN(SolverLnSimpleBugModels.bug4network2());
     }
+
+        @Test
+    @Timeout(120)
+    public void testBug3EqualAbove() {
+        assertResultsMatchSolverLN(SolverLnSimpleBugModels.bug3network1());
+    }
+
+    @Test
+    @Timeout(120)
+    public void testBug3EqualBoth() {
+        assertResultsMatchSolverLN(SolverLnSimpleBugModels.bug3network2());
+    }
+
+    @Test
+    @Timeout(120)
+    public void testBug3NotEqual1() {
+        assertResultsMatchSolverLN(SolverLnSimpleBugModels.bug3network3());
+    }
+
+    @Test
+    @Timeout(120)
+    public void testBug3NotEqual2() {
+        assertResultsMatchSolverLN(SolverLnSimpleBugModels.bug3network4());
+    }
+
+    @Test
+    @Timeout(120)
+    public void testBugNotEqualButPasses() {
+        assertResultsMatchSolverLN(SolverLnSimpleBugModels.bug3network5());
+    }
 }

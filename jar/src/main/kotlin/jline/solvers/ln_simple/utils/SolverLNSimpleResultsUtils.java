@@ -2,6 +2,7 @@ package jline.solvers.ln_simple.utils;
 
 import jline.VerboseLevel;
 import jline.io.Ret;
+import jline.lang.ClosedClass;
 import jline.lang.Network;
 import jline.lang.constant.SchedStrategy;
 import jline.lang.layered.Activity;
@@ -63,6 +64,7 @@ public final class SolverLNSimpleResultsUtils {
                 continue;
             }
 
+
             Matrix n = MvaUtils.buildN(layer);
             Matrix z = MvaUtils.buildThinkTimeMatrix(layer);
             Matrix demand = MvaUtils.buildDemandMatrix(nodes, layer);
@@ -95,36 +97,46 @@ public final class SolverLNSimpleResultsUtils {
             String mainClassTaskName = stripPrefix(MvaUtils.getMainClass(layer).getName());
 
             if (serverQueueName.startsWith("P:")) {
-                // Compute per-server utilization: X * D / c (pfqn_mvald returns 1-P(idle) which differs for c>1).
-                double d = demand.get(serverNodeIndex, 0);
+                List<ClosedClass> hostClasses = MvaUtils.getClosedClasses(layer);
+                int R_host = hostClasses.size();
                 double c = servers.get(serverNodeIndex, 0);
-                processorDemand.put(taskName, d);
-                processorServers.put(taskName, c);
-                double u_per_server;
-                if (c > 0 && Double.isFinite(x) && x > 0) {
-                    u_per_server = Math.min(x * d / c, 1.0);
-                } else if (Double.isFinite(u) && u >= 0) {
-                    u_per_server = u;
-                } else {
-                    u_per_server = 0.0;
-                }
-                processorUtil.put(taskName, u_per_server);
+                boolean isInfProc = isInfProcessor(lqnModel, taskName);
+                double c_eff = isInfProc ? 1.0 : c;
+                processorServers.put(taskName, c_eff);
 
-                for (Task task : lqnModel.getTasks().values()) {
-                    if (task.getName().equals(mainClassTaskName)) {
+                // Total demand and utilization across all hosted classes
+                double totalD = 0.0;
+                double totalUtil = 0.0;
+                for (int r2 = 0; r2 < R_host; r2++) {
+                    double x_r = res.X.get(0, r2);
+                    double d_r = demand.get(serverNodeIndex, r2);
+                    totalD += d_r;
+                    if (Double.isFinite(x_r) && x_r > 0 && Double.isFinite(d_r) && c_eff > 0) {
+                        totalUtil += x_r * d_r / c_eff;
+                    }
+                }
+                if (!isInfProc) totalUtil = Math.min(totalUtil, 1.0);
+                processorDemand.put(taskName, totalD);
+                processorUtil.put(taskName, totalUtil);
+
+                // Per-class metrics
+                for (int r2 = 0; r2 < R_host; r2++) {
+                    double x_r = res.X.get(0, r2);
+                    double q_r = res.Q.get(serverNodeIndex, r2);
+                    double resp_r = (x_r > 0) ? (q_r / x_r) : Double.NaN;
+                    String hostedTaskName = stripPrefix(hostClasses.get(r2).getName());
+                    for (Task task : lqnModel.getTasks().values()) {
+                        if (!task.getName().equals(hostedTaskName)) continue;
                         if (task.getScheduling() == SchedStrategy.REF) {
-                            refTaskProcQLen.put(task.getName(), q);
-                            taskUtil.put(task.getName(), u_per_server);
+                            refTaskProcQLen.put(task.getName(), q_r);
+                            taskUtil.put(task.getName(), totalUtil);
                             taskRespT.put(task.getName(), Double.NaN);
-                            taskResidT.put(task.getName(), r);
-                            taskTput.put(task.getName(), x);
-                        } else if (Double.isFinite(x) && x > 0) {
-                            // Record the host-layer throughput for non-REF tasks; this captures
-                            // the task's own cycle (including its think time) and is used below
-                            // to override the task-layer throughput, which reflects the caller's rate.
-                            hostLayerTput.put(task.getName(), x);
-                            if (Double.isFinite(r) && r > 0) {
-                                hostLayerResid.put(task.getName(), r);
+                            taskResidT.put(task.getName(), resp_r);
+                            taskTput.put(task.getName(), x_r);
+                        } else if (Double.isFinite(x_r) && x_r > 0) {
+                            hostLayerTput.put(task.getName(), x_r);
+                            if (Double.isFinite(resp_r) && resp_r > 0) {
+                                hostLayerResid.put(task.getName(), resp_r);
                             }
                         }
                         break;
@@ -220,6 +232,34 @@ public final class SolverLNSimpleResultsUtils {
             }
         }
 
+        // Correct processor utilization using per-caller throughputs × per-caller demands.
+        // The P: layer aggregate demand is wrong when callers have asymmetric service demands
+        // (e.g., T1 and T2 both call T3, but T3's host demand differs per entry called).
+        // REF-task throughputs in taskTput are correct (set from P: layer per-class results).
+        // Formula: U_proc = sum_caller (X_caller × D_caller_on_proc) / servers.
+        for (Task hostedTask : lqnModel.getTasks().values()) {
+            if (hostedTask.getScheduling() == SchedStrategy.REF || hostedTask.getProcessor() == null) continue;
+            String procName = hostedTask.getProcessor().getName();
+            if (isInfProcessor(lqnModel, procName)) continue;
+            Double c = processorServers.get(procName);
+            if (c == null || c <= 0) continue;
+            double utilSum = 0.0;
+            boolean hasCaller = false;
+            for (Task caller : lqnModel.getTasks().values()) {
+                double d = computeCallerDemandOnTask(lqnModel, caller.getName(), hostedTask.getName());
+                if (d <= 0) continue;
+                Double xCaller = taskTput.get(caller.getName());
+                if (xCaller == null || xCaller <= 0) continue;
+                utilSum += xCaller * d / c;
+                hasCaller = true;
+            }
+            if (hasCaller) {
+                double utilCapped = Math.min(utilSum, 1.0);
+                processorUtil.put(procName, utilCapped);
+                taskUtil.put(hostedTask.getName(), utilCapped);
+            }
+        }
+
         applyRefTaskInheritance(lqnModel, taskQLen, taskResidT, taskTput, taskCalledTask, refTaskCalledTask, refTaskCalledTaskMean);
 
         for (Task task : lqnModel.getTasks().values()) {
@@ -289,7 +329,11 @@ public final class SolverLNSimpleResultsUtils {
 
         for (Entry entry : lqnModel.getEntries().values()) {
             String parentTaskName = (entry.getParent() != null) ? entry.getParent().getName() : null;
-            double q = (parentTaskName != null && taskQLen.containsKey(parentTaskName)) ? taskQLen.get(parentTaskName) : 0.0;
+            double taskQ = (parentTaskName != null && taskQLen.containsKey(parentTaskName)) ? taskQLen.get(parentTaskName) : 0.0;
+            double parentTput = (parentTaskName != null && taskTput.containsKey(parentTaskName)) ? taskTput.get(parentTaskName) : 0.0;
+            double callerTput = computeEntryCallerTput(entry, lqnModel, taskTput);
+            double entryFraction = (parentTput > 0 && callerTput > 0) ? Math.min(1.0, callerTput / parentTput) : 1.0;
+            double q = entryFraction * taskQ;
             double resp;
             Task parentTask = findTaskByName(lqnModel, parentTaskName);
             if (parentTask != null
@@ -299,7 +343,7 @@ public final class SolverLNSimpleResultsUtils {
             } else {
                 resp = resolveEntryRespTime(lqnModel, parentTaskName, taskResidT, taskCalledTask, refTaskCalledTask, refTaskCalledTaskMean);
             }
-            double t = (parentTaskName != null && taskTput.containsKey(parentTaskName)) ? taskTput.get(parentTaskName) : 0.0;
+            double t = entryFraction * parentTput;
 
             finalNodeNames.add(entry.getName());
             finalNodeTypes.add("Entry");
@@ -319,8 +363,20 @@ public final class SolverLNSimpleResultsUtils {
             boolean isRefTaskActivity = act.getParent() != null && act.getParent().getScheduling() == SchedStrategy.REF;
             boolean hasSyncCall = hasExternalSyncCall(lqnModel, act, parentTaskName);
 
-            double q = (parentTaskName != null && taskQLen.containsKey(parentTaskName)) ? taskQLen.get(parentTaskName) : 0.0;
-            double util = (parentTaskName != null && taskUtil.containsKey(parentTaskName)) ? taskUtil.get(parentTaskName) : 0.0;
+            double actFraction = 1.0;
+            {
+                String boundEntry = act.getBoundToEntry();
+                if (boundEntry != null) {
+                    Entry boundE = findEntryByName(lqnModel, boundEntry);
+                    if (boundE != null) {
+                        double pTput = (parentTaskName != null && taskTput.containsKey(parentTaskName)) ? taskTput.get(parentTaskName) : 0.0;
+                        double cTput = computeEntryCallerTput(boundE, lqnModel, taskTput);
+                        if (pTput > 0 && cTput > 0) actFraction = Math.min(1.0, cTput / pTput);
+                    }
+                }
+            }
+            double q = actFraction * ((parentTaskName != null && taskQLen.containsKey(parentTaskName)) ? taskQLen.get(parentTaskName) : 0.0);
+            double util = actFraction * ((parentTaskName != null && taskUtil.containsKey(parentTaskName)) ? taskUtil.get(parentTaskName) : 0.0);
             if (act.getHostDemandMean() <= 1e-8) {
                 util = 0.0;
             }
@@ -399,14 +455,14 @@ public final class SolverLNSimpleResultsUtils {
             if (parentTask != null
                     && parentTask.getScheduling() != SchedStrategy.REF
                     && !taskHasExternalSyncCall(lqnModel, parentTaskName)) {
-                resid = deriveLocalTaskResid(parentTaskName, taskQLen, taskTput, taskResidT);
+                resid = actFraction * deriveLocalTaskResid(parentTaskName, taskQLen, taskTput, taskResidT);
             } else {
                 resid = (parentTaskName != null && taskResidT.containsKey(parentTaskName)) ? taskResidT.get(parentTaskName) : 0.0;
             }
             if (isRefTaskActivity && act.getHostDemandMean() <= 1e-8) {
                 resid = 0.0;
             }
-            double t = (parentTaskName != null && taskTput.containsKey(parentTaskName)) ? taskTput.get(parentTaskName) : 0.0;
+            double t = actFraction * ((parentTaskName != null && taskTput.containsKey(parentTaskName)) ? taskTput.get(parentTaskName) : 0.0);
 
             finalNodeNames.add(act.getName());
             finalNodeTypes.add("Activity");
@@ -425,6 +481,60 @@ public final class SolverLNSimpleResultsUtils {
         opts.verbose = VerboseLevel.STD;
         table.print(opts, true);
         return table;
+    }
+
+    private static double computeEntryCallerTput(Entry entry, LayeredNetwork lqnModel, Map<String, Double> taskTput) {
+        double total = 0.0;
+        for (Task task : lqnModel.getTasks().values()) {
+            for (Activity act : task.getActivities()) {
+                if (act.getSyncCallDests() == null) continue;
+                for (Map.Entry<Integer, String> syncCall : act.getSyncCallDests().entrySet()) {
+                    if (!syncCall.getValue().equals(entry.getName())) continue;
+                    Double x = taskTput.get(task.getName());
+                    if (x == null || x <= 0) continue;
+                    double callMean = 1.0;
+                    int idx = syncCall.getKey();
+                    Matrix means = act.getSyncCallMeans();
+                    if (means != null && means.getNumCols() > idx) {
+                        double m = means.get(0, idx);
+                        if (Double.isFinite(m) && m > 0) callMean = m;
+                    }
+                    total += x * callMean;
+                }
+            }
+        }
+        return total;
+    }
+
+    private static double computeCallerDemandOnTask(LayeredNetwork lqnModel, String callerTaskName, String targetTaskName) {
+        Task callerTask = findTaskByName(lqnModel, callerTaskName);
+        if (callerTask == null) return 0.0;
+        double totalDemand = 0.0;
+        for (Activity act : callerTask.getActivities()) {
+            Map<Integer, String> callDests = act.getSyncCallDests();
+            Matrix callMeans = act.getSyncCallMeans();
+            if (callDests == null || callMeans == null) continue;
+            for (int ci = 0; ci < callDests.size(); ci++) {
+                String destEntryName = callDests.get(ci);
+                Entry destEntry = null;
+                outer:
+                for (Task t : lqnModel.getTasks().values()) {
+                    for (Entry e : t.getEntries()) {
+                        if (e.getName().equals(destEntryName)) { destEntry = e; break outer; }
+                    }
+                }
+                if (destEntry == null || destEntry.getParent() == null) continue;
+                if (!targetTaskName.equals(destEntry.getParent().getName())) continue;
+                for (Activity serverAct : destEntry.getParent().getActivities()) {
+                    if (destEntryName.equals(serverAct.getBoundToEntry())) {
+                        double callMean = callMeans.get(0, ci);
+                        totalDemand += callMean * serverAct.getHostDemandMean();
+                        break;
+                    }
+                }
+            }
+        }
+        return totalDemand;
     }
 
     private static double computeTaskHostDemand(Task task) {
@@ -741,5 +851,14 @@ public final class SolverLNSimpleResultsUtils {
         }
 
         return null;
+    }
+
+    private static boolean isInfProcessor(LayeredNetwork lqnModel, String procName) {
+        for (jline.lang.layered.Host host : lqnModel.getHosts().values()) {
+            if (host.getName().equals(procName)) {
+                return host.getScheduling() == SchedStrategy.INF;
+            }
+        }
+        return false;
     }
 }

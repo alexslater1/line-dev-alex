@@ -32,16 +32,20 @@ public class util {
 
         LayeredNetworkAvgTable simpleTable = runSolverLNSimple(model);
         LayeredNetworkAvgTable lnTable = runSolverLN(model);
+       LayeredNetworkAvgTable lqnsTable = runSolverLQNS(model);
 
         assertNotNull(simpleTable, "SolverLNSimple returned null avg table");
         assertNotNull(lnTable, "SolverLN returned null avg table");
+       assertNotNull(lqnsTable, "SolverLQNS returned null avg table");
 
         List<String> simpleNames = simpleTable.getNodeNames();
         List<String> lnNames = lnTable.getNodeNames();
+       List<String> lqnsNames = lqnsTable.getNodeNames();
         assertNotNull(simpleNames, "SolverLNSimple node names are null");
         assertNotNull(lnNames, "SolverLN node names are null");
-        assertEquals(lnNames.size(), simpleNames.size(),
-                "Row count mismatch: SolverLNSimple=" + simpleNames.size() + " SolverLN=" + lnNames.size());
+       assertNotNull(lqnsNames, "SolverLQNS node names are null");
+        assertEquals(lnNames.size(), simpleNames.size(), "Row count mismatch: SolverLNSimple=" + simpleNames.size() + " SolverLN=" + lnNames.size());
+       assertEquals(lqnsNames.size(), simpleNames.size(), "Row count mismatch: SolverLNSimple=" + simpleNames.size() + " SolverLQNS=" + lqnsNames.size());
 
         List<Double> simpleQLen  = simpleTable.getQLen();
         List<Double> simpleUtil  = simpleTable.getUtil();
@@ -56,7 +60,8 @@ public class util {
         List<Double> lnTput  = lnTable.getTput();
 
         String context = "\n\n=== SolverLN ===\n" + formatTable(lnTable)
-                       + "\n=== SolverLNSimple ===\n" + formatTable(simpleTable);
+                    + "=== SolverLNSimple ===\n" + formatTable(simpleTable)
+                    + "=== SolverLQNS ===\n" + formatTable(lqnsTable);
 
         for (int i = 0; i < lnNames.size(); i++) {
             String name = lnNames.get(i);
@@ -77,7 +82,7 @@ public class util {
     public static LayeredNetworkAvgTable runSolverLN(LayeredNetwork model) {
         final LayeredNetworkAvgTable[] holder = new LayeredNetworkAvgTable[1];
         suppressOutput(() -> {
-            SolverLN solver = new SolverLN(model);
+            SolverLN solver = new SolverLN(model, SolverType.MVA);
             holder[0] = (LayeredNetworkAvgTable) solver.getAvgTable();
         });
         return holder[0];

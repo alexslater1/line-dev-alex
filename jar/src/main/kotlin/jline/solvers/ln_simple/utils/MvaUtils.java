@@ -39,47 +39,50 @@ public final class MvaUtils {
         return net.getClasses().get(0);
     }
 
+    public static List<ClosedClass> getClosedClasses(Network net) {
+        List<ClosedClass> result = new ArrayList<ClosedClass>();
+        for (JobClass jc : net.getClasses()) {
+            if (jc instanceof ClosedClass && ((ClosedClass) jc).getNumberOfJobs() > 0) {
+                result.add((ClosedClass) jc);
+            }
+        }
+        return result;
+    }
+
     public static Matrix buildDemandMatrix(List<Node> mvaNodes, Network net) {
+        List<ClosedClass> closed = getClosedClasses(net);
         int m = mvaNodes.size();
-        Matrix l = new Matrix(m, 1);
-        JobClass main = getMainClass(net);
-        for (int i = 0; i < m; i++) {
-            Node node = mvaNodes.get(i);
-            double mean = 0.0;
-            if (node instanceof ServiceStation) {
-                if (node instanceof Delay) {
-                    // Delay nodes represent think time; do not place their service time into the demand matrix L
-                    mean = 0.0;
-                } else {
-                    // SolverLNSimple runs a one-class MVA solve per layer (see buildN/getMainClass),
-                    // so the service demand must be taken from that same active class only.
-                    mean = ((ServiceStation) node).getServiceProcess(main).getMean();
+        int R = closed.size();
+        Matrix l = new Matrix(m, R);
+        for (int r = 0; r < R; r++) {
+            JobClass jc = closed.get(r);
+            for (int i = 0; i < m; i++) {
+                Node node = mvaNodes.get(i);
+                double mean = 0.0;
+                if (node instanceof ServiceStation && !(node instanceof Delay)) {
+                    mean = ((ServiceStation) node).getServiceProcess(jc).getMean();
                     if (Double.isNaN(mean)) {
-                        for (JobClass jc : net.getClasses()) {
-                            double serviceMean = ((ServiceStation) node).getServiceProcess(jc).getMean();
-                            if (!Double.isNaN(serviceMean)) {
-                                mean = serviceMean;
-                                break;
-                            }
+                        // Host-layer caller classes have Disabled at server; fall back to
+                        // the first non-NaN service from any class (activity/call classes).
+                        for (JobClass jc2 : net.getClasses()) {
+                            double m2 = ((ServiceStation) node).getServiceProcess(jc2).getMean();
+                            if (!Double.isNaN(m2)) { mean = m2; break; }
                         }
-                        if (Double.isNaN(mean)) {
-                            mean = 0.0;
-                        }
+                        if (Double.isNaN(mean)) mean = 0.0;
                     }
                 }
+                l.set(i, r, mean);
             }
-            l.set(i, 0, mean);
         }
         return l;
     }
 
     public static Matrix buildN(Network net) {
-        Matrix n = new Matrix(1, 1);
-        JobClass jc = getMainClass(net);
-        if (jc instanceof ClosedClass) {
-            n.set(0, 0, ((ClosedClass) jc).getNumberOfJobs());
-        } else {
-            throw new IllegalArgumentException("Main class must be a closed class with a positive number of jobs");
+        List<ClosedClass> closed = getClosedClasses(net);
+        if (closed.isEmpty()) throw new IllegalArgumentException("No closed class with positive jobs");
+        Matrix n = new Matrix(1, closed.size());
+        for (int r = 0; r < closed.size(); r++) {
+            n.set(0, r, closed.get(r).getNumberOfJobs());
         }
         return n;
     }
@@ -107,18 +110,19 @@ public final class MvaUtils {
     }
 
     public static Matrix buildThinkTimeMatrix(Network net) {
-        JobClass main = getMainClass(net);
-        // Look for a Delay node named "Clients" and return its mean for the main class
+        List<ClosedClass> closed = getClosedClasses(net);
+        int R = closed.size();
+        Matrix z = new Matrix(1, R);
         for (Node node : net.getNodes()) {
             if (node instanceof Delay && "Clients".equals(node.getName())) {
-                double mean = ((Delay) node).getServiceProcess(main).getMean();
-                if (Double.isNaN(mean)) mean = 0.0;
-                Matrix z = new Matrix(1, 1);
-                z.set(0, 0, mean);
-                return z;
+                for (int r = 0; r < R; r++) {
+                    double mean = ((Delay) node).getServiceProcess(closed.get(r)).getMean();
+                    z.set(0, r, Double.isNaN(mean) ? 0.0 : mean);
+                }
+                break;
             }
         }
-        return new Matrix(1, 1);
+        return z;
     }
 
     public static Ret.pfqnMVA callMVA(Matrix l, Matrix n, Matrix z, Matrix s) {
