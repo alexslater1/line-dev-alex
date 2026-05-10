@@ -63,13 +63,35 @@ public class util {
                     + "=== SolverLNSimple ===\n" + formatTable(simpleTable)
                     + "=== SolverLQNS ===\n" + formatTable(lqnsTable);
 
+        double maxRelDiff = 0.0;
+        String worstMsg = null;
         for (int i = 0; i < lnNames.size(); i++) {
             String name = lnNames.get(i);
-            assertClose(name, "QLen",  lnQLen.get(i),  simpleQLen.get(i),  context);
-            assertClose(name, "Util",  lnUtil.get(i),  simpleUtil.get(i),  context);
-            assertClose(name, "RespT", lnRespT.get(i), simpleRespT.get(i), context);
-            assertClose(name, "ResidT",lnResidT.get(i),simpleResidT.get(i),context);
-            assertClose(name, "Tput",  lnTput.get(i),  simpleTput.get(i),  context);
+            String[] metrics = {"QLen", "Util", "RespT", "ResidT", "Tput"};
+            double[][] pairs = {
+                {lnQLen.get(i),   simpleQLen.get(i)},
+                {lnUtil.get(i),   simpleUtil.get(i)},
+                {lnRespT.get(i),  simpleRespT.get(i)},
+                {lnResidT.get(i), simpleResidT.get(i)},
+                {lnTput.get(i),   simpleTput.get(i)}
+            };
+            for (int m = 0; m < metrics.length; m++) {
+                double expected = pairs[m][0], actual = pairs[m][1];
+                if (Double.isNaN(expected) && Double.isNaN(actual)) continue;
+                if (Double.isNaN(expected) || Double.isNaN(actual)) {
+                    fail(String.format("%s.%s: SolverLN=%.6f SolverLNSimple=%.6f (one is NaN)%s",
+                            name, metrics[m], expected, actual, context));
+                }
+                double relDiff = Math.abs(expected - actual) / Math.max(1.0, Math.abs(expected));
+                if (relDiff > maxRelDiff) {
+                    maxRelDiff = relDiff;
+                    worstMsg = String.format("%s.%s: SolverLN=%.6f SolverLNSimple=%.6f (relative diff=%.2e > %.2e)%s",
+                            name, metrics[m], expected, actual, relDiff, TOLERANCE, context);
+                }
+            }
+        }
+        if (maxRelDiff > TOLERANCE) {
+            fail(worstMsg);
         }
     }
 
