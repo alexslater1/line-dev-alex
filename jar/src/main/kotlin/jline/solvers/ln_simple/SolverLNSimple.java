@@ -35,6 +35,8 @@ public class SolverLNSimple {
     private final Map<String, Integer> queueNameToLayer = new HashMap<String, Integer>();
     private static final double EPS = 1e-12;
     private static final double MAX_PROTECTION = 1e6;
+    private final Map<String, Double> taskSojournCache = new HashMap<String, Double>();
+    private final Map<String, Double> taskThroughputCache = new HashMap<String, Double>();
 
     public SolverLNSimple(LayeredNetwork model) {
         this.lqnModel = model;
@@ -198,6 +200,58 @@ public class SolverLNSimple {
                 }
             }
         }
+
+        enforceMaxMult();
+    }
+
+    private void enforceMaxMult() {
+        // Sum all caller-class populations in each T: layer to get the true maximum
+        // concurrency at that task (each caller independently contributes its full N).
+        Map<String, Double> taskEffectiveN = new HashMap<String, Double>();
+        for (Network layer : ensemble) {
+            Queue serverQueue = MvaUtils.findNonDelayQueue(layer);
+            if (serverQueue == null || !serverQueue.getName().startsWith("T:")) continue;
+            String taskName = stripPrefix(serverQueue.getName());
+            double totalN = 0.0;
+            for (JobClass jc : layer.getClasses()) {
+                if (!(jc instanceof ClosedClass)) continue;
+                double n = ((ClosedClass) jc).getNumberOfJobs();
+                if (n > 0 && n < Integer.MAX_VALUE) totalN += n;
+            }
+            if (totalN > 0) {
+                taskEffectiveN.put(taskName, totalN);
+            }
+        }
+        for (Network layer : ensemble) {
+            Queue serverQueue = MvaUtils.findNonDelayQueue(layer);
+            if (serverQueue == null || !serverQueue.getName().startsWith("P:")) continue;
+            double layerEffN = Double.MAX_VALUE;
+            // Find the minimum effective N across all T: classes hosted in this P: layer
+            for (JobClass jc : layer.getClasses()) {
+                if (!(jc instanceof ClosedClass)) continue;
+                ClosedClass cc = (ClosedClass) jc;
+                if (!cc.getName().startsWith("T:")) continue;
+                String taskName = stripPrefix(cc.getName());
+                Double effN = taskEffectiveN.get(taskName);
+                if (effN != null && effN < layerEffN) layerEffN = effN;
+            }
+            if (layerEffN == Double.MAX_VALUE) continue;
+            // Cap population of each T: class — do NOT cap server count.
+            // Processor server count reflects the physical multiplicity of the host
+            // and must remain unchanged; only the customer population is bounded by
+            // the minimum concurrency in the call chain.
+            for (JobClass jc : layer.getClasses()) {
+                if (!(jc instanceof ClosedClass)) continue;
+                ClosedClass cc = (ClosedClass) jc;
+                if (!cc.getName().startsWith("T:")) continue;
+                if (cc.getNumberOfJobs() <= 0) continue;
+                String taskName = stripPrefix(cc.getName());
+                Double effN = taskEffectiveN.get(taskName);
+                if (effN != null && cc.getNumberOfJobs() > effN) {
+                    cc.setPopulation(effN);
+                }
+            }
+        }
     }
 
     public LayeredNetworkAvgTable getAvgTable() {
@@ -275,9 +329,29 @@ public class SolverLNSimple {
                         List<ClosedClass> callerClasses = MvaUtils.getClosedClasses(layer);
                         for (ClosedClass callerCl : callerClasses) {
                             String callerTask_c = stripPrefix(callerCl.getName());
-                            double refChainThink = getRootRefThinkTime(callerTask_c) + computeCallerChainDemand(callerTask_c);
-                            double directCallerThink = getTaskThinkTimeSafe(callerTask_c) + computeLocalDemand(callerTask_c);
-                            double calleeThink = Math.max(1e-9, Math.min(Math.max(refChainThink, directCallerThink), MAX_PROTECTION));
+                            double calleeThink;
+                            // For non-REF callers that have their own T: layer (i.e., intermediate
+                            // tasks), use the cycle-time formula: Z = N_caller / X_caller - sojourn_callee.
+                            // This correctly sets the think time to the caller's idle fraction,
+                            // which approaches 0 when the caller is saturated.
+                            Double xCaller = taskThroughputCache.get(callerTask_c);
+                            Double sojournCallee = taskSojournCache.get(calleeTask);
+                            double callerThink = getTaskThinkTimeSafe(callerTask_c);
+                            if (xCaller != null && xCaller > EPS && sojournCallee != null && callerThink <= 1e-9) {
+                                // Cycle-time formula only for zero-think intermediate callers:
+                                // Z = N/X_caller - callMean * sojourn_callee → 0 when caller is saturated.
+                                // Must use callMean because the caller makes callMean sequential calls per
+                                // request; subtract total callee time, not per-call sojourn alone.
+                                double nCaller = callerCl.getNumberOfJobs();
+                                double cMean = getSyncCallMean(callerTask_c, calleeTask);
+                                if (cMean < 1.0) cMean = 1.0;
+                                calleeThink = Math.max(0.0, nCaller / xCaller - cMean * sojournCallee);
+                            } else {
+                                double refChainThink = getRootRefThinkTime(callerTask_c) + computeCallerChainDemand(callerTask_c);
+                                double directCallerThink = getTaskThinkTimeSafe(callerTask_c) + computeLocalDemand(callerTask_c);
+                                calleeThink = Math.max(refChainThink, directCallerThink);
+                            }
+                            calleeThink = Math.max(1e-9, Math.min(calleeThink, MAX_PROTECTION));
                             calleeClients.setService(callerCl, Exp.fitMean(calleeThink));
                         }
                     }
@@ -321,8 +395,16 @@ public class SolverLNSimple {
                         continue;
                     }
 
+                    taskSojournCache.put(calleeTask, R_task_total);
+                    taskThroughputCache.put(calleeTask, throughput);
+
                     double syncCallMean = getSyncCallMean(callerTask, calleeTask);
-                    double propagatedTaskResp = R_task_total * syncCallMean;
+                    // For leaf tasks (no sync callees), the T: layer demand was set as
+                    // callMean * hostDemand, so R_task_total already represents aggregate
+                    // sojourn per caller-visit (callMean already embedded). Don't multiply again.
+                    // For intermediate tasks, R_task_total is per-call and needs * callMean.
+                    double propagatedTaskResp = taskHasSyncCallees(calleeTask)
+                            ? R_task_total * syncCallMean : R_task_total;
 
                     Integer callerTaskLayer = queueNameToLayer.get("T:" + callerTask);
                     if (callerTaskLayer != null && callerTaskLayer != l) {
@@ -410,7 +492,8 @@ public class SolverLNSimple {
                         if (!Double.isFinite(q_r2)) continue;
                         double R_task_r = q_r2 / x_r2;
                         double syncMean_r = getSyncCallMean(callerTask_r, calleeTask);
-                        double propagated_r = R_task_r * syncMean_r;
+                        double propagated_r = taskHasSyncCallees(calleeTask)
+                                ? R_task_r * syncMean_r : R_task_r;
                         String callerProcessor_r = taskToProcessor.get(callerTask_r);
                         if (callerProcessor_r == null) continue;
                         Integer hostLayer_r = queueNameToLayer.get("P:" + callerProcessor_r);
@@ -501,7 +584,7 @@ public class SolverLNSimple {
         }
 
         // Collect final results and print using LayeredNetworkAvgTable
-        lastAvgTable = SolverLNSimpleResultsUtils.collectAndPrintFinalResults(lqnModel, ensemble, N_LAYERS);
+        lastAvgTable = SolverLNSimpleResultsUtils.collectAndPrintFinalResults(lqnModel, ensemble, N_LAYERS, taskSojournCache);
     }
 
     private void refreshEnsemble() {

@@ -29,7 +29,7 @@ public final class SolverLNSimpleResultsUtils {
     private SolverLNSimpleResultsUtils() {
     }
 
-    public static LayeredNetworkAvgTable collectAndPrintFinalResults(LayeredNetwork lqnModel, List<Network> ensemble, int nLayers) {
+    public static LayeredNetworkAvgTable collectAndPrintFinalResults(LayeredNetwork lqnModel, List<Network> ensemble, int nLayers, Map<String, Double> taskSojournCache) {
         List<String> finalNodeNames = new ArrayList<>();
         List<String> finalNodeTypes = new ArrayList<>();
         List<Double> finalQLen = new ArrayList<>();
@@ -160,24 +160,32 @@ public final class SolverLNSimpleResultsUtils {
                     // For immediate tasks (zero host demand), the residual time is 0,
                     // not the callee response propagated into the server queue by coupling.
                     double taskHostDemand = computeTaskHostDemand(currentTask);
-                    taskResidT.put(taskName, taskHostDemand <= 1e-7 ? 0.0 : r);
+                    double residToStore = taskHostDemand <= 1e-7 ? 0.0 : r;
+                    // For leaf tasks (no sync callees), T: layer demand = callMean × hostDemand,
+                    // so r = callMean × R_per_call. resolveTaskResponseTime multiplies by
+                    // callMean again → divide here to store per-call residual.
+                    if (taskHostDemand > 1e-7 && !taskCalledTask.containsKey(taskName)) {
+                        double cm = getMaxInboundCallMean(lqnModel, taskName);
+                        if (cm > 1.0 + 1e-9) residToStore = residToStore / cm;
+                    }
+                    taskResidT.put(taskName, residToStore);
                 }
                 taskTput.put(taskName, x);
             }
         }
 
-        // For intermediate non-REF tasks (those that have sync callees), taskResidT was set
-        // from the task-layer server demand D_local + R_callee (Fix 2). Override with
-        // hostLayerResid (= D_local only) so resolveTaskResponseTime doesn't double-count R_callee
-        // when it adds the callee's response on top.
+        // For non-leaf non-REF tasks, override taskResidT with hostLayerResid (per-call
+        // processor response time). For intermediate tasks, taskResidT from the T: layer
+        // includes the callee response (D_local + R_callee); hostLayerResid = D_local only,
+        // preventing double-counting when resolveTaskResponseTime adds callee response
+        // recursively. Leaf tasks are excluded: their per-call residual is already stored
+        // correctly by the T: layer processing above (dividing by callMean when needed).
         for (Task task : lqnModel.getTasks().values()) {
-            if (isRefTask(task) || isLeafNonRefTask(task, taskCalledTask)) {
-                continue;
-            }
+            if (isRefTask(task)) continue;
+            if (isLeafNonRefTask(task, taskCalledTask)) continue;
             String tName = task.getName();
-            if (hostLayerResid.containsKey(tName)) {
-                taskResidT.put(tName, hostLayerResid.get(tName));
-            }
+            if (!hostLayerResid.containsKey(tName)) continue;
+            taskResidT.put(tName, hostLayerResid.get(tName));
         }
 
         // For non-REF tasks, the host layer gives the task's own throughput only when the
@@ -192,6 +200,16 @@ public final class SolverLNSimpleResultsUtils {
         }
         for (Map.Entry<String, Double> e : hostLayerTput.entrySet()) {
             String tName = e.getKey();
+            // Intermediate tasks with NO think time have a T: layer throughput that reflects
+            // the actual call-arrival rate — more reliable than P: layer when the task is
+            // saturated. Keep the T: layer value for those. Intermediate tasks WITH think time
+            // pace themselves via Z; the P: layer correctly models their utilization and
+            // throughput, so allow the host-layer override for them.
+            if (taskCalledTask.containsKey(tName)) {
+                Task t2 = findTaskByName(lqnModel, tName);
+                double think2 = (t2 != null && Double.isFinite(t2.getThinkTimeMean())) ? t2.getThinkTimeMean() : 0.0;
+                if (think2 <= 1e-9) continue;
+            }
             String procName = taskNameToProc.get(tName);
             Double d = (procName != null) ? processorDemand.get(procName) : null;
             Task t = findTaskByName(lqnModel, tName);
@@ -235,10 +253,13 @@ public final class SolverLNSimpleResultsUtils {
         // Correct processor utilization using per-caller throughputs × per-caller demands.
         // The P: layer aggregate demand is wrong when callers have asymmetric service demands
         // (e.g., T1 and T2 both call T3, but T3's host demand differs per entry called).
-        // REF-task throughputs in taskTput are correct (set from P: layer per-class results).
-        // Formula: U_proc = sum_caller (X_caller × D_caller_on_proc) / servers.
+        // Skip when the hosted task has a non-zero think time: its P: layer already correctly
+        // models its own utilization (the task paces itself with Z seconds between requests,
+        // so U = X_task × D where X_task comes from the host layer, not the caller's X).
         for (Task hostedTask : lqnModel.getTasks().values()) {
             if (hostedTask.getScheduling() == SchedStrategy.REF || hostedTask.getProcessor() == null) continue;
+            double hostedThink = hostedTask.getThinkTimeMean();
+            if (!Double.isNaN(hostedThink) && Double.isFinite(hostedThink) && hostedThink > 1e-9) continue;
             String procName = hostedTask.getProcessor().getName();
             if (isInfProcessor(lqnModel, procName)) continue;
             Double c = processorServers.get(procName);
@@ -260,7 +281,7 @@ public final class SolverLNSimpleResultsUtils {
             }
         }
 
-        applyRefTaskInheritance(lqnModel, taskQLen, taskResidT, taskTput, taskCalledTask, refTaskCalledTask, refTaskCalledTaskMean);
+        applyRefTaskInheritance(lqnModel, taskQLen, taskResidT, taskTput, taskCalledTask, refTaskCalledTask, refTaskCalledTaskMean, taskSojournCache);
 
         for (Task task : lqnModel.getTasks().values()) {
             if (task.getScheduling() != SchedStrategy.REF) {
@@ -280,19 +301,20 @@ public final class SolverLNSimpleResultsUtils {
         }
 
         // Refresh ref-task metrics after non-ref queue lengths have been derived.
-        applyRefTaskInheritance(lqnModel, taskQLen, taskResidT, taskTput, taskCalledTask, refTaskCalledTask, refTaskCalledTaskMean);
+        applyRefTaskInheritance(lqnModel, taskQLen, taskResidT, taskTput, taskCalledTask, refTaskCalledTask, refTaskCalledTaskMean, taskSojournCache);
 
-        // Add the REF task's processor queue contribution (Q_proc) to its QLen.
-        // After applyRefTaskInheritance, taskQLen[T1] = callee QLen (X*R_T2).
-        // The total is X*(R_P1 + R_T2) = Q_P1 + Q_T2, so we add Q_P1 here.
+        // For leaf tasks with multi-call (callMean > 1), taskTput was stored as the caller's
+        // throughput (e.g. T3.tput=0.317). SolverLN reports T4.tput per T4 CALL: 0.317×7=2.222.
+        // Scale up here, AFTER QLen computation (which used caller_tput × aggregate_sojourn).
         for (Task task : lqnModel.getTasks().values()) {
-            if (task.getScheduling() == SchedStrategy.REF) {
-                Double qlenCallee = taskQLen.get(task.getName());
-                Double qlenProc = refTaskProcQLen.get(task.getName());
-                if (qlenProc != null && qlenProc > 0) {
-                    double baseQ = (qlenCallee != null && Double.isFinite(qlenCallee)) ? qlenCallee : 0.0;
-                    taskQLen.put(task.getName(), baseQ + qlenProc);
-                }
+            if (isRefTask(task)) continue;
+            if (!isLeafNonRefTask(task, taskCalledTask)) continue;
+            String tName = task.getName();
+            double maxCM = getMaxInboundCallMean(lqnModel, tName);
+            if (maxCM <= 1.0 + 1e-9) continue;
+            Double tx = taskTput.get(tName);
+            if (tx != null && tx > 0) {
+                taskTput.put(tName, tx * maxCM);
             }
         }
 
@@ -314,7 +336,12 @@ public final class SolverLNSimpleResultsUtils {
             if (task.getScheduling() != SchedStrategy.REF
                     && isLeafNonRefTask(task, taskCalledTask)
                     && hostLayerResid.containsKey(task.getName())) {
-                resid = hostLayerResid.get(task.getName());
+                double hrv = hostLayerResid.get(task.getName());
+                // For leaf tasks with multi-call, hostLayerResid is sojourn per caller-visit
+                // (callMean already embedded in P: layer demand). Divide to get per-call residual.
+                double maxCM = getMaxInboundCallMean(lqnModel, task.getName());
+                if (maxCM > 1.0 + 1e-9) hrv = hrv / maxCM;
+                resid = hrv;
             }
 
             finalNodeNames.add(task.getName());
@@ -336,7 +363,16 @@ public final class SolverLNSimpleResultsUtils {
             double q = entryFraction * taskQ;
             double resp;
             Task parentTask = findTaskByName(lqnModel, parentTaskName);
-            if (parentTask != null
+            if (parentTask != null && parentTask.getScheduling() == SchedStrategy.REF) {
+                // For REF tasks: derive entry response from Little's Law R = QLen / X.
+                Double qT1 = taskQLen.get(parentTaskName);
+                Double xT1 = taskTput.get(parentTaskName);
+                if (qT1 != null && xT1 != null && xT1 > 0 && Double.isFinite(qT1)) {
+                    resp = qT1 / xT1;
+                } else {
+                    resp = resolveEntryRespTime(lqnModel, parentTaskName, taskResidT, taskCalledTask, refTaskCalledTask, refTaskCalledTaskMean);
+                }
+            } else if (parentTask != null
                     && parentTask.getScheduling() != SchedStrategy.REF
                     && !taskHasExternalSyncCall(lqnModel, parentTaskName)) {
                 resp = deriveLocalTaskResid(parentTaskName, taskQLen, taskTput, taskResidT);
@@ -638,6 +674,29 @@ public final class SolverLNSimpleResultsUtils {
         return totalCallMean > 0 ? totalCallMean : 1.0;
     }
 
+    private static double getMaxInboundCallMean(LayeredNetwork lqnModel, String targetTaskName) {
+        double maxCallMean = 0.0;
+        for (Task callerTask : lqnModel.getTasks().values()) {
+            for (Activity activity : callerTask.getActivities()) {
+                if (activity.getSyncCallDests() == null) continue;
+                for (Map.Entry<Integer, String> syncCall : activity.getSyncCallDests().entrySet()) {
+                    Entry calledEntry = findEntryByName(lqnModel, syncCall.getValue());
+                    if (calledEntry == null || calledEntry.getParent() == null) continue;
+                    if (!targetTaskName.equals(calledEntry.getParent().getName())) continue;
+                    int idx = syncCall.getKey();
+                    double m = 1.0;
+                    Matrix means = activity.getSyncCallMeans();
+                    if (means != null && means.getNumCols() > idx) {
+                        double mean = means.get(0, idx);
+                        if (Double.isFinite(mean) && mean > 0) m = mean;
+                    }
+                    if (m > maxCallMean) maxCallMean = m;
+                }
+            }
+        }
+        return maxCallMean;
+    }
+
     public static void applyRefTaskInheritance(
             LayeredNetwork lqnModel,
             Map<String, Double> taskQLen,
@@ -645,7 +704,8 @@ public final class SolverLNSimpleResultsUtils {
             Map<String, Double> taskTput,
             Map<String, String> taskCalledTask,
             Map<String, String> refTaskCalledTask,
-            Map<String, Double> refTaskCalledTaskMean) {
+            Map<String, Double> refTaskCalledTaskMean,
+            Map<String, Double> taskSojournCache) {
 
         for (Task task : lqnModel.getTasks().values()) {
             if (task.getScheduling() != SchedStrategy.REF) {
@@ -666,15 +726,27 @@ public final class SolverLNSimpleResultsUtils {
                 }
             }
 
-            // T1.QLen callee contribution = T1.tput * R_callee, not T2.tput * R_callee.
-            // When T2 has a think time, T2.tput < T1.tput and we must use T1's own rate.
+            // T1.QLen = T1.tput × R_T1_total.
+            // If we have a cached sojourn time for the called task's T: layer, use it —
+            // it captures the full queuing delay at the called task (not just service time).
+            // This is essential when the called task has limited multiplicity (mult << N_callers),
+            // causing the sojourn to greatly exceed the bare service demand.
+            // Fall back to the chain-sum formula when no cache entry exists.
             Double t1Tput = taskTput.get(task.getName());
-            double calleeResidT = resolveTaskResponseTime(lqnModel, calledTaskName, taskResidT, taskCalledTask, new HashSet<String>());
-            double callMean = refTaskCalledTaskMean.containsKey(task.getName())
-                    ? refTaskCalledTaskMean.get(task.getName())
-                    : 1.0;
-            if (t1Tput != null && t1Tput > 0 && Double.isFinite(calleeResidT) && calleeResidT > 0) {
-                taskQLen.put(task.getName(), t1Tput * callMean * calleeResidT);
+            double totalResidT;
+            Double sojourn = (taskSojournCache != null) ? taskSojournCache.get(calledTaskName) : null;
+            if (sojourn != null && Double.isFinite(sojourn) && sojourn > 0) {
+                double ownResid = 0.0;
+                Double r = taskResidT.get(task.getName());
+                if (r != null && Double.isFinite(r) && r > 0) ownResid = r;
+                double callMean = refTaskCalledTaskMean.containsKey(task.getName())
+                        ? refTaskCalledTaskMean.get(task.getName()) : 1.0;
+                totalResidT = ownResid + callMean * sojourn;
+            } else {
+                totalResidT = resolveTaskResponseTime(lqnModel, task.getName(), taskResidT, taskCalledTask, new HashSet<String>());
+            }
+            if (t1Tput != null && t1Tput > 0 && Double.isFinite(totalResidT) && totalResidT > 0) {
+                taskQLen.put(task.getName(), t1Tput * totalResidT);
             }
 
             // Only zero out ResidT if not already set (e.g., from a non-Immediate processor layer).
