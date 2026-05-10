@@ -3,7 +3,9 @@ package jline.solvers.ln_simple;
 import jline.lang.ClosedClass;
 import jline.lang.JobClass;
 import jline.lang.Network;
+import jline.lang.constant.ActivityPrecedenceType;
 import jline.lang.layered.Activity;
+import jline.lang.layered.ActivityPrecedence;
 import jline.lang.layered.Entry;
 import jline.lang.layered.LayeredNetwork;
 import jline.lang.layered.Task;
@@ -158,6 +160,14 @@ public class SolverLNSimple {
                     }
                     if (totalN > 0 && weightedD > 0) {
                         serverQueue.setService(hc, Exp.fitMean(weightedD / totalN));
+                    } else {
+                        // No callers found (REF task or self-contained task):
+                        // use the sum of the task's own activity host demands,
+                        // weighted by per-activity visit counts (e.g. loop bodies).
+                        double selfDemand = computeLocalDemand(aggTaskName);
+                        if (selfDemand > 0) {
+                            serverQueue.setService(hc, Exp.fitMean(selfDemand));
+                        }
                     }
                     continue;  // skip existing per-caller path below
                 }
@@ -197,6 +207,16 @@ public class SolverLNSimple {
                 }
                 if (demand > 0) {
                     serverQueue.setService(hc, Exp.fitMean(demand));
+                } else if (callerTask != null && tasksOnServer.containsKey(callerTask.getName())) {
+                    // The caller IS the task hosted on this processor (e.g., a REF task
+                    // in its own P: layer). No sync calls from T1 to T1 exist, so the
+                    // demand-from-calls loop above yields 0. Instead use the task's own
+                    // activity host demands, weighted by per-activity visit counts
+                    // (accounts for loop bodies that fire multiple times per visit).
+                    double selfDemand = computeLocalDemand(callerTask.getName());
+                    if (selfDemand > 0) {
+                        serverQueue.setService(hc, Exp.fitMean(selfDemand));
+                    }
                 }
             }
         }
@@ -399,10 +419,9 @@ public class SolverLNSimple {
                     taskThroughputCache.put(calleeTask, throughput);
 
                     double syncCallMean = getSyncCallMean(callerTask, calleeTask);
-                    // For leaf tasks (no sync callees), the T: layer demand was set as
-                    // callMean * hostDemand, so R_task_total already represents aggregate
-                    // sojourn per caller-visit (callMean already embedded). Don't multiply again.
-                    // For intermediate tasks, R_task_total is per-call and needs * callMean.
+                    // For leaf tasks (no sync callees): the T: layer demand was set as
+                    // callMean * hostDemand, so R_task_total already embeds callMean per
+                    // caller-visit. For intermediate tasks R_task_total is per-call.
                     double propagatedTaskResp = taskHasSyncCallees(calleeTask)
                             ? R_task_total * syncCallMean : R_task_total;
 
@@ -490,7 +509,12 @@ public class SolverLNSimple {
                         if (!Double.isFinite(x_r2) || x_r2 <= EPS) continue;
                         double q_r2 = res.Q.get(serverNodeIndex, r2);
                         if (!Double.isFinite(q_r2)) continue;
-                        double R_task_r = q_r2 / x_r2;
+                        // INF-scheduled tasks have unlimited multiplicity: their T:-layer server
+                        // must behave as IS (infinite-server), so R = D (no queueing overhead).
+                        // Using Q/X would include artificial M/M/m FCFS queueing that doesn't exist.
+                        double R_task_r = isInfScheduledTask(calleeTask)
+                                ? L.get(serverNodeIndex, r2)
+                                : q_r2 / x_r2;
                         double syncMean_r = getSyncCallMean(callerTask_r, calleeTask);
                         double propagated_r = taskHasSyncCallees(calleeTask)
                                 ? R_task_r * syncMean_r : R_task_r;
@@ -566,8 +590,6 @@ public class SolverLNSimple {
 
             long synchStartTime = System.nanoTime();
 
-            refreshEnsemble();
-
             if (afterIteration != null) {
                 afterIteration.run();
             }
@@ -587,11 +609,6 @@ public class SolverLNSimple {
         lastAvgTable = SolverLNSimpleResultsUtils.collectAndPrintFinalResults(lqnModel, ensemble, N_LAYERS, taskSojournCache);
     }
 
-    private void refreshEnsemble() {
-        for (Network layer : ensemble) {
-            layer.refreshProcesses();
-        }
-    }
 
     private String stripPrefix(String name) {
         int idx = name.indexOf(':');
@@ -640,17 +657,45 @@ public class SolverLNSimple {
     private double computeLocalDemand(String taskName) {
         for (Task task : lqnModel.getTasks().values()) {
             if (taskName.equals(task.getName())) {
+                Map<String, Double> visitCounts = computeActivityVisitCounts(task);
                 double total = 0.0;
-                for (jline.lang.layered.Activity act : task.getActivities()) {
+                for (Activity act : task.getActivities()) {
                     double m = act.getHostDemandMean();
                     if (!Double.isNaN(m) && m > 1e-7) {
-                        total += m;
+                        double count = visitCounts.containsKey(act.getName())
+                                ? visitCounts.get(act.getName()) : 1.0;
+                        total += count * m;
                     }
                 }
                 return total;
             }
         }
         return 0.0;
+    }
+
+    // Returns the effective visit count per task-entry visit for each activity,
+    // accounting for POST_LOOP precedences: preActs are the loop bodies (fire
+    // loopCount times per visit), postActs are the loop exits (fire once).
+    private Map<String, Double> computeActivityVisitCounts(Task task) {
+        Map<String, Double> counts = new HashMap<String, Double>();
+        for (Activity act : task.getActivities()) {
+            counts.put(act.getName(), 1.0);
+        }
+        for (ActivityPrecedence prec : task.getPrecedences()) {
+            if (ActivityPrecedenceType.POST_LOOP.equals(prec.getPostType())) {
+                Matrix postParams = prec.getPostParams();
+                double loopCount = (postParams != null
+                        && postParams.getNumRows() > 0
+                        && postParams.getNumCols() > 0)
+                        ? postParams.get(0, 0) : 1.0;
+                // preActs are the loop body — they fire loopCount times per visit
+                for (String actName : prec.getPreActs()) {
+                    counts.put(actName, loopCount);
+                }
+                // postActs are the loop exit — they fire once (already default)
+            }
+        }
+        return counts;
     }
 
     private String findCallerTask(String calleeName) {
@@ -713,6 +758,15 @@ public class SolverLNSimple {
             current = caller;
         }
         return total;
+    }
+
+    private boolean isInfScheduledTask(String taskName) {
+        for (Task task : lqnModel.getTasks().values()) {
+            if (taskName.equals(task.getName())) {
+                return task.getScheduling() == jline.lang.constant.SchedStrategy.INF;
+            }
+        }
+        return false;
     }
 
     private boolean taskHasSyncCallees(String taskName) {

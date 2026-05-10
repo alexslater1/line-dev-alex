@@ -447,8 +447,206 @@ public class LayeredNetworkTestExamples {
         return model;
     }
 
+    public static LayeredNetwork sc1_simple_chain() throws Exception {
+        LayeredNetwork model = new LayeredNetwork("sc1");
 
+        Processor P1 = new Processor(model, "P1", 1, SchedStrategy.PS);
+        Processor P2 = new Processor(model, "P2", 1, SchedStrategy.PS);
 
+        Task T1 = new Task(model, "T1", 50, SchedStrategy.REF).on(P1).setThinkTime(new Exp(1.0));
+        Task T2 = new Task(model, "T2", Integer.MAX_VALUE, SchedStrategy.INF).on(P2);
+
+        Entry E1 = new Entry(model, "E1").on(T1);
+        Entry E2 = new Entry(model, "E2").on(T2);
+
+        new Activity(model, "A1", new Exp(5)).on(T1).boundTo(E1).synchCall(E2, 1);
+        new Activity(model, "A2", new Exp(10)).on(T2).boundTo(E2).repliesTo(E2);
+
+        return model;
+    }
+
+    public static LayeredNetwork sc2_three_tier() throws Exception {
+        LayeredNetwork model = new LayeredNetwork("sc2");
+
+        Processor P1 = new Processor(model, "P1", 2, SchedStrategy.PS);
+        Processor P2 = new Processor(model, "P2", 2, SchedStrategy.PS);
+        Processor P3 = new Processor(model, "P3", 2, SchedStrategy.PS);
+
+        Task T1 = new Task(model, "T1", 100, SchedStrategy.REF).on(P1).setThinkTime(new Exp(2));
+        Task T2 = new Task(model, "T2", Integer.MAX_VALUE, SchedStrategy.INF).on(P2);
+        Task T3 = new Task(model, "T3", Integer.MAX_VALUE, SchedStrategy.INF).on(P3);
+
+        Entry E1 = new Entry(model, "E1").on(T1);
+        Entry E2 = new Entry(model, "E2").on(T2);
+        Entry E3 = new Entry(model, "E3").on(T3);
+
+        new Activity(model, "A1", new Exp(3)).on(T1).boundTo(E1).synchCall(E2, 1);
+        new Activity(model, "A2", new Exp(4)).on(T2).boundTo(E2).synchCall(E3, 2).repliesTo(E2);
+        new Activity(model, "A3", new Exp(6)).on(T3).boundTo(E3).repliesTo(E3);
+
+        return model;
+    }
+
+    public static LayeredNetwork sc3_fanout() throws Exception {
+        LayeredNetwork model = new LayeredNetwork("sc3");
+
+        Processor P1 = new Processor(model, "P1", 1, SchedStrategy.PS);
+        Processor P2 = new Processor(model, "P2", 1, SchedStrategy.PS);
+
+        Task T1 = new Task(model, "T1", 40, SchedStrategy.REF).on(P1).setThinkTime(new Exp(1));
+        Task T2 = new Task(model, "T2", Integer.MAX_VALUE, SchedStrategy.INF).on(P2);
+
+        Entry E1 = new Entry(model, "E1").on(T1);
+        Entry E2 = new Entry(model, "E2").on(T2);
+        Entry E3 = new Entry(model, "E3").on(T2);
+
+        new Activity(model, "A1", new Exp(2)).on(T1).boundTo(E1).synchCall(E2, 1).synchCall(E3, 1);
+
+        new Activity(model, "A2", new Exp(5)).on(T2).boundTo(E2).repliesTo(E2);
+        new Activity(model, "A3", new Exp(7)).on(T2).boundTo(E3).repliesTo(E3);
+
+        return model;
+    }
+
+    public static LayeredNetwork sc4_serial() throws Exception {
+        LayeredNetwork model = new LayeredNetwork("sc4");
+
+        Processor P1 = new Processor(model, "P1", 1, SchedStrategy.PS);
+        Processor P2 = new Processor(model, "P2", 1, SchedStrategy.PS);
+
+        Task T1 = new Task(model, "T1", 30, SchedStrategy.REF).on(P1).setThinkTime(new Exp(2));
+        Task T2 = new Task(model, "T2", Integer.MAX_VALUE, SchedStrategy.INF).on(P2);
+
+        Entry E1 = new Entry(model, "E1").on(T1);
+        Entry E2 = new Entry(model, "E2").on(T2);
+
+        Activity A1 = new Activity(model, "A1", new Exp(1)).on(T1).boundTo(E1);
+        Activity A2 = new Activity(model, "A2", new Exp(1)).on(T1).synchCall(E2, 1);
+
+        new Activity(model, "A3", new Exp(3)).on(T2).boundTo(E2).repliesTo(E2);
+
+        T1.addPrecedence(ActivityPrecedence.Serial("A1", "A2"));
+
+        return model;
+    }
+
+    public static LayeredNetwork sc5_loop() throws Exception {
+        LayeredNetwork model = new LayeredNetwork("sc5");
+
+        Processor P1 = new Processor(model, "P1", 1, SchedStrategy.PS);
+
+        Task T1 = new Task(model, "T1", 20, SchedStrategy.REF).on(P1).setThinkTime(new Exp(1));
+
+        Entry E1 = new Entry(model, "E1").on(T1);
+
+        Activity A1 = new Activity(model, "A1", new Exp(2)).on(T1).boundTo(E1);
+        Activity A2 = new Activity(model, "A2", new Exp(3)).on(T1);
+
+        T1.addPrecedence(ActivityPrecedence.Loop("A1", Arrays.asList("A2"), Matrix.singleton(3)));
+
+        return model;
+    }
+
+    public static LayeredNetwork sc6_multi_call() throws Exception {
+        LayeredNetwork model = new LayeredNetwork("sc6");
+
+        Processor P1 = new Processor(model, "P1", 2, SchedStrategy.PS);
+        Processor P2 = new Processor(model, "P2", 2, SchedStrategy.PS);
+
+        Task T1 = new Task(model, "T1", 60, SchedStrategy.REF).on(P1).setThinkTime(new Exp(2));
+        Task T2 = new Task(model, "T2", Integer.MAX_VALUE, SchedStrategy.INF).on(P2);
+
+        Entry E1 = new Entry(model, "E1").on(T1);
+        Entry E2 = new Entry(model, "E2").on(T2);
+
+        new Activity(model, "A1", new Exp(2)).on(T1).boundTo(E1).synchCall(E2, 5);
+        new Activity(model, "A2", new Exp(8)).on(T2).boundTo(E2).repliesTo(E2);
+
+        return model;
+    }
+
+    public static LayeredNetwork sc7_multicore() throws Exception {
+        LayeredNetwork model = new LayeredNetwork("sc7");
+
+        Processor P1 = new Processor(model, "P1", 4, SchedStrategy.PS);
+        Processor P2 = new Processor(model, "P2", 8, SchedStrategy.PS);
+
+        Task T1 = new Task(model, "T1", 200, SchedStrategy.REF).on(P1).setThinkTime(new Exp(5));
+        Task T2 = new Task(model, "T2", Integer.MAX_VALUE, SchedStrategy.INF).on(P2);
+
+        Entry E1 = new Entry(model, "E1").on(T1);
+        Entry E2 = new Entry(model, "E2").on(T2);
+
+        new Activity(model, "A1", new Exp(3)).on(T1).boundTo(E1).synchCall(E2, 1);
+        new Activity(model, "A2", new Exp(6)).on(T2).boundTo(E2).repliesTo(E2);
+
+        return model;
+    }
+
+    public static LayeredNetwork sc8_immediate() throws Exception {
+        LayeredNetwork model = new LayeredNetwork("sc8");
+
+        Processor P1 = new Processor(model, "P1", 1, SchedStrategy.PS);
+        Processor P2 = new Processor(model, "P2", Integer.MAX_VALUE, SchedStrategy.INF);
+
+        Task T1 = new Task(model, "T1", 10, SchedStrategy.REF).on(P1).setThinkTime(new Exp(1));
+        Task T2 = new Task(model, "T2", Integer.MAX_VALUE, SchedStrategy.INF).on(P2);
+
+        Entry E1 = new Entry(model, "E1").on(T1);
+        Entry E2 = new Entry(model, "E2").on(T2);
+
+        new Activity(model, "A1", new Exp(1)).on(T1).boundTo(E1).synchCall(E2, 1);
+        new Activity(model, "A2", Immediate.getInstance()).on(T2).boundTo(E2).repliesTo(E2);
+
+        return model;
+    }
+    public static LayeredNetwork sc9_two_calls() throws Exception {
+        LayeredNetwork model = new LayeredNetwork("sc9");
+
+        Processor P1 = new Processor(model, "P1", 1, SchedStrategy.PS);
+        Processor P2 = new Processor(model, "P2", 1, SchedStrategy.PS);
+
+        Task T1 = new Task(model, "T1", 25, SchedStrategy.REF).on(P1).setThinkTime(new Exp(2));
+        Task T2 = new Task(model, "T2", Integer.MAX_VALUE, SchedStrategy.INF).on(P2);
+
+        Entry E1 = new Entry(model, "E1").on(T1);
+        Entry E2 = new Entry(model, "E2").on(T2);
+
+        Activity A1 = new Activity(model, "A1", new Exp(1)).on(T1).boundTo(E1).synchCall(E2, 1);
+        Activity A2 = new Activity(model, "A2", new Exp(1)).on(T1).synchCall(E2, 1);
+
+        new Activity(model, "A3", new Exp(4)).on(T2).boundTo(E2).repliesTo(E2);
+
+        T1.addPrecedence(ActivityPrecedence.Serial("A1", "A2"));
+
+        return model;
+    }
+
+    public static LayeredNetwork sc10_deep_chain() throws Exception {
+        LayeredNetwork model = new LayeredNetwork("sc10");
+
+        Processor P1 = new Processor(model, "P1", 1, SchedStrategy.PS);
+        Processor P2 = new Processor(model, "P2", 1, SchedStrategy.PS);
+        Processor P3 = new Processor(model, "P3", 1, SchedStrategy.PS);
+        Processor P4 = new Processor(model, "P4", 1, SchedStrategy.PS);
+
+        Task T1 = new Task(model, "T1", 80, SchedStrategy.REF).on(P1).setThinkTime(new Exp(3));
+        Task T2 = new Task(model, "T2", Integer.MAX_VALUE, SchedStrategy.INF).on(P2);
+        Task T3 = new Task(model, "T3", Integer.MAX_VALUE, SchedStrategy.INF).on(P3);
+        Task T4 = new Task(model, "T4", Integer.MAX_VALUE, SchedStrategy.INF).on(P4);
+
+        Entry E1 = new Entry(model, "E1").on(T1);
+        Entry E2 = new Entry(model, "E2").on(T2);
+        Entry E3 = new Entry(model, "E3").on(T3);
+        Entry E4 = new Entry(model, "E4").on(T4);
+
+        new Activity(model, "A1", new Exp(2)).on(T1).boundTo(E1).synchCall(E2, 1);
+        new Activity(model, "A2", new Exp(3)).on(T2).boundTo(E2).synchCall(E3, 1).repliesTo(E2);
+        new Activity(model, "A3", new Exp(4)).on(T3).boundTo(E3).synchCall(E4, 1).repliesTo(E3);
+        new Activity(model, "A4", new Exp(5)).on(T4).boundTo(E4).repliesTo(E4);
+
+        return model;
+    }
 
 
 
