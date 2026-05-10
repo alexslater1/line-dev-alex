@@ -19,7 +19,7 @@ import jline.solvers.lqns.SolverLQNS;
 
 public class util {
 
-    private static final double TOLERANCE = 1e-3;
+    private static final double TOLERANCE = 1e-2;
 
     static {
         Logger.getLogger("").setLevel(Level.OFF);
@@ -75,25 +75,36 @@ public class util {
 
     public static LayeredNetworkAvgTable runSolverLNSimple(LayeredNetwork model) {
         SolverLNSimple solver = new SolverLNSimple(model);
-        suppressOutput(() -> solver.iterateCoupledMva(100, 1e-4));
+        int[] iters = {0};
+        long start = System.currentTimeMillis();
+        suppressOutput(() -> solver.iterateCoupledMva(100, 1e-4, () -> iters[0]++));
+        System.out.printf("[SolverLNSimple] %.3f s, %d iters%n", (System.currentTimeMillis() - start) / 1000.0, iters[0]);
         return solver.getAvgTable();
     }
 
     public static LayeredNetworkAvgTable runSolverLN(LayeredNetwork model) {
         final LayeredNetworkAvgTable[] holder = new LayeredNetworkAvgTable[1];
+        final SolverLN[] solverHolder = new SolverLN[1];
+        long start = System.currentTimeMillis();
         suppressOutput(() -> {
-            SolverLN solver = new SolverLN(model, SolverType.MVA);
-            holder[0] = (LayeredNetworkAvgTable) solver.getAvgTable();
+            solverHolder[0] = new SolverLN(model, SolverType.MVA);
+            holder[0] = (LayeredNetworkAvgTable) solverHolder[0].getAvgTable();
         });
+        int iters = solverHolder[0] != null && solverHolder[0].maxitererr != null ? solverHolder[0].maxitererr.size() : -1;
+        System.out.printf("[SolverLN]       %.3f s, %d iters%n", (System.currentTimeMillis() - start) / 1000.0, iters);
         return holder[0];
     }
 
     public static LayeredNetworkAvgTable runSolverLQNS(LayeredNetwork model) {
         final LayeredNetworkAvgTable[] holder = new LayeredNetworkAvgTable[1];
+        final SolverLQNS[] solverHolder = new SolverLQNS[1];
+        long start = System.currentTimeMillis();
         suppressOutput(() -> {
-            SolverLQNS solver = new SolverLQNS(model);
-            holder[0] = (LayeredNetworkAvgTable) solver.getAvgTable();
+            solverHolder[0] = new SolverLQNS(model);
+            holder[0] = (LayeredNetworkAvgTable) solverHolder[0].getAvgTable();
         });
+        int iters = solverHolder[0] != null && solverHolder[0].result != null ? solverHolder[0].result.iter : -1;
+        System.out.printf("[SolverLQNS]     %.3f s, %d iters%n", (System.currentTimeMillis() - start) / 1000.0, iters);
         return holder[0];
     }
 
