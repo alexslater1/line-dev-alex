@@ -384,6 +384,29 @@ public class MulticlassLayeredNetworkExamples {
         return model;
     }
 
+    public static LayeredNetwork mc_b6_two_class_shared_ps_asymmetric_z() throws Exception {
+        LayeredNetwork model = new LayeredNetwork("mc_b6");
+
+        Processor P1 = new Processor(model, "P1", Integer.MAX_VALUE, SchedStrategy.INF);
+        Processor P2 = new Processor(model, "P2", 1, SchedStrategy.PS);
+
+        Task T1 = new Task(model, "T1", 2, SchedStrategy.REF).on(P1).setThinkTime(Exp.fitMean(3.0));
+        Task T2 = new Task(model, "T2", 6, SchedStrategy.REF).on(P1).setThinkTime(Exp.fitMean(5.0));
+        Task T3 = new Task(model, "T3", Integer.MAX_VALUE, SchedStrategy.INF).on(P2);
+
+        Entry E1 = new Entry(model, "E1").on(T1);
+        Entry E2 = new Entry(model, "E2").on(T2);
+        Entry E3 = new Entry(model, "E3").on(T3);
+        Entry E4 = new Entry(model, "E4").on(T3);
+
+        new Activity(model, "A1", Immediate.getInstance()).on(T1).boundTo(E1).synchCall(E3, 1);
+        new Activity(model, "A2", Immediate.getInstance()).on(T2).boundTo(E2).synchCall(E4, 1);
+        new Activity(model, "A3", Exp.fitMean(1.0)).on(T3).boundTo(E3).repliesTo(E3);
+        new Activity(model, "A4", Exp.fitMean(1.0)).on(T3).boundTo(E4).repliesTo(E4);
+
+        return model;
+    }
+
     // =========================================================================
     // Category C: Shared multi-server PS (m > 1 servers)
     //

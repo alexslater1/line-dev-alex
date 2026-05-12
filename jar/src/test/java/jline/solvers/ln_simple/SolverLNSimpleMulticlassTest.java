@@ -4,6 +4,7 @@ import jline.GlobalConstants;
 import jline.VerboseLevel;
 import jline.solvers.ln_simple.utils.MulticlassLayeredNetworkExamples;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
@@ -63,17 +64,24 @@ public class SolverLNSimpleMulticlassTest {
         assertResultsMatchSolverLN(MulticlassLayeredNetworkExamples.mc_b5_three_class_shared_ps_asymmetric());
     }
 
+    @Test @Timeout(120)
+    public void testMcB6_TwoClassSharedPsAsymmetric() throws Exception {
+        assertResultsMatchSolverLN(MulticlassLayeredNetworkExamples.mc_b6_two_class_shared_ps_asymmetric_z());
+    }
+
     // Category C: shared multi-server PS
     @Test @Timeout(120)
     public void testMcC1_TwoClassShared2ServerPsSymmetric() throws Exception {
         assertResultsMatchSolverLN(MulticlassLayeredNetworkExamples.mc_c1_two_class_shared_2server_ps_symmetric());
     }
 
+//    @Disabled
     @Test @Timeout(120)
     public void testMcC2_TwoClassShared2ServerPsAsymmetric() throws Exception {
         assertResultsMatchSolverLN(MulticlassLayeredNetworkExamples.mc_c2_two_class_shared_2server_ps_asymmetric());
     }
 
+//    @Disabled
     @Test @Timeout(120)
     public void testMcC3_ThreeClassShared3ServerPsAsymmetric() throws Exception {
         assertResultsMatchSolverLN(MulticlassLayeredNetworkExamples.mc_c3_three_class_shared_3server_ps_asymmetric());

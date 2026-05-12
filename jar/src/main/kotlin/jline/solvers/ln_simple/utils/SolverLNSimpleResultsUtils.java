@@ -31,7 +31,7 @@ public final class SolverLNSimpleResultsUtils {
     private SolverLNSimpleResultsUtils() {
     }
 
-    public static LayeredNetworkAvgTable collectAndPrintFinalResults(LayeredNetwork lqnModel, List<Network> ensemble, int nLayers, Map<String, Double> taskSojournCache) {
+    public static LayeredNetworkAvgTable collectAndPrintFinalResults(LayeredNetwork lqnModel, List<Network> ensemble, int nLayers, Map<String, Double> taskSojournCache, Map<Integer, String> rebuiltHostLayers) {
         List<String> finalNodeNames = new ArrayList<>();
         List<String> finalNodeTypes = new ArrayList<>();
         List<Double> finalQLen = new ArrayList<>();
@@ -122,27 +122,45 @@ public final class SolverLNSimpleResultsUtils {
                 processorDemand.put(taskName, totalD);
                 processorUtil.put(taskName, totalUtil);
 
-                // Per-class metrics
-                for (int r2 = 0; r2 < R_host; r2++) {
-                    double x_r = res.X.get(0, r2);
-                    double q_r = res.Q.get(serverNodeIndex, r2);
-                    double resp_r = (x_r > 0) ? (q_r / x_r) : Double.NaN;
-                    String hostedTaskName = stripPrefix(hostClasses.get(r2).getName());
-                    for (Task task : lqnModel.getTasks().values()) {
-                        if (!task.getName().equals(hostedTaskName)) continue;
-                        if (task.getScheduling() == SchedStrategy.REF) {
-                            refTaskProcQLen.put(task.getName(), q_r);
-                            taskUtil.put(task.getName(), totalUtil);
-                            taskRespT.put(task.getName(), Double.NaN);
-                            taskResidT.put(task.getName(), resp_r);
-                            taskTput.put(task.getName(), x_r);
-                        } else if (Double.isFinite(x_r) && x_r > 0) {
-                            hostLayerTput.put(task.getName(), x_r);
-                            if (Double.isFinite(resp_r) && resp_r > 0) {
-                                hostLayerResid.put(task.getName(), resp_r);
+                // Rebuilt Case B host layer: per-caller R:* classes represent the hosted task's
+                // per-class processing, not the REF callers themselves. Attribute aggregate Q/X
+                // back to the hosted task.
+                if (rebuiltHostLayers != null && rebuiltHostLayers.containsKey(l)) {
+                    String hostedName = rebuiltHostLayers.get(l);
+                    double qTot = 0.0, xTot = 0.0;
+                    for (int r2 = 0; r2 < R_host; r2++) {
+                        double x_r = res.X.get(0, r2);
+                        double q_r = res.Q.get(serverNodeIndex, r2);
+                        if (Double.isFinite(x_r) && x_r > 0) xTot += x_r;
+                        if (Double.isFinite(q_r)) qTot += q_r;
+                    }
+                    if (xTot > 0) {
+                        hostLayerTput.put(hostedName, xTot);
+                        hostLayerResid.put(hostedName, qTot / xTot);
+                    }
+                } else {
+                    // Per-class metrics for non-rebuilt layers
+                    for (int r2 = 0; r2 < R_host; r2++) {
+                        double x_r = res.X.get(0, r2);
+                        double q_r = res.Q.get(serverNodeIndex, r2);
+                        double resp_r = (x_r > 0) ? (q_r / x_r) : Double.NaN;
+                        String hostedTaskName = stripPrefix(hostClasses.get(r2).getName());
+                        for (Task task : lqnModel.getTasks().values()) {
+                            if (!task.getName().equals(hostedTaskName)) continue;
+                            if (task.getScheduling() == SchedStrategy.REF) {
+                                refTaskProcQLen.put(task.getName(), q_r);
+                                taskUtil.put(task.getName(), totalUtil);
+                                taskRespT.put(task.getName(), Double.NaN);
+                                taskResidT.put(task.getName(), resp_r);
+                                taskTput.put(task.getName(), x_r);
+                            } else if (Double.isFinite(x_r) && x_r > 0) {
+                                hostLayerTput.put(task.getName(), x_r);
+                                if (Double.isFinite(resp_r) && resp_r > 0) {
+                                    hostLayerResid.put(task.getName(), resp_r);
+                                }
                             }
+                            break;
                         }
-                        break;
                     }
                 }
             } else if (serverQueueName.startsWith("T:")) {

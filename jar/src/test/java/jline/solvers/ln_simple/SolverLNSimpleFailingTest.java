@@ -12,6 +12,6 @@ import org.junit.jupiter.api.Timeout;
 import static jline.solvers.ln_simple.util.assertResultsMatchSolverLN;
 
 public class SolverLNSimpleFailingTest {
-    //FAILING TESTS - USED TO STORE KNOWN FAILURES
+    //USED TO STORE KNOWN FAILURES
 
 }
