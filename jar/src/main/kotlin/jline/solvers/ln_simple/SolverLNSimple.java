@@ -3,388 +3,120 @@ package jline.solvers.ln_simple;
 import jline.lang.ClosedClass;
 import jline.lang.JobClass;
 import jline.lang.Network;
-import jline.lang.RoutingMatrix;
-import jline.lang.constant.ActivityPrecedenceType;
-import jline.lang.layered.Activity;
-import jline.lang.layered.ActivityPrecedence;
-import jline.lang.layered.Entry;
 import jline.lang.layered.LayeredNetwork;
-import jline.lang.layered.Task;
 import jline.lang.nodes.Delay;
+import jline.lang.nodes.Node;
 import jline.lang.nodes.Queue;
-import jline.lang.processes.Disabled;
 import jline.lang.processes.Exp;
 import jline.io.Ret;
 import jline.solvers.LayeredNetworkAvgTable;
-import jline.solvers.ln_simple.utils.MulticlassLayeredNetworkExamples;
-import jline.solvers.ln_simple.utils.MvaUtils;
-import jline.solvers.ln_simple.utils.SolverLNSimpleResultsUtils;
+import jline.solvers.ln_simple.results.ResultsCollector;
 import jline.util.matrix.Matrix;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 
+/**
+ * Layered Queueing Network (LQN) decomposition solver.
+ *
+ * <h2>Decomposition model</h2>
+ * {@link LayeredNetwork#getEnsemble()} factors the LQN into a list of single-server
+ * closed PFQNs, one per processor and one per task. Two layer kinds are used:
+ *
+ * <ul>
+ *   <li><b>{@code T:<task>} task layer</b> — server queue is the task; closed
+ *       classes are caller tasks named {@code R:<caller>} with N = caller multiplicity
+ *       and demand = total call-demand (sum of {@code callMean × hostDemand} over
+ *       all synchronous calls into the task).</li>
+ *   <li><b>{@code P:<proc>} host layer</b> — server queue is the processor; classes
+ *       are either per-caller {@code R:<caller>} (multi-caller / rebuilt Case B) or
+ *       one aggregate {@code T:<task>} class (single-class form).</li>
+ * </ul>
+ *
+ * Each layer also has a {@code Clients} {@link Delay} node whose mean encodes the
+ * think / blocking time per class.
+ *
+ * <h2>Architecture</h2>
+ * Work is split across four files:
+ * <ul>
+ *   <li>{@link EnsembleInitialiser} — one-shot constructor-time init (demand fixing,
+ *       Case-B rebuild, population cap, topology snapshots).</li>
+ *   <li>This class — public API + the iteration loop and its two coupling stages.</li>
+ *   <li>{@link MvaInputs} — MVA matrix builders and the reflection-based call into
+ *       {@code pfqn_mvams}.</li>
+ *   <li>{@link LqnGraph} — pure read-only queries on the LQN model.</li>
+ *   <li>{@link ResultsCollector} (in {@code results/}) — final-pass result assembly
+ *       into a {@link LayeredNetworkAvgTable}.</li>
+ * </ul>
+ *
+ * <h2>Iteration</h2>
+ * {@link #iterateCoupledMva} runs a bounce sweep (sequence
+ * {@code 0,1,...,N-1,N-2,...,1}) over all layers per outer iteration so that
+ * information flows both ways through the call chain in a single pass. Each layer
+ * is solved by {@code pfqn_mvams}; its result then propagates into coupled
+ * layers via {@code Clients} think times and queue service rates. Stop when
+ * {@code max |ΔX| < tol}.
+ *
+ * <h2>Notation (used in comments throughout)</h2>
+ * D / L — service demand at a station; N — population; X — throughput;
+ * Q — mean queue length; R — response time (Q/X by Little's law);
+ * Z — Clients-delay (think) time; callMean — expected sync calls per caller-visit.
+ */
 public class SolverLNSimple {
 
-    private int N_LAYERS;
-    private List<Network> ensemble;
-    private final double[] baseClientsThink; // initial Clients Delay think per layer, used as base for coupling
-    private double[] hostContribToCalleeClients; // R_proc added to each callee-layer's Clients via host->callee coupling
-    private LayeredNetwork lqnModel; // Save the original LQN model
-    private LayeredNetworkAvgTable lastAvgTable;
-    private final Map<String, String> taskToProcessor = new HashMap<String, String>();
-    private final Map<String, List<String>> processorToTasks = new HashMap<String, List<String>>();
-    private final Map<String, Integer> queueNameToLayer = new HashMap<String, Integer>();
+    // === Numerical safety constants ===
+    /** Minimum positive value used to avoid zero-divides. */
     private static final double EPS = 1e-12;
+    /** Hard upper bound on injected think / service times. Keeps MVA inputs finite
+     *  when feedback transiently blows up before convergence. */
     private static final double MAX_PROTECTION = 1e6;
+    /** Floor for any clamped value (slightly larger than EPS so MVA always sees > 0). */
+    private static final double CLAMP_FLOOR = 1e-9;
+
+    // === Model & ensemble ===
+    private final LayeredNetwork lqnModel;
+    private final List<Network> ensemble;
+    private final int N_LAYERS;
+
+    // === Initialisation result (immutable for the lifetime of the solver) ===
+    private final double[] baseClientsThink;
+    private final Map<String, Integer> queueNameToLayer;
+    private final Map<String, String> taskToProcessor;
+    private final Map<Integer, String> rebuiltHostLayers;
+
+    // === State accumulated across sweeps ===
+    /** Cached server-only response time per callee task (Q_server/X). Used by the
+     *  cycle-time formula when updating intermediate callers' Clients delay. */
     private final Map<String, Double> taskSojournCache = new HashMap<String, Double>();
+    /** Cached throughput per callee task. Companion to {@link #taskSojournCache}. */
     private final Map<String, Double> taskThroughputCache = new HashMap<String, Double>();
-    // callee task name → (caller task name → raw host demand at callee's processor)
-    private final Map<String, Map<String, Double>> perCallerHostDemand = new HashMap<String, Map<String, Double>>();
-    // callee task name → population-weighted average host demand (D_agg) — used only for non-rebuilt layers
-    private final Map<String, Double> aggregateHostDemand = new HashMap<String, Double>();
-    // P: host layers we rebuilt with per-caller classes: layer index → hosted task name
-    private final Map<Integer, String> rebuiltHostLayers = new HashMap<Integer, String>();
+
+    /** Result table from the most recent {@link #iterateCoupledMva} run. */
+    private LayeredNetworkAvgTable lastAvgTable;
+
+
+    // =================================================================================
+    //  Construction
+    // =================================================================================
 
     public SolverLNSimple(LayeredNetwork model) {
         this.lqnModel = model;
-        ensemble = model.getEnsemble();
-        N_LAYERS = ensemble.size();
+        this.ensemble = model.getEnsemble();
+        this.N_LAYERS = ensemble.size();
 
-        // Capture base Clients think times before any coupling modifies them
-        baseClientsThink = new double[N_LAYERS];
-        hostContribToCalleeClients = new double[N_LAYERS];
-        for (int l = 0; l < N_LAYERS; l++) {
-            Delay d = findClientsDelay(ensemble.get(l));
-            if (d != null) {
-                JobClass mc = MvaUtils.getMainClass(ensemble.get(l));
-                double m = d.getServiceProcess(mc).getMean();
-                baseClientsThink[l] = Double.isNaN(m) ? 0.0 : m;
-            }
-
-            Queue q = MvaUtils.findNonDelayQueue(ensemble.get(l));
-            if (q != null) {
-                queueNameToLayer.put(q.getName(), l);
-            }
-        }
-
-        for (Task task : lqnModel.getTasks().values()) {
-            if (task.getProcessor() == null) {
-                continue;
-            }
-            String taskName = task.getName();
-            String processorName = task.getProcessor().getName();
-            taskToProcessor.put(taskName, processorName);
-
-            List<String> hostedTasks = processorToTasks.get(processorName);
-            if (hostedTasks == null) {
-                hostedTasks = new ArrayList<String>();
-                processorToTasks.put(processorName, hostedTasks);
-            }
-            hostedTasks.add(taskName);
-        }
-
-        // Fix per-class server demands in ensemble layers.
-        // The ensemble builder sets Disabled (NaN) service at the server for all caller classes.
-        // buildDemandMatrix falls back to the first non-NaN class, which is always the first
-        // call class — giving the same demand D_T1 to every class including T2, T3, etc.
-        // This loop sets the correct per-class demand for each caller class in each layer.
-        //
-        // Two layer types need fixing:
-        //   T: task layers  (e.g. T:T3): have per-caller classes R:T1, R:T2 with demand
-        //                                = callMean × hostedActivity.hostDemand
-        //   P: host layers (e.g. P:P2):  have either per-caller classes (for REF tasks on
-        //                                the processor, correctly named R:Txx) which need
-        //                                per-caller demand setting, or a single aggregate
-        //                                class (T:Txx). Aggregate classes need population-
-        //                                weighted demand over all callers; this is now
-        //                                handled by a guard clause in the ClosedClass loop.
-        for (int l = 0; l < N_LAYERS; l++) {
-            Network layer = ensemble.get(l);
-            Queue serverQueue = MvaUtils.findNonDelayQueue(layer);
-            if (serverQueue == null) continue;
-            String serverQueueName = serverQueue.getName();
-            String serverTaskOrProc = stripPrefix(serverQueueName);
-            List<ClosedClass> layerClasses = MvaUtils.getClosedClasses(layer);
-
-            // Build tasksOnServer: the set of tasks whose service is represented by this server node.
-            // For T: layers: the server IS the task itself (T3 for T:T3).
-            // For P: layers: the server is the processor, so tasksOnServer = all tasks on that proc.
-            Map<String, Task> tasksOnServer = new HashMap<String, Task>();
-            if (serverQueueName.startsWith("T:")) {
-                for (Task t : lqnModel.getTasks().values()) {
-                    if (t.getName().equals(serverTaskOrProc)) {
-                        tasksOnServer.put(t.getName(), t);
-                        break;
-                    }
-                }
-            } else if (serverQueueName.startsWith("P:")) {
-                for (Task t : lqnModel.getTasks().values()) {
-                    if (t.getProcessor() != null && t.getProcessor().getName().equals(serverTaskOrProc)) {
-                        tasksOnServer.put(t.getName(), t);
-                    }
-                }
-            } else {
-                continue;
-            }
-
-            for (ClosedClass hc : layerClasses) {
-                // P: layer with aggregate "T:xxx" class: the existing per-caller path yields
-                // demand=0 (aggTask has no sync calls to itself). Compute the correct
-                // population-weighted average over all tasks that call entries on aggTask.
-                if (serverQueueName.startsWith("P:") && hc.getName().startsWith("T:")) {
-                    String aggTaskName = stripPrefix(hc.getName());
-                    double totalN = 0.0, weightedD = 0.0;
-                    for (Task caller : lqnModel.getTasks().values()) {
-                        int mult = caller.getMultiplicity();
-                        if (mult <= 0 || mult == Integer.MAX_VALUE) continue;
-                        double d_r = 0.0;
-                        for (Activity act : caller.getActivities()) {
-                            Map<Integer, String> callDests = act.getSyncCallDests();
-                            Matrix callMeans = act.getSyncCallMeans();
-                            for (int ci = 0; ci < callDests.size(); ci++) {
-                                String destEntryName = callDests.get(ci);
-                                Entry destEntry = null;
-                                entrySearch:
-                                for (Task t : lqnModel.getTasks().values()) {
-                                    for (Entry e : t.getEntries()) {
-                                        if (e.getName().equals(destEntryName)) { destEntry = e; break entrySearch; }
-                                    }
-                                }
-                                if (destEntry == null || !aggTaskName.equals(destEntry.getParent().getName())) continue;
-                                for (Activity serverAct : destEntry.getParent().getActivities()) {
-                                    if (destEntryName.equals(serverAct.getBoundToEntry())) {
-                                        d_r += callMeans.get(0, ci) * serverAct.getHostDemandMean();
-                                        break;
-                                    }
-                                }
-                            }
-                        }
-                        if (d_r <= 0) continue;
-                        weightedD += mult * d_r;
-                        totalN += mult;
-                    }
-                    if (totalN > 0 && weightedD > 0) {
-                        serverQueue.setService(hc, Exp.fitMean(weightedD / totalN));
-                        aggregateHostDemand.put(aggTaskName, weightedD / totalN);
-                    } else {
-                        // No callers found (REF task or self-contained task):
-                        // use the sum of the task's own activity host demands,
-                        // weighted by per-activity visit counts (e.g. loop bodies).
-                        double selfDemand = computeLocalDemand(aggTaskName);
-                        if (selfDemand > 0) {
-                            serverQueue.setService(hc, Exp.fitMean(selfDemand));
-                        }
-                    }
-                    continue;  // skip existing per-caller path below
-                }
-
-                String callerTaskName = stripPrefix(hc.getName());
-                Task callerTask = null;
-                for (Task t : lqnModel.getTasks().values()) {
-                    if (t.getName().equals(callerTaskName)) { callerTask = t; break; }
-                }
-                if (callerTask == null) continue;
-
-                // Compute demand = sum over all sync calls from callerTask to entries on tasksOnServer
-                double demand = 0.0;
-                for (Activity act : callerTask.getActivities()) {
-                    Map<Integer, String> callDests = act.getSyncCallDests();
-                    Matrix callMeans = act.getSyncCallMeans();
-                    for (int ci = 0; ci < callDests.size(); ci++) {
-                        String destEntryName = callDests.get(ci);
-                        Entry destEntry = null;
-                        outer:
-                        for (Task t : lqnModel.getTasks().values()) {
-                            for (Entry e : t.getEntries()) {
-                                if (e.getName().equals(destEntryName)) { destEntry = e; break outer; }
-                            }
-                        }
-                        if (destEntry == null) continue;
-                        Task serverTask = destEntry.getParent();
-                        if (!tasksOnServer.containsKey(serverTask.getName())) continue;
-                        for (Activity serverAct : serverTask.getActivities()) {
-                            if (destEntryName.equals(serverAct.getBoundToEntry())) {
-                                double callMean = callMeans.get(0, ci);
-                                demand += callMean * serverAct.getHostDemandMean();
-                                break;
-                            }
-                        }
-                    }
-                }
-                if (demand > 0) {
-                    serverQueue.setService(hc, Exp.fitMean(demand));
-                    if (serverQueueName.startsWith("T:")) {
-                        Map<String, Double> demandForCallee = perCallerHostDemand.get(serverTaskOrProc);
-                        if (demandForCallee == null) {
-                            demandForCallee = new HashMap<String, Double>();
-                            perCallerHostDemand.put(serverTaskOrProc, demandForCallee);
-                        }
-                        Double existing = demandForCallee.get(callerTaskName);
-                        demandForCallee.put(callerTaskName, (existing != null ? existing : 0.0) + demand);
-                    }
-                } else if (callerTask != null && tasksOnServer.containsKey(callerTask.getName())) {
-                    // The caller IS the task hosted on this processor (e.g., a REF task
-                    // in its own P: layer). No sync calls from T1 to T1 exist, so the
-                    // demand-from-calls loop above yields 0. Instead use the task's own
-                    // activity host demands, weighted by per-activity visit counts
-                    // (accounts for loop bodies that fire multiple times per visit).
-                    double selfDemand = computeLocalDemand(callerTask.getName());
-                    if (selfDemand > 0) {
-                        serverQueue.setService(hc, Exp.fitMean(selfDemand));
-                    }
-                }
-            }
-        }
-
-        rebuildCaseBHostLayers();
-        enforceMaxMult();
+        EnsembleInitialiser.Result init = EnsembleInitialiser.initialise(model, ensemble);
+        this.baseClientsThink   = init.baseClientsThink;
+        this.queueNameToLayer   = init.queueNameToLayer;
+        this.taskToProcessor    = init.taskToProcessor;
+        this.rebuiltHostLayers  = init.rebuiltHostLayers;
     }
 
-    // Case B: a P: host layer whose only "T:" class is an INF-scheduled task called by
-    // multiple distinct REF tasks. The aggregate single-class model loses per-caller
-    // demand information; we replace it with a multi-class PS model where each caller
-    // task contributes its own closed class (N = caller multiplicity, D = raw host
-    // demand, Z = caller think time). This is structurally equivalent to what SolverLN
-    // builds for the same situation and lets the existing P:→T: per-class coupling work
-    // without aggregate→per-class scaling tricks.
-    private void rebuildCaseBHostLayers() {
-        for (int l = 0; l < N_LAYERS; l++) {
-            Network layer = ensemble.get(l);
-            Queue serverQueue = MvaUtils.findNonDelayQueue(layer);
-            if (serverQueue == null || !serverQueue.getName().startsWith("P:")) continue;
 
-            // Look for an aggregate T: closed class (signals this layer needs rebuilding)
-            ClosedClass aggClass = null;
-            for (JobClass jc : layer.getClasses()) {
-                if (jc instanceof ClosedClass && jc.getName().startsWith("T:")) {
-                    aggClass = (ClosedClass) jc; break;
-                }
-            }
-            if (aggClass == null) continue;
-
-            String hostedTaskName = stripPrefix(aggClass.getName());
-            if (!isInfScheduledTask(hostedTaskName)) continue;
-            // Skip tasks that themselves make sync calls — those need a different coupling
-            if (taskHasSyncCallees(hostedTaskName)) continue;
-
-            Map<String, Double> demandsByCaller = perCallerHostDemand.get(hostedTaskName);
-            if (demandsByCaller == null || demandsByCaller.size() < 2) continue;
-
-            Delay clientDelay = findClientsDelay(layer);
-            if (clientDelay == null) continue;
-
-            // Collect per-caller class info first; if any caller is invalid, skip the rebuild
-            List<String> callerNames = new ArrayList<String>();
-            List<Integer> callerMults = new ArrayList<Integer>();
-            List<Double> callerThinks = new ArrayList<Double>();
-            List<Double> callerDemands = new ArrayList<Double>();
-            boolean valid = true;
-            for (Map.Entry<String, Double> e : demandsByCaller.entrySet()) {
-                String callerName = e.getKey();
-                Double D_r = e.getValue();
-                if (D_r == null || D_r <= 0) { valid = false; break; }
-                Task caller = null;
-                for (Task t : lqnModel.getTasks().values()) {
-                    if (callerName.equals(t.getName())) { caller = t; break; }
-                }
-                if (caller == null) { valid = false; break; }
-                int mult_r = caller.getMultiplicity();
-                if (mult_r <= 0 || mult_r == Integer.MAX_VALUE) { valid = false; break; }
-                double think_r = caller.getThinkTimeMean();
-                if (Double.isNaN(think_r) || think_r <= 0) think_r = EPS;
-                callerNames.add(callerName);
-                callerMults.add(mult_r);
-                callerThinks.add(think_r);
-                callerDemands.add(D_r);
-            }
-            if (!valid || callerNames.isEmpty()) continue;
-
-            // Add per-caller closed classes (constructor registers them with the network)
-            List<ClosedClass> newClasses = new ArrayList<ClosedClass>();
-            for (int i = 0; i < callerNames.size(); i++) {
-                ClosedClass cc = new ClosedClass(layer, "R:" + callerNames.get(i), callerMults.get(i), clientDelay);
-                cc.setReferenceClass(true);
-                newClasses.add(cc);
-            }
-
-            // Disable the aggregate class — getClosedClasses() filters out N=0 classes
-            // so it will not appear in the MVA matrices.
-            aggClass.setPopulation(0);
-            clientDelay.setService(aggClass, Disabled.getInstance());
-            serverQueue.setService(aggClass, Disabled.getInstance());
-
-            // Set per-class service times: think at Clients delay, demand at PS queue
-            for (int i = 0; i < newClasses.size(); i++) {
-                clientDelay.setService(newClasses.get(i), Exp.fitMean(callerThinks.get(i)));
-                serverQueue.setService(newClasses.get(i), Exp.fitMean(callerDemands.get(i)));
-            }
-
-            // Re-link with serial Clients ↔ Queue routing for every class in the network.
-            // The disabled aggregate class gets routed too, but has no jobs so it is inert.
-            RoutingMatrix P = layer.initRoutingMatrix();
-            for (JobClass jc : layer.getClasses()) {
-                P.addConnection(jc, jc, clientDelay, serverQueue, 1.0);
-                P.addConnection(jc, jc, serverQueue, clientDelay, 1.0);
-            }
-            layer.link(P);
-
-            rebuiltHostLayers.put(l, hostedTaskName);
-        }
-    }
-
-    private void enforceMaxMult() {
-        // Sum all caller-class populations in each T: layer to get the true maximum
-        // concurrency at that task (each caller independently contributes its full N).
-        Map<String, Double> taskEffectiveN = new HashMap<String, Double>();
-        for (Network layer : ensemble) {
-            Queue serverQueue = MvaUtils.findNonDelayQueue(layer);
-            if (serverQueue == null || !serverQueue.getName().startsWith("T:")) continue;
-            String taskName = stripPrefix(serverQueue.getName());
-            double totalN = 0.0;
-            for (JobClass jc : layer.getClasses()) {
-                if (!(jc instanceof ClosedClass)) continue;
-                double n = ((ClosedClass) jc).getNumberOfJobs();
-                if (n > 0 && n < Integer.MAX_VALUE) totalN += n;
-            }
-            if (totalN > 0) {
-                taskEffectiveN.put(taskName, totalN);
-            }
-        }
-        for (Network layer : ensemble) {
-            Queue serverQueue = MvaUtils.findNonDelayQueue(layer);
-            if (serverQueue == null || !serverQueue.getName().startsWith("P:")) continue;
-            double layerEffN = Double.MAX_VALUE;
-            // Find the minimum effective N across all T: classes hosted in this P: layer
-            for (JobClass jc : layer.getClasses()) {
-                if (!(jc instanceof ClosedClass)) continue;
-                ClosedClass cc = (ClosedClass) jc;
-                if (!cc.getName().startsWith("T:")) continue;
-                String taskName = stripPrefix(cc.getName());
-                Double effN = taskEffectiveN.get(taskName);
-                if (effN != null && effN < layerEffN) layerEffN = effN;
-            }
-            if (layerEffN == Double.MAX_VALUE) continue;
-            // Cap population of each T: class — do NOT cap server count.
-            // Processor server count reflects the physical multiplicity of the host
-            // and must remain unchanged; only the customer population is bounded by
-            // the minimum concurrency in the call chain.
-            for (JobClass jc : layer.getClasses()) {
-                if (!(jc instanceof ClosedClass)) continue;
-                ClosedClass cc = (ClosedClass) jc;
-                if (!cc.getName().startsWith("T:")) continue;
-                if (cc.getNumberOfJobs() <= 0) continue;
-                String taskName = stripPrefix(cc.getName());
-                Double effN = taskEffectiveN.get(taskName);
-                if (effN != null && cc.getNumberOfJobs() > effN) {
-                    cc.setPopulation(effN);
-                }
-            }
-        }
-    }
+    // =================================================================================
+    //  Public API
+    // =================================================================================
 
     public LayeredNetworkAvgTable getAvgTable() {
         return lastAvgTable;
@@ -398,6 +130,12 @@ public class SolverLNSimple {
         iterateCoupledMva(maxIter, tol, null);
     }
 
+    /**
+     * Outer fixed-point loop. Each outer iteration runs a bounce sweep over all
+     * layers (index sequence {@code 0,1,...,N-1,N-2,...,1}) so that information
+     * flows both ways through the call chain in a single pass. Convergence:
+     * {@code max_l |X_l^(k) - X_l^(k-1)| < tol}.
+     */
     public void iterateCoupledMva(int maxIter, double tol, Runnable afterIteration) {
         long outerStartTime = System.nanoTime();
         double[][] prevX = new double[N_LAYERS][];
@@ -409,606 +147,494 @@ public class SolverLNSimple {
             int sweepLen = 2 * N_LAYERS - 1;
             for (int si = 0; si < sweepLen; si++) {
                 int l = computeSweepLayerIndex(si);
-                Network layer = ensemble.get(l);
 
-                List<jline.lang.nodes.Node> nodes = MvaUtils.getQueueNodes(layer);
-                int M = nodes.size();
+                LayerSolve s = solveLayer(l);
+                if (s == null) return;             // MVA threw; bail out
+                if (s.serverIdx < 0) continue;     // No non-Delay queue; nothing to couple
 
-                Matrix N = MvaUtils.buildN(layer);
-                Matrix Z = MvaUtils.buildThinkTimeMatrix(layer);
-                Matrix L = MvaUtils.buildDemandMatrix(nodes, layer);
-                Matrix S = MvaUtils.buildServerMatrix(nodes, N);
+                maxDeltaX = Math.max(maxDeltaX, updateDeltaX(prevX, l, s.res));
 
-                Ret.pfqnMVA res = null;
-                try {
-                    res = MvaUtils.callMVA(L, N, Z, S);
-                } catch (Exception e) {
-                    e.printStackTrace();
-                    return;
-                }
-                if (res == null) return;
-
-                double throughput = res.X.get(0, 0);
-                int R_layer = res.X.getNumCols();
-                if (prevX[l] == null) prevX[l] = new double[R_layer];
-                for (int r = 0; r < R_layer; r++) {
-                    double x_r = res.X.get(0, r);
-                    double deltaX = Math.abs(x_r - prevX[l][r]);
-                    if (deltaX > maxDeltaX) maxDeltaX = deltaX;
-                    prevX[l][r] = x_r;
-                }
-
-                // --- Coupling ---
-                Queue serverQueue = MvaUtils.findNonDelayQueue(layer);
-                if (serverQueue == null) continue;
-
-                String serverQueueName = serverQueue.getName();
-                String layerName = layer.getName();
-                String layerBase = stripPrefix(layerName);
-                boolean isFcfsLayer = serverQueueName.startsWith("T:");
-
-                String callerTask = null;
-                String calleeTask = null;
-                if (isFcfsLayer) {
-                    callerTask = stripPrefix(MvaUtils.getMainClass(layer).getName());
-                    calleeTask = stripPrefix(serverQueueName);
-
-                    // Keep task-layer Clients updated even when the current solve is degenerate
-                    // (e.g. D=0 and stale Z causes non-finite X). This lets subsequent sweeps
-                    // recover to finite values.
-                    Delay calleeClients = findClientsDelay(layer);
-                    if (calleeClients != null) {
-                        List<ClosedClass> callerClasses = MvaUtils.getClosedClasses(layer);
-                        for (ClosedClass callerCl : callerClasses) {
-                            String callerTask_c = stripPrefix(callerCl.getName());
-                            double calleeThink;
-                            // For non-REF callers that have their own T: layer (i.e., intermediate
-                            // tasks), use the cycle-time formula: Z = N_caller / X_caller - sojourn_callee.
-                            // This correctly sets the think time to the caller's idle fraction,
-                            // which approaches 0 when the caller is saturated.
-                            Double xCaller = taskThroughputCache.get(callerTask_c);
-                            Double sojournCallee = taskSojournCache.get(calleeTask);
-                            double callerThink = getTaskThinkTimeSafe(callerTask_c);
-                            if (xCaller != null && xCaller > EPS && sojournCallee != null && callerThink <= 1e-9) {
-                                // Cycle-time formula only for zero-think intermediate callers:
-                                // Z = N/X_caller - callMean * sojourn_callee → 0 when caller is saturated.
-                                // Must use callMean because the caller makes callMean sequential calls per
-                                // request; subtract total callee time, not per-call sojourn alone.
-                                double nCaller = callerCl.getNumberOfJobs();
-                                double cMean = getSyncCallMean(callerTask_c, calleeTask);
-                                if (cMean < 1.0) cMean = 1.0;
-                                calleeThink = Math.max(0.0, nCaller / xCaller - cMean * sojournCallee);
-                            } else {
-                                double refChainThink = getRootRefThinkTime(callerTask_c) + computeCallerChainDemand(callerTask_c);
-                                double directCallerThink = getTaskThinkTimeSafe(callerTask_c) + computeLocalDemand(callerTask_c);
-                                calleeThink = Math.max(refChainThink, directCallerThink);
-                            }
-                            calleeThink = Math.max(1e-9, Math.min(calleeThink, MAX_PROTECTION));
-                            calleeClients.setService(callerCl, Exp.fitMean(calleeThink));
-                        }
-                    }
-
-                    Integer callerTaskLayer = queueNameToLayer.get("T:" + callerTask);
-                    if (callerTaskLayer != null && callerTaskLayer != l) {
-                        Delay callerTaskClients = findClientsDelay(ensemble.get(callerTaskLayer));
-                        if (callerTaskClients != null) {
-                            JobClass callerTaskMain = MvaUtils.getMainClass(ensemble.get(callerTaskLayer));
-                            double callerTaskThink = Math.max(1e-9, Math.min(
-                                    getRootRefThinkTime(callerTask) + computeCallerChainDemand(callerTask), MAX_PROTECTION));
-                            callerTaskClients.setService(callerTaskMain, Exp.fitMean(callerTaskThink));
-                        }
-                    }
-                }
-
-                if (!Double.isFinite(throughput) || throughput <= EPS) {
-                    continue;
-                }
-
-                // Index of the non-Delay Queue in the MVA node list
-                int serverNodeIndex = -1;
-                for (int i = 0; i < M; i++) {
-                    if (!(nodes.get(i) instanceof Delay)) { serverNodeIndex = i; break; }
-                }
-                if (serverNodeIndex < 0) continue;
-
-                if (isFcfsLayer) {
-                    // Task submodel: feed back to host layers.
-                    // Use server-only response (Q_server/X) so that Clients think time injected
-                    // by Fix 1 is not double-counted when propagating response to caller/host layers.
-                    double R_task_total = Double.NaN;
-                    if (Double.isFinite(throughput) && throughput > EPS) {
-                        double q_server = res.Q.get(serverNodeIndex, 0);
-                        if (Double.isFinite(q_server)) {
-                            R_task_total = q_server / throughput;
-                        }
-                    }
-
-                    if (!Double.isFinite(R_task_total)) {
-                        continue;
-                    }
-
-                    taskSojournCache.put(calleeTask, R_task_total);
-                    taskThroughputCache.put(calleeTask, throughput);
-
-                    double syncCallMean = getSyncCallMean(callerTask, calleeTask);
-                    // For leaf tasks (no sync callees): the T: layer demand was set as
-                    // callMean * hostDemand, so R_task_total already embeds callMean per
-                    // caller-visit. For intermediate tasks R_task_total is per-call.
-                    double propagatedTaskResp = taskHasSyncCallees(calleeTask)
-                            ? R_task_total * syncCallMean : R_task_total;
-
-                    Integer callerTaskLayer = queueNameToLayer.get("T:" + callerTask);
-                    if (callerTaskLayer != null && callerTaskLayer != l) {
-                        // Set caller's task layer server to D_local + R_callee so that the callee
-                        // response time is visible to the MVA solve (works for all caller types).
-                        Queue callerServerQueue = MvaUtils.findNonDelayQueue(ensemble.get(callerTaskLayer));
-                        if (callerServerQueue != null) {
-                            JobClass callerServerClass = findActiveQueueClass(ensemble.get(callerTaskLayer));
-                            if (callerServerClass != null) {
-                                double localDemand = computeLocalDemand(callerTask);
-                                double safeD = Math.max(1e-9, Math.min(localDemand + propagatedTaskResp, MAX_PROTECTION));
-                                callerServerQueue.setService(callerServerClass, Exp.fitMean(safeD));
-                            }
-                        }
-                    }
-
-                    // Update callee's host think time.
-                    String calleeProcessor = taskToProcessor.get(calleeTask);
-                    if (calleeProcessor != null && !taskHasSyncCallees(calleeTask)) {
-                        Integer calleeHostLayer = queueNameToLayer.get("P:" + calleeProcessor);
-                        // For rebuilt Case B layers each per-caller class has its own constant
-                        // think time (the REF caller's think time) already set in the rebuild;
-                        // do not overwrite it with an aggregate value here.
-                        if (calleeHostLayer != null && calleeHostLayer != l && !rebuiltHostLayers.containsKey(calleeHostLayer)) {
-                            int R_task = N.getNumCols();
-                            double Q_server_total = 0.0, N_task_total = 0.0, X_task_total = 0.0;
-                            for (int r2 = 0; r2 < R_task; r2++) {
-                                Q_server_total += res.Q.get(serverNodeIndex, r2);
-                                N_task_total += N.get(0, r2);
-                                X_task_total += res.X.get(0, r2);
-                            }
-                            if (Double.isFinite(Q_server_total) && X_task_total > EPS) {
-                                double calleeThinkTime = 0.0;
-                                for (Task t : lqnModel.getTasks().values()) {
-                                    if (calleeTask.equals(t.getName())) {
-                                        double m = t.getThinkTimeMean();
-                                        if (!Double.isNaN(m)) calleeThinkTime = m;
-                                        break;
-                                    }
-                                }
-                                double Z_callee_host;
-                                if (!hasServerDemandInSubtree(calleeTask)) {
-                                    Z_callee_host = Math.max(1e-9, Math.min(calleeThinkTime, MAX_PROTECTION));
-                                } else {
-                                    Z_callee_host = Math.max(calleeThinkTime, (N_task_total - Q_server_total) / X_task_total);
-                                    Z_callee_host = Math.max(1e-9, Math.min(Z_callee_host, MAX_PROTECTION));
-                                }
-                                Delay calleeHostClients = findClientsDelay(ensemble.get(calleeHostLayer));
-                                if (calleeHostClients != null) {
-                                    JobClass calleeHostMain = MvaUtils.getMainClass(ensemble.get(calleeHostLayer));
-                                    calleeHostClients.setService(calleeHostMain, Exp.fitMean(Z_callee_host));
-                                }
-                            }
-                        }
-                    } else if (calleeProcessor != null && taskHasSyncCallees(calleeTask)) {
-                        // Intermediate callee: its host Clients = max(callee think, caller-chain think)
-                        // + time the callee waits for its own callees (R_task_total minus D_local).
-                        // This covers both the callee-bottleneck and caller-bottleneck cases.
-                        Integer calleeHostLayer = queueNameToLayer.get("P:" + calleeProcessor);
-                        if (calleeHostLayer != null && calleeHostLayer != l) {
-                            double calleeThinkTime = 0.0;
-                            for (Task t : lqnModel.getTasks().values()) {
-                                if (calleeTask.equals(t.getName())) {
-                                    double m = t.getThinkTimeMean();
-                                    if (!Double.isNaN(m)) calleeThinkTime = m;
-                                    break;
-                                }
-                            }
-                            double calleeLocalDemand = computeLocalDemand(calleeTask);
-                            double callerChainZ = getRootRefThinkTime(calleeTask) + computeCallerChainDemand(calleeTask);
-                            double Z_callee_host = Math.max(calleeThinkTime, callerChainZ)
-                                    + (R_task_total - calleeLocalDemand);
-                            Z_callee_host = Math.max(1e-9, Math.min(Z_callee_host, MAX_PROTECTION));
-                            Delay calleeHostClients = findClientsDelay(ensemble.get(calleeHostLayer));
-                            if (calleeHostClients != null) {
-                                JobClass calleeHostMain = MvaUtils.getMainClass(ensemble.get(calleeHostLayer));
-                                calleeHostClients.setService(calleeHostMain, Exp.fitMean(Z_callee_host));
-                            }
-                        }
-                    }
-
-                    List<ClosedClass> callerClassesList = MvaUtils.getClosedClasses(layer);
-                    for (int r2 = 0; r2 < callerClassesList.size(); r2++) {
-                        String callerTask_r = stripPrefix(callerClassesList.get(r2).getName());
-                        double x_r2 = res.X.get(0, r2);
-                        if (!Double.isFinite(x_r2) || x_r2 <= EPS) continue;
-                        double q_r2 = res.Q.get(serverNodeIndex, r2);
-                        if (!Double.isFinite(q_r2)) continue;
-                        // INF-scheduled tasks have unlimited multiplicity: their T:-layer server
-                        // must behave as IS (infinite-server), so R = D (no queueing overhead).
-                        // Using Q/X would include artificial M/M/m FCFS queueing that doesn't exist.
-                        double R_task_r = isInfScheduledTask(calleeTask)
-                                ? L.get(serverNodeIndex, r2)
-                                : q_r2 / x_r2;
-                        double syncMean_r = getSyncCallMean(callerTask_r, calleeTask);
-                        double propagated_r = taskHasSyncCallees(calleeTask)
-                                ? R_task_r * syncMean_r : R_task_r;
-                        String callerProcessor_r = taskToProcessor.get(callerTask_r);
-                        if (callerProcessor_r == null) continue;
-                        Integer hostLayer_r = queueNameToLayer.get("P:" + callerProcessor_r);
-                        if (hostLayer_r == null || hostLayer_r == l) continue;
-                        Delay targetClients_r = findClientsDelay(ensemble.get(hostLayer_r));
-                        if (targetClients_r == null) continue;
-                        JobClass targetClass_r = findClassByTaskName(ensemble.get(hostLayer_r), callerTask_r);
-                        if (targetClass_r == null) targetClass_r = MvaUtils.getMainClass(ensemble.get(hostLayer_r));
-                        if (targetClass_r == null) continue;
-                        double newThink_r = getRootRefThinkTime(callerTask_r) + computeCallerChainDemand(callerTask_r) + propagated_r;
-                        if (!Double.isFinite(newThink_r)) continue;
-                        newThink_r = Math.max(1e-9, Math.min(newThink_r, MAX_PROTECTION));
-                        targetClients_r.setService(targetClass_r, Exp.fitMean(newThink_r));
-                    }
-
-                } else {
-                    // Host submodel: feed R_proc into the matching task layer, one class at a time
-                    List<ClosedClass> hostClasses = MvaUtils.getClosedClasses(layer);
-                    int R_host = hostClasses.size();
-
-                    // Rebuilt Case B host layer: classes are R:<caller>, demands are the per-caller
-                    // raw host demands on the hosted task. R_proc per class IS the per-class response
-                    // time at the hosted task — feed it directly into the hosted task's IS server.
-                    if (rebuiltHostLayers.containsKey(l)) {
-                        String hostedName = rebuiltHostLayers.get(l);
-                        Integer hostedTaskLayer = queueNameToLayer.get("T:" + hostedName);
-                        if (hostedTaskLayer != null && hostedTaskLayer != l) {
-                            Queue hostedTServer = MvaUtils.findNonDelayQueue(ensemble.get(hostedTaskLayer));
-                            if (hostedTServer != null) {
-                                for (int r = 0; r < R_host; r++) {
-                                    double x_r = res.X.get(0, r);
-                                    if (!Double.isFinite(x_r) || x_r <= EPS) continue;
-                                    double q_r = res.Q.get(serverNodeIndex, r);
-                                    if (!Double.isFinite(q_r)) continue;
-                                    double R_proc_r = q_r / x_r;
-                                    if (!Double.isFinite(R_proc_r) || R_proc_r <= EPS) continue;
-                                    String callerName = stripPrefix(hostClasses.get(r).getName());
-                                    JobClass tClass = findClassByTaskName(ensemble.get(hostedTaskLayer), callerName);
-                                    if (tClass == null) continue;
-                                    double safeR = Math.max(1e-9, Math.min(R_proc_r, MAX_PROTECTION));
-                                    hostedTServer.setService(tClass, Exp.fitMean(safeR));
-                                }
-                            }
-                        }
-                        continue;
-                    }
-
-                    for (int r = 0; r < R_host; r++) {
-                        double x_r = res.X.get(0, r);
-                        if (!Double.isFinite(x_r) || x_r <= EPS) continue;
-                        double q_r = res.Q.get(serverNodeIndex, r);
-                        if (!Double.isFinite(q_r)) continue;
-                        double R_proc_r = q_r / x_r;
-                        if (!Double.isFinite(R_proc_r) || R_proc_r <= EPS) continue;
-
-                        String hostedTask = stripPrefix(hostClasses.get(r).getName());
-                        Integer taskLayer = queueNameToLayer.get("T:" + hostedTask);
-                        if (taskLayer == null) {
-                            // hostedTask is a REF task with no own task layer.
-                            // Propagate R_proc into the Clients delay of every task layer
-                            // where this REF task is the caller.
-                            double safeR = Math.max(1e-9, Math.min(R_proc_r, MAX_PROTECTION));
-                            for (Map.Entry<String, Integer> entry : queueNameToLayer.entrySet()) {
-                                if (!entry.getKey().startsWith("T:")) continue;
-                                int calleeLay = entry.getValue();
-                                Network calleeNet = ensemble.get(calleeLay);
-                                // Find the class in the callee layer that corresponds to this REF task
-                                JobClass calleeClass = findClassByTaskName(calleeNet, hostedTask);
-                                if (calleeClass == null) calleeClass = MvaUtils.getMainClass(calleeNet);
-                                if (calleeClass == null) continue;
-                                if (!hostedTask.equals(stripPrefix(calleeClass.getName()))) continue;
-                                Delay calleeClients = findClientsDelay(calleeNet);
-                                if (calleeClients == null) continue;
-                                double newThink = Math.max(1e-9, Math.min(baseClientsThink[calleeLay] + safeR, MAX_PROTECTION));
-                                calleeClients.setService(calleeClass, Exp.fitMean(newThink));
-                                hostContribToCalleeClients[calleeLay] = safeR;
-                            }
-                            continue;
-                        }
-                        if (taskLayer == l) continue;
-                        if (taskHasSyncCallees(hostedTask)) continue;
-                        Queue tq = MvaUtils.findNonDelayQueue(ensemble.get(taskLayer));
-                        if (tq == null) continue;
-                        double safeR = Math.max(1e-9, Math.min(R_proc_r, MAX_PROTECTION));
-                        // Non-rebuilt P: layers either have one class (symmetric/single-caller —
-                        // safeR is correct for all) or per-caller classes whose names match T:
-                        // layer classes. Either way, write safeR to every non-Disabled class.
-                        for (JobClass tc : ensemble.get(taskLayer).getClasses()) {
-                            double m = tq.getServiceProcess(tc).getMean();
-                            if (!Double.isNaN(m)) {
-                                tq.setService(tc, Exp.fitMean(safeR));
-                            }
-                        }
-                    }
-                }
-
+                if (s.isTaskLayer)      propagateTaskLayerCoupling(l, s);
+                else if (s.isHostLayer) propagateHostLayerCoupling(l, s);
             }
 
-            double solveTime = (System.nanoTime() - solveStartTime) / 1000000000.0;
-
+            double solveTime = (System.nanoTime() - solveStartTime) / 1e9;
             long synchStartTime = System.nanoTime();
-
-            if (afterIteration != null) {
-                afterIteration.run();
-            }
-
-            double synchTime = (System.nanoTime() - synchStartTime) / 1000000000.0;
-            double totalRuntime = (System.nanoTime() - outerStartTime) / 1000000000.0;
+            if (afterIteration != null) afterIteration.run();
+            double synchTime = (System.nanoTime() - synchStartTime) / 1e9;
+            double totalRuntime = (System.nanoTime() - outerStartTime) / 1e9;
 
             System.out.printf("\nIter %2d. Analyze time: %.3fs. Update time: %.3fs. Runtime: %.3fs. ",
                     iter + 1, solveTime, synchTime, totalRuntime);
 
-            if (maxDeltaX < tol) {
-                break;
+            if (maxDeltaX < tol) break;
+        }
+
+        lastAvgTable = ResultsCollector.collectAndPrintFinalResults(
+                lqnModel, ensemble, N_LAYERS, taskSojournCache, rebuiltHostLayers);
+    }
+
+
+    // =================================================================================
+    //  Per-layer solve
+    // =================================================================================
+
+    /** Bundles a single layer's MVA result with the surrounding context the
+     *  coupling stages need. */
+    private static final class LayerSolve {
+        final Network layer;
+        final Matrix N;
+        final Matrix L;
+        final Ret.pfqnMVA res;
+        final Queue serverQueue;
+        final int serverIdx;            // index of the (single) non-Delay queue in MVA nodes
+        final boolean isTaskLayer;      // server name starts with "T:"
+        final boolean isHostLayer;      // server name starts with "P:"
+
+        LayerSolve(Network layer, Matrix N, Matrix L, Ret.pfqnMVA res,
+                   Queue serverQueue, int serverIdx) {
+            this.layer = layer; this.N = N; this.L = L; this.res = res;
+            this.serverQueue = serverQueue; this.serverIdx = serverIdx;
+            String name = (serverQueue != null) ? serverQueue.getName() : "";
+            this.isTaskLayer = name.startsWith("T:");
+            this.isHostLayer = name.startsWith("P:");
+        }
+    }
+
+    /** Build MVA inputs for layer {@code l} and invoke {@code pfqn_mvams}.
+     *  Returns {@code null} on solver exception (caller terminates the outer loop). */
+    private LayerSolve solveLayer(int l) {
+        Network layer = ensemble.get(l);
+        List<Node> nodes = MvaInputs.getQueueNodes(layer);
+
+        Matrix N = MvaInputs.buildN(layer);
+        Matrix Z = MvaInputs.buildThinkTimeMatrix(layer);
+        Matrix L = MvaInputs.buildDemandMatrix(nodes, layer);
+        Matrix S = MvaInputs.buildServerMatrix(nodes, N);
+
+        Ret.pfqnMVA res;
+        try {
+            res = MvaInputs.callMVA(L, N, Z, S);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+        if (res == null) return null;
+
+        Queue serverQueue = MvaInputs.findNonDelayQueue(layer);
+        int serverIdx = -1;
+        if (serverQueue != null) {
+            for (int i = 0; i < nodes.size(); i++) {
+                if (!(nodes.get(i) instanceof Delay)) { serverIdx = i; break; }
             }
         }
-
-        // Collect final results and print using LayeredNetworkAvgTable
-        lastAvgTable = SolverLNSimpleResultsUtils.collectAndPrintFinalResults(lqnModel, ensemble, N_LAYERS, taskSojournCache, rebuiltHostLayers);
+        return new LayerSolve(layer, N, L, res, serverQueue, serverIdx);
     }
 
-
-    private String stripPrefix(String name) {
-        int idx = name.indexOf(':');
-        if (idx >= 0 && idx + 1 < name.length()) {
-            return name.substring(idx + 1);
+    /** Update {@code prevX[l]} with this iteration's throughputs and return the
+     *  largest absolute change observed at this layer. */
+    private double updateDeltaX(double[][] prevX, int l, Ret.pfqnMVA res) {
+        int R = res.X.getNumCols();
+        if (prevX[l] == null) prevX[l] = new double[R];
+        double maxDelta = 0.0;
+        for (int r = 0; r < R; r++) {
+            double x = res.X.get(0, r);
+            maxDelta = Math.max(maxDelta, Math.abs(x - prevX[l][r]));
+            prevX[l][r] = x;
         }
-        return name;
+        return maxDelta;
     }
 
-    // --- MVA matrix builders ---
 
-    // Delegated to MvaUtils
+    // =================================================================================
+    //  Task-layer (T:) coupling
+    // =================================================================================
 
-    // --- Node/class lookup helpers ---
+    /**
+     * Propagation rules after solving a T:&lt;callee&gt; task layer:
+     *
+     * <ol>
+     *   <li><b>Refresh this layer's Clients delay</b> for each caller class. Uses
+     *       a cycle-time formula for saturated zero-think intermediate callers,
+     *       otherwise the larger of (root-REF think + caller-chain demand) and
+     *       (caller think + caller local demand).</li>
+     *   <li><b>Refresh the caller task's own T: layer Clients</b> (if it has one)
+     *       with root-REF think + caller-chain demand.</li>
+     *   <li>(Skip remaining steps if this layer's main throughput is non-finite.)</li>
+     *   <li><b>Compute R_task_total = Q_server / X</b> — server-only response time.
+     *       This is per-call for intermediate tasks and per-caller-visit for leaf
+     *       tasks (whose T: layer demand already embeds {@code callMean}).</li>
+     *   <li><b>Cache</b> sojourn and throughput for the callee.</li>
+     *   <li><b>Push response into the caller's T: layer server</b>: D = D_local_caller
+     *       + propagatedTaskResp ({@code R_task_total × callMean} for intermediates;
+     *       {@code R_task_total} for leaves).</li>
+     *   <li><b>Update callee's host layer Clients</b> (skip rebuilt Case-B layers).</li>
+     *   <li><b>Per-caller update of each caller's host layer Clients</b> using
+     *       this layer's per-class throughput / response.</li>
+     * </ol>
+     */
+    private void propagateTaskLayerCoupling(int l, LayerSolve s) {
+        Network layer = s.layer;
+        String calleeTask = LqnGraph.stripPrefix(s.serverQueue.getName());
+        String callerTask = LqnGraph.stripPrefix(MvaInputs.getMainClass(layer).getName());
+        double throughput = s.res.X.get(0, 0);
+
+        // (1) + (2): refresh think times even if this solve is degenerate, so that
+        // later sweeps can recover to finite values.
+        updateTaskLayerClientsThinks(layer, calleeTask);
+        updateCallerOwnTaskLayerClients(l, callerTask);
+
+        if (!Double.isFinite(throughput) || throughput <= EPS) return;
+
+        // (4) server-only response time.
+        double R_task_total = Double.NaN;
+        double q_server = s.res.Q.get(s.serverIdx, 0);
+        if (Double.isFinite(q_server)) R_task_total = q_server / throughput;
+        if (!Double.isFinite(R_task_total)) return;
+
+        // (5) cache the callee's sojourn / throughput (used by step (1) on later sweeps).
+        taskSojournCache.put(calleeTask, R_task_total);
+        taskThroughputCache.put(calleeTask, throughput);
+
+        // (6) push response into the caller's T: layer server (D_local + R_callee).
+        // For LEAF callees: T: layer demand was set as callMean × hostDemand, so
+        //   R_task_total already embeds callMean → no extra multiply.
+        // For INTERMEDIATE callees: R_task_total is per single call → the caller
+        //   issues callMean calls per visit, so multiply by callMean here.
+        double syncCallMean = LqnGraph.getSyncCallMean(lqnModel, callerTask, calleeTask);
+        double propagatedTaskResp = LqnGraph.taskHasSyncCallees(lqnModel, calleeTask)
+                ? R_task_total * syncCallMean : R_task_total;
+        pushResponseToCallerTaskLayer(l, callerTask, propagatedTaskResp);
+
+        // (7) callee's host-layer Clients.
+        updateCalleeHostLayerClients(l, calleeTask, s, R_task_total);
+
+        // (8) per-caller updates to caller host-layer Clients.
+        pushPerCallerResponseToHostLayers(l, layer, s, calleeTask);
+    }
+
+    /**
+     * Step (1): for each caller class in this T: layer, set the Clients delay
+     * service to model that caller's blocking + chain time before issuing a call.
+     */
+    private void updateTaskLayerClientsThinks(Network layer, String calleeTask) {
+        Delay calleeClients = findClientsDelay(layer);
+        if (calleeClients == null) return;
+
+        for (ClosedClass callerCl : MvaInputs.getClosedClasses(layer)) {
+            String callerTask_c = LqnGraph.stripPrefix(callerCl.getName());
+            double calleeThink = computeCallerClientsThink(callerCl, callerTask_c, calleeTask);
+            calleeClients.setService(callerCl, Exp.fitMean(clamp(calleeThink)));
+        }
+    }
+
+    /**
+     * Z formula for a single caller class.
+     *
+     * <p>For saturated zero-think intermediate callers we use Little's-law-driven
+     * cycle time: an intermediate task with N customers, throughput X_caller and
+     * total sojourn at this callee {@code callMean × sojourn} has idle time
+     * {@code N/X − callMean × sojourn}. This drives Z → 0 as the caller saturates.
+     *
+     * <p>Otherwise the caller's blocking before issuing a call is the longer of:
+     * <ul><li>chain-think: root REF think time + sum of local demands along the
+     * upstream caller chain;</li>
+     * <li>direct-think: caller's own think + caller's local demand.</li></ul>
+     */
+    private double computeCallerClientsThink(ClosedClass callerCl, String callerTask, String calleeTask) {
+        Double xCaller = taskThroughputCache.get(callerTask);
+        Double sojournCallee = taskSojournCache.get(calleeTask);
+        double callerThink = LqnGraph.getTaskThinkTimeSafe(lqnModel, callerTask);
+
+        if (xCaller != null && xCaller > EPS && sojournCallee != null && callerThink <= 1e-9) {
+            double nCaller = callerCl.getNumberOfJobs();
+            double cMean = Math.max(1.0, LqnGraph.getSyncCallMean(lqnModel, callerTask, calleeTask));
+            return Math.max(0.0, nCaller / xCaller - cMean * sojournCallee);
+        }
+        double refChainThink = LqnGraph.getRootRefThinkTime(lqnModel, callerTask)
+                + LqnGraph.computeCallerChainDemand(lqnModel, callerTask);
+        double directThink   = callerThink + LqnGraph.computeLocalDemand(lqnModel, callerTask);
+        return Math.max(refChainThink, directThink);
+    }
+
+    /** Step (2): keep the caller's own T: layer Clients up-to-date with the
+     *  cumulative blocking the caller has experienced. */
+    private void updateCallerOwnTaskLayerClients(int currentLayerIdx, String callerTask) {
+        Integer callerTaskLayer = queueNameToLayer.get("T:" + callerTask);
+        if (callerTaskLayer == null || callerTaskLayer == currentLayerIdx) return;
+        Network callerLayer = ensemble.get(callerTaskLayer);
+        Delay clients = findClientsDelay(callerLayer);
+        if (clients == null) return;
+        JobClass mainCls = MvaInputs.getMainClass(callerLayer);
+        double newZ = LqnGraph.getRootRefThinkTime(lqnModel, callerTask)
+                + LqnGraph.computeCallerChainDemand(lqnModel, callerTask);
+        clients.setService(mainCls, Exp.fitMean(clamp(newZ)));
+    }
+
+    /** Step (6): write {@code D_local_caller + R_callee} to the caller's T: layer server. */
+    private void pushResponseToCallerTaskLayer(int currentLayerIdx, String callerTask, double propagatedTaskResp) {
+        Integer callerTaskLayer = queueNameToLayer.get("T:" + callerTask);
+        if (callerTaskLayer == null || callerTaskLayer == currentLayerIdx) return;
+        Network callerLayer = ensemble.get(callerTaskLayer);
+        Queue callerServer = MvaInputs.findNonDelayQueue(callerLayer);
+        if (callerServer == null) return;
+        JobClass cls = findActiveQueueClass(callerLayer);
+        if (cls == null) return;
+        double localDemand = LqnGraph.computeLocalDemand(lqnModel, callerTask);
+        callerServer.setService(cls, Exp.fitMean(clamp(localDemand + propagatedTaskResp)));
+    }
+
+    /**
+     * Step (7): refresh the callee's <i>host</i>-layer Clients think time so the
+     * processor sees the right idle gap between visits.
+     *
+     * <ul>
+     *   <li><b>Leaf callee</b> (no sync callees): if the subtree below has no
+     *       server demand at all, Z = intrinsic think (the only source of pacing);
+     *       otherwise Z = max(intrinsic think, (N_total − Q_server_total)/X_total)
+     *       — Little's law on the customers not currently at the server.</li>
+     *   <li><b>Intermediate callee</b>: Z = max(intrinsic think, caller-chain think)
+     *       + (R_task_total − D_local_callee). Adds the time the callee itself
+     *       waits for its own callees on top of the upstream blocking.</li>
+     * </ul>
+     *
+     * Skipped entirely for rebuilt Case-B layers (they have constant per-caller
+     * think times set during the rebuild).
+     */
+    private void updateCalleeHostLayerClients(int currentLayerIdx, String calleeTask,
+                                              LayerSolve s, double R_task_total) {
+        String calleeProcessor = taskToProcessor.get(calleeTask);
+        if (calleeProcessor == null) return;
+        Integer calleeHostLayer = queueNameToLayer.get("P:" + calleeProcessor);
+        if (calleeHostLayer == null || calleeHostLayer == currentLayerIdx) return;
+        if (rebuiltHostLayers.containsKey(calleeHostLayer)) return;
+
+        boolean isLeaf = !LqnGraph.taskHasSyncCallees(lqnModel, calleeTask);
+        double calleeThink = LqnGraph.getTaskThinkTimeSafe(lqnModel, calleeTask);
+        double Z_callee_host;
+
+        if (isLeaf) {
+            int R_task = s.N.getNumCols();
+            double Q_server_total = 0.0, N_task_total = 0.0, X_task_total = 0.0;
+            for (int r2 = 0; r2 < R_task; r2++) {
+                Q_server_total += s.res.Q.get(s.serverIdx, r2);
+                N_task_total   += s.N.get(0, r2);
+                X_task_total   += s.res.X.get(0, r2);
+            }
+            if (!(Double.isFinite(Q_server_total) && X_task_total > EPS)) return;
+
+            if (!LqnGraph.hasServerDemandInSubtree(lqnModel, calleeTask)) {
+                Z_callee_host = calleeThink;
+            } else {
+                Z_callee_host = Math.max(calleeThink, (N_task_total - Q_server_total) / X_task_total);
+            }
+        } else {
+            // Intermediate task: account for time spent waiting for its own callees.
+            double localD = LqnGraph.computeLocalDemand(lqnModel, calleeTask);
+            double chainZ = LqnGraph.getRootRefThinkTime(lqnModel, calleeTask)
+                    + LqnGraph.computeCallerChainDemand(lqnModel, calleeTask);
+            Z_callee_host = Math.max(calleeThink, chainZ) + (R_task_total - localD);
+        }
+
+        Delay calleeHostClients = findClientsDelay(ensemble.get(calleeHostLayer));
+        if (calleeHostClients == null) return;
+        JobClass calleeHostMain = MvaInputs.getMainClass(ensemble.get(calleeHostLayer));
+        calleeHostClients.setService(calleeHostMain, Exp.fitMean(clamp(Z_callee_host)));
+    }
+
+    /**
+     * Step (8): for each caller class in this T: layer, push the per-class
+     * response (Q_r/X_r) up to the <i>caller</i>'s host layer Clients delay.
+     * INF-scheduled callees use R = D (no queueing) since they behave as IS.
+     */
+    private void pushPerCallerResponseToHostLayers(int currentLayerIdx, Network layer,
+                                                   LayerSolve s, String calleeTask) {
+        List<ClosedClass> callerClasses = MvaInputs.getClosedClasses(layer);
+        boolean calleeIsInf = LqnGraph.isInfScheduledTask(lqnModel, calleeTask);
+        boolean calleeIsIntermediate = LqnGraph.taskHasSyncCallees(lqnModel, calleeTask);
+
+        for (int r2 = 0; r2 < callerClasses.size(); r2++) {
+            String callerTask_r = LqnGraph.stripPrefix(callerClasses.get(r2).getName());
+            double x_r = s.res.X.get(0, r2);
+            double q_r = s.res.Q.get(s.serverIdx, r2);
+            if (!Double.isFinite(x_r) || x_r <= EPS || !Double.isFinite(q_r)) continue;
+
+            // INF callees act as IS (no queueing) — use D directly, not Q/X.
+            double R_task_r = calleeIsInf ? s.L.get(s.serverIdx, r2) : q_r / x_r;
+            // Intermediate: R is per-call → multiply by callMean.
+            // Leaf: R already embeds callMean (T: layer demand = callMean × hostDemand).
+            double propagated = calleeIsIntermediate
+                    ? R_task_r * LqnGraph.getSyncCallMean(lqnModel, callerTask_r, calleeTask)
+                    : R_task_r;
+
+            String callerProcessor = taskToProcessor.get(callerTask_r);
+            if (callerProcessor == null) continue;
+            Integer hostLayer = queueNameToLayer.get("P:" + callerProcessor);
+            if (hostLayer == null || hostLayer == currentLayerIdx) continue;
+
+            Network callerHost = ensemble.get(hostLayer);
+            Delay clients = findClientsDelay(callerHost);
+            if (clients == null) continue;
+            JobClass cls = findClassByTaskName(callerHost, callerTask_r);
+            if (cls == null) cls = MvaInputs.getMainClass(callerHost);
+            if (cls == null) continue;
+
+            double newZ = LqnGraph.getRootRefThinkTime(lqnModel, callerTask_r)
+                    + LqnGraph.computeCallerChainDemand(lqnModel, callerTask_r)
+                    + propagated;
+            if (!Double.isFinite(newZ)) continue;
+            clients.setService(cls, Exp.fitMean(clamp(newZ)));
+        }
+    }
+
+
+    // =================================================================================
+    //  Host-layer (P:) coupling
+    // =================================================================================
+
+    /**
+     * Propagation rules after solving a P:&lt;proc&gt; host layer:
+     *
+     * <ul>
+     *   <li><b>Rebuilt Case-B layer</b>: each per-caller R:&lt;caller&gt; class's
+     *       response time (Q_r/X_r) is the hosted task's per-class service time;
+     *       write each directly into the hosted task's T: layer server.</li>
+     *   <li><b>Normal layer</b>: for each hosted-task class, take R_proc = Q_r/X_r.
+     *       <ul>
+     *         <li>If the hosted task has its own T: layer, write R_proc into <i>every</i>
+     *             non-Disabled class of that layer's server.</li>
+     *         <li>If the hosted task is REF (no T: layer), inject R_proc into the
+     *             Clients delay of every T: layer that this REF task calls into,
+     *             as Z = baseClientsThink + R_proc.</li>
+     *       </ul></li>
+     * </ul>
+     */
+    private void propagateHostLayerCoupling(int l, LayerSolve s) {
+        if (rebuiltHostLayers.containsKey(l)) {
+            propagateRebuiltHostLayer(l, s);
+            return;
+        }
+
+        List<ClosedClass> hostClasses = MvaInputs.getClosedClasses(s.layer);
+        for (int r = 0; r < hostClasses.size(); r++) {
+            double x_r = s.res.X.get(0, r);
+            double q_r = s.res.Q.get(s.serverIdx, r);
+            if (!Double.isFinite(x_r) || x_r <= EPS || !Double.isFinite(q_r)) continue;
+            double R_proc_r = q_r / x_r;
+            if (!Double.isFinite(R_proc_r) || R_proc_r <= EPS) continue;
+
+            String hostedTask = LqnGraph.stripPrefix(hostClasses.get(r).getName());
+            Integer taskLayer = queueNameToLayer.get("T:" + hostedTask);
+            double safeR = clamp(R_proc_r);
+
+            if (taskLayer == null) {
+                pushRefTaskHostResponseToCalleeClients(hostedTask, safeR);
+            } else {
+                if (taskLayer == l) continue;
+                if (LqnGraph.taskHasSyncCallees(lqnModel, hostedTask)) continue;
+                writeHostResponseToTaskLayerServer(taskLayer, safeR);
+            }
+        }
+    }
+
+    /** Case-B rebuilt layer: each R:&lt;caller&gt; class's Q/X is the per-class
+     *  service time of the hosted task. Push directly into its T: layer server. */
+    private void propagateRebuiltHostLayer(int l, LayerSolve s) {
+        String hostedName = rebuiltHostLayers.get(l);
+        Integer hostedTaskLayer = queueNameToLayer.get("T:" + hostedName);
+        if (hostedTaskLayer == null || hostedTaskLayer == l) return;
+        Queue hostedServer = MvaInputs.findNonDelayQueue(ensemble.get(hostedTaskLayer));
+        if (hostedServer == null) return;
+
+        List<ClosedClass> hostClasses = MvaInputs.getClosedClasses(s.layer);
+        for (int r = 0; r < hostClasses.size(); r++) {
+            double x_r = s.res.X.get(0, r);
+            double q_r = s.res.Q.get(s.serverIdx, r);
+            if (!Double.isFinite(x_r) || x_r <= EPS || !Double.isFinite(q_r)) continue;
+            double R_proc_r = q_r / x_r;
+            if (!Double.isFinite(R_proc_r) || R_proc_r <= EPS) continue;
+            String callerName = LqnGraph.stripPrefix(hostClasses.get(r).getName());
+            JobClass tClass = findClassByTaskName(ensemble.get(hostedTaskLayer), callerName);
+            if (tClass == null) continue;
+            hostedServer.setService(tClass, Exp.fitMean(clamp(R_proc_r)));
+        }
+    }
+
+    /** REF task with no T: layer: inject R_proc into Clients of every T: layer
+     *  that has this REF task as a caller class. */
+    private void pushRefTaskHostResponseToCalleeClients(String refTaskName, double safeR) {
+        for (Map.Entry<String, Integer> entry : queueNameToLayer.entrySet()) {
+            if (!entry.getKey().startsWith("T:")) continue;
+            int calleeLay = entry.getValue();
+            Network calleeNet = ensemble.get(calleeLay);
+            JobClass calleeClass = findClassByTaskName(calleeNet, refTaskName);
+            if (calleeClass == null) calleeClass = MvaInputs.getMainClass(calleeNet);
+            if (calleeClass == null) continue;
+            if (!refTaskName.equals(LqnGraph.stripPrefix(calleeClass.getName()))) continue;
+            Delay calleeClients = findClientsDelay(calleeNet);
+            if (calleeClients == null) continue;
+            double newZ = clamp(baseClientsThink[calleeLay] + safeR);
+            calleeClients.setService(calleeClass, Exp.fitMean(newZ));
+        }
+    }
+
+    /** Write the same R_proc into every non-Disabled class on the task's
+     *  T: layer queue server (the processor response is the per-call service
+     *  time the task layer should see for all callers). */
+    private void writeHostResponseToTaskLayerServer(int taskLayerIdx, double safeR) {
+        Network taskNet = ensemble.get(taskLayerIdx);
+        Queue tq = MvaInputs.findNonDelayQueue(taskNet);
+        if (tq == null) return;
+        for (JobClass tc : taskNet.getClasses()) {
+            double m = tq.getServiceProcess(tc).getMean();
+            if (!Double.isNaN(m)) tq.setService(tc, Exp.fitMean(safeR));
+        }
+    }
+
+
+    // =================================================================================
+    //  Network-introspection helpers (private to the coupling stages)
+    // =================================================================================
 
     private Delay findClientsDelay(Network net) {
-        for (jline.lang.nodes.Node node : net.getNodes()) {
+        for (Node node : net.getNodes()) {
             if (node instanceof Delay && "Clients".equals(node.getName())) return (Delay) node;
         }
         return null;
     }
 
-    // findNonDelayQueue delegated to MvaUtils; keep this helper removed to avoid duplication
-
+    /** Find any class in {@code net} whose service mean at the non-Delay queue
+     *  is not NaN — i.e. the "active" class for the layer's queue. */
     private JobClass findActiveQueueClass(Network net) {
-        Queue q = MvaUtils.findNonDelayQueue(net);
+        Queue q = MvaInputs.findNonDelayQueue(net);
         if (q == null) return null;
         for (JobClass jc : net.getClasses()) {
-            double m = q.getServiceProcess(jc).getMean();
-            if (!Double.isNaN(m)) return jc;
+            if (!Double.isNaN(q.getServiceProcess(jc).getMean())) return jc;
         }
         return null;
     }
 
+    /** Find a class on {@code net} whose unprefixed name matches {@code taskName}. */
     private JobClass findClassByTaskName(Network net, String taskName) {
         for (JobClass jc : net.getClasses()) {
-            if (taskName.equals(stripPrefix(jc.getName()))) return jc;
+            if (taskName.equals(LqnGraph.stripPrefix(jc.getName()))) return jc;
         }
         return null;
     }
 
+
+    // =================================================================================
+    //  Misc utilities
+    // =================================================================================
+
+    /** Clamp a value into the safe MVA-input range to avoid 0 / NaN / Inf. */
+    private static double clamp(double v) {
+        return Math.max(CLAMP_FLOOR, Math.min(v, MAX_PROTECTION));
+    }
+
+    /** Map sweep index 0..2N-2 to layer index, producing the bounce sequence
+     *  {@code 0,1,...,N-1,N-2,...,1}. */
     private int computeSweepLayerIndex(int sweepIndex) {
         return (sweepIndex < N_LAYERS) ? sweepIndex : 2 * N_LAYERS - 2 - sweepIndex;
-    }
-
-    private double computeLocalDemand(String taskName) {
-        for (Task task : lqnModel.getTasks().values()) {
-            if (taskName.equals(task.getName())) {
-                Map<String, Double> visitCounts = computeActivityVisitCounts(task);
-                double total = 0.0;
-                for (Activity act : task.getActivities()) {
-                    double m = act.getHostDemandMean();
-                    if (!Double.isNaN(m) && m > 1e-7) {
-                        double count = visitCounts.containsKey(act.getName())
-                                ? visitCounts.get(act.getName()) : 1.0;
-                        total += count * m;
-                    }
-                }
-                return total;
-            }
-        }
-        return 0.0;
-    }
-
-    // Returns the effective visit count per task-entry visit for each activity,
-    // accounting for POST_LOOP precedences: preActs are the loop bodies (fire
-    // loopCount times per visit), postActs are the loop exits (fire once).
-    private Map<String, Double> computeActivityVisitCounts(Task task) {
-        Map<String, Double> counts = new HashMap<String, Double>();
-        for (Activity act : task.getActivities()) {
-            counts.put(act.getName(), 1.0);
-        }
-        for (ActivityPrecedence prec : task.getPrecedences()) {
-            if (ActivityPrecedenceType.POST_LOOP.equals(prec.getPostType())) {
-                Matrix postParams = prec.getPostParams();
-                double loopCount = (postParams != null
-                        && postParams.getNumRows() > 0
-                        && postParams.getNumCols() > 0)
-                        ? postParams.get(0, 0) : 1.0;
-                // preActs are the loop body — they fire loopCount times per visit
-                for (String actName : prec.getPreActs()) {
-                    counts.put(actName, loopCount);
-                }
-                // postActs are the loop exit — they fire once (already default)
-            }
-        }
-        return counts;
-    }
-
-    private String findCallerTask(String calleeName) {
-        for (Task task : lqnModel.getTasks().values()) {
-            for (jline.lang.layered.Activity act : task.getActivities()) {
-                for (Map.Entry<Integer, String> e : act.getSyncCallDests().entrySet()) {
-                    for (jline.lang.layered.Entry entry : lqnModel.getEntries().values()) {
-                        if (e.getValue().equals(entry.getName())) {
-                            if (entry.getParent() != null && calleeName.equals(entry.getParent().getName())) {
-                                return task.getName();
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        return null;
-    }
-
-    private double getTaskThinkTimeSafe(String taskName) {
-        for (Task t : lqnModel.getTasks().values()) {
-            if (taskName.equals(t.getName())) {
-                double m = t.getThinkTimeMean();
-                return (Double.isNaN(m) || !Double.isFinite(m)) ? 0.0 : m;
-            }
-        }
-        return 0.0;
-    }
-
-    private double getRootRefThinkTime(String taskName) {
-        String current = taskName;
-        java.util.Set<String> visited = new java.util.HashSet<String>();
-        while (current != null && !visited.contains(current)) {
-            visited.add(current);
-            for (Task t : lqnModel.getTasks().values()) {
-                if (current.equals(t.getName())) {
-                    if (t.getScheduling() == jline.lang.constant.SchedStrategy.REF) {
-                        double m = t.getThinkTimeMean();
-                        return (Double.isNaN(m) || !Double.isFinite(m)) ? 0.0 : m;
-                    }
-                    break;
-                }
-            }
-            String caller = findCallerTask(current);
-            if (caller == null) break;
-            current = caller;
-        }
-        return 0.0;
-    }
-
-    private double computeCallerChainDemand(String taskName) {
-        double total = 0.0;
-        String current = taskName;
-        java.util.Set<String> visited = new java.util.HashSet<String>();
-        while (current != null && !visited.contains(current)) {
-            visited.add(current);
-            String caller = findCallerTask(current);
-            if (caller == null) break;
-            total += computeLocalDemand(caller);
-            current = caller;
-        }
-        return total;
-    }
-
-    private boolean isInfScheduledTask(String taskName) {
-        for (Task task : lqnModel.getTasks().values()) {
-            if (taskName.equals(task.getName())) {
-                return task.getScheduling() == jline.lang.constant.SchedStrategy.INF;
-            }
-        }
-        return false;
-    }
-
-    private boolean taskHasSyncCallees(String taskName) {
-        for (Task task : lqnModel.getTasks().values()) {
-            if (taskName.equals(task.getName())) {
-                for (jline.lang.layered.Activity act : task.getActivities()) {
-                    if (act.getSyncCallDests() != null && !act.getSyncCallDests().isEmpty()) {
-                        return true;
-                    }
-                }
-                return false;
-            }
-        }
-        return false;
-    }
-
-    // Returns true if the given task or any of its synchronous callees (recursively)
-    // have host/server demand (i.e., computeLocalDemand > EPS). This helps detect
-    // whether a callee subtree contributes any server-side queuing; if not, host-level
-    // Clients should not rely on the (N-Q)/X formula.
-    private boolean hasServerDemandInSubtree(String taskName) {
-        java.util.Set<String> visited = new java.util.HashSet<String>();
-        return hasServerDemandInSubtree(taskName, visited);
-    }
-
-    private boolean hasServerDemandInSubtree(String taskName, java.util.Set<String> visited) {
-        if (taskName == null || visited.contains(taskName)) return false;
-        visited.add(taskName);
-
-        double local = computeLocalDemand(taskName);
-        if (local > 1e-9) return true;
-
-        // Check synchronous callees recursively
-        for (Task task : lqnModel.getTasks().values()) {
-            if (!taskName.equals(task.getName())) continue;
-            for (jline.lang.layered.Activity act : task.getActivities()) {
-                Map<Integer, String> dests = act.getSyncCallDests();
-                if (dests == null || dests.isEmpty()) continue;
-                for (Map.Entry<Integer, String> e : dests.entrySet()) {
-                    for (jline.lang.layered.Entry entry : lqnModel.getEntries().values()) {
-                        if (!e.getValue().equals(entry.getName())) continue;
-                        if (entry.getParent() == null) continue;
-                        String calleeTask = entry.getParent().getName();
-                        if (hasServerDemandInSubtree(calleeTask, visited)) return true;
-                    }
-                }
-            }
-        }
-        return false;
-    }
-
-    private double getSyncCallMean(String callerTask, String calleeTask) {
-        if (callerTask == null || calleeTask == null) {
-            return 1.0;
-        }
-        Task caller = null;
-        for (Task task : lqnModel.getTasks().values()) {
-            if (callerTask.equals(task.getName())) {
-                caller = task;
-                break;
-            }
-        }
-        if (caller == null) {
-            return 1.0;
-        }
-
-        double totalCallMean = 0.0;
-        for (jline.lang.layered.Activity activity : caller.getActivities()) {
-            Map<Integer, String> dests = activity.getSyncCallDests();
-            if (dests == null || dests.isEmpty()) {
-                continue;
-            }
-            Matrix means = activity.getSyncCallMeans();
-            for (Map.Entry<Integer, String> entry : dests.entrySet()) {
-                jline.lang.layered.Entry calledEntry = null;
-                for (jline.lang.layered.Entry candidate : lqnModel.getEntries().values()) {
-                    if (entry.getValue().equals(candidate.getName())) {
-                        calledEntry = candidate;
-                        break;
-                    }
-                }
-                if (calledEntry == null || calledEntry.getParent() == null) {
-                    continue;
-                }
-                if (!calleeTask.equals(calledEntry.getParent().getName())) {
-                    continue;
-                }
-                int idx = entry.getKey();
-                double m = 1.0;
-                if (means != null && means.getNumCols() > idx) {
-                    m = means.get(0, idx);
-                }
-                if (Double.isFinite(m) && m > 0) {
-                    totalCallMean += m;
-                }
-            }
-        }
-        return totalCallMean > 0 ? totalCallMean : 1.0;
     }
 }

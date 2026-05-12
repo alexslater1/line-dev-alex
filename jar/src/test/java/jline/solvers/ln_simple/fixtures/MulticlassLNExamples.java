@@ -1,4 +1,4 @@
-package jline.solvers.ln_simple.utils;
+package jline.solvers.ln_simple.fixtures;
 
 import jline.lang.constant.SchedStrategy;
 import jline.lang.layered.*;
@@ -22,7 +22,7 @@ import jline.lang.processes.Immediate;
  *       Tests that the multi-server PS residence time formula is applied per-class.
  * </pre>
  */
-public class MulticlassLayeredNetworkExamples {
+public class MulticlassLNExamples {
 
     // =========================================================================
     // Category A: No shared resources (independent classes)
