@@ -12,7 +12,6 @@ import jline.lang.nodes.Station;
 import jline.solvers.ln_simple.SolverLNSimple;
 import jline.util.matrix.Matrix;
 
-import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -155,58 +154,76 @@ public final class MvaInputs {
         return z;
     }
 
+    /**
+     * Threshold on {@code prodN = ∏(N_r + 1)} above which {@link #callMVA}
+     * stops using exact LD-MVA ({@link MvaLd}) and falls back to Seidmann
+     * multi-server AMVA ({@link MvaAmva}). Exact MVA's cost grows roughly like
+     * {@code prodN · Nsum}; AMVA cost is independent of {@code prodN}.
+     *
+     * <p>Mutable so characterisation tests can drive different values; production
+     * callers should leave it at its default.
+     */
+    public static volatile long exactLatticeMax = 500L;
+
+    /** Per-path dispatch counters. Tests reset before a solve and read after to
+     *  see which paths actually fired on a given model. Plain (non-atomic)
+     *  fields — {@code SolverLNSimple} is single-threaded. */
+    public static long ldCalls = 0L;
+    public static long amvaCalls = 0L;
+
+    public static void resetDispatchCounters() {
+        ldCalls = 0L; amvaCalls = 0L;
+    }
+
     /** Solve a layer's two-station closed network.
      *
-     *  <p>The closed multi-server case is handled by {@link MvaLd}, an in-package
-     *  load-dependent MVA that is numerically identical to the shared
-     *  {@code pfqn_mvald} but avoids its per-customer {@code Matrix} allocations —
-     *  without that, a single layer with a few hundred customers and a multi-server
-     *  processor takes seconds. Every other case (single-server queues, mixed
-     *  models) keeps going through the shared {@code pfqn_mvams}, reached via
-     *  reflection to avoid a compile-time dependency on the Kotlin module. The
-     *  closed-network case there is forced by passing a zero {@code lambda}. */
+     *  <p>Every layer the LQN ensemble produces has finite per-class populations,
+     *  so two paths cover everything:
+     *  <ul>
+     *    <li>At least one multi-server queue AND lattice size
+     *        {@code prodN > }{@link #exactLatticeMax} → {@link MvaAmva}
+     *        (Seidmann + BS), cost independent of {@code prodN}.</li>
+     *    <li>Otherwise → {@link MvaLd}, exact load-dependent MVA. When every
+     *        station has {@code S[i] = 1} the {@code mu} matrix collapses to
+     *        all-ones and {@code MvaLd} degenerates to plain exact MVA — same
+     *        answer the dedicated {@code pfqn_mva} would give, at a small
+     *        constant-factor cost.</li>
+     *  </ul>
+     */
     public static Ret.pfqnMVA callMVA(Matrix l, Matrix n, Matrix z, Matrix s) {
-        try {
-            final int M = l.getNumRows();
+        final int M = l.getNumRows();
+        final int R = n.getNumCols();
 
-            // Total (finite) population and whether any station is genuinely multi-server.
-            double ntot = 0.0;
-            boolean allPopFinite = true;
-            for (int r = 0; r < n.getNumCols(); r++) {
-                double nr = n.get(0, r);
-                if (Double.isFinite(nr)) ntot += nr; else allPopFinite = false;
-            }
-            boolean anyMulti = false;
-            for (int i = 0; i < s.getNumRows(); i++) {
-                double si = s.get(i, 0);
-                if (Double.isFinite(si) && si > 1.0) { anyMulti = true; break; }
-            }
+        double ntot = 0.0;
+        for (int r = 0; r < R; r++) ntot += n.get(0, r);
+        final int ntotI = (int) ntot;
 
-            int ntotI = (int) ntot;
-            if (anyMulti && allPopFinite && ntotI >= 1) {
-                // Load-dependent rate matrix, built exactly as pfqn_mvams does for the
-                // closed multi-server branch: mu[i][j] = min(j + 1, S[i]).
-                Matrix mu = new Matrix(M, ntotI);
-                for (int i = 0; i < M; i++) {
-                    double si = s.get(i, 0);
-                    for (int j = 0; j < ntotI; j++) {
-                        mu.set(i, j, Math.min(j + 1.0, si));
-                    }
-                }
-                return MvaLd.solve(l, n, z, mu);
-            }
-
-            Matrix lambda = new Matrix(1, n.getNumCols());
-            Matrix mi = Matrix.ones(M, 1);
-            Class<?> cls = Class.forName("jline.api.pfqn.mva.Pfqn_mvamsKt");
-            Method method = cls.getMethod("pfqn_mvams",
-                    Matrix.class, Matrix.class, Matrix.class,
-                    Matrix.class, Matrix.class, Matrix.class);
-            Object result = method.invoke(null, lambda, l, n, z, mi, s);
-            return (Ret.pfqnMVA) result;
-        } catch (Exception e) {
-            return null;
+        boolean anyMulti = false;
+        for (int i = 0; i < s.getNumRows(); i++) {
+            double si = s.get(i, 0);
+            if (Double.isFinite(si) && si > 1.0) { anyMulti = true; break; }
         }
+        if (anyMulti) {
+            final long cap = exactLatticeMax;
+            long prodN = 1L;
+            for (int r = 0; r < R; r++) {
+                prodN *= (long) (n.get(0, r) + 1);
+                if (prodN > cap) break;
+            }
+            if (prodN > cap) {
+                amvaCalls++;
+                return MvaAmva.solve(l, n, z, s);
+            }
+        }
+        ldCalls++;
+        Matrix mu = new Matrix(M, ntotI);
+        for (int i = 0; i < M; i++) {
+            double si = s.get(i, 0);
+            for (int j = 0; j < ntotI; j++) {
+                mu.set(i, j, Math.min(j + 1.0, si));
+            }
+        }
+        return MvaLd.solve(l, n, z, mu);
     }
 
     /** The first {@link Queue} that is not a {@link Delay} — i.e. the server

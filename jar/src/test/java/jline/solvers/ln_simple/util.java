@@ -1,6 +1,5 @@
 package jline.solvers.ln_simple;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -30,7 +29,14 @@ public class util {
     public static void assertResultsMatchSolverLN(LayeredNetwork model) {
         assertNotNull(model);
 
+        // Temporary instrumentation: count which MvaInputs.callMVA dispatch
+        // path actually fired, so each test reports its model's exact mix.
+        jline.solvers.ln_simple.mva.MvaInputs.resetDispatchCounters();
         LayeredNetworkAvgTable simpleTable = runSolverLNSimple(model);
+        System.out.printf("[paths] LD=%d AMVA=%d cap=%d%n",
+                jline.solvers.ln_simple.mva.MvaInputs.ldCalls,
+                jline.solvers.ln_simple.mva.MvaInputs.amvaCalls,
+                jline.solvers.ln_simple.mva.MvaInputs.exactLatticeMax);
         LayeredNetworkAvgTable lnTable = runSolverLN(model);
         LayeredNetworkAvgTable lqnsTable = runSolverLQNS(model);
 

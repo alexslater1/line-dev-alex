@@ -6,6 +6,7 @@ import jline.lang.constant.SchedStrategy;
 import jline.lang.layered.*;
 import jline.lang.processes.Exp;
 import jline.lang.processes.Immediate;
+import jline.solvers.ln_simple.fixtures.MulticlassLNExamples;
 import jline.solvers.ln_simple.fixtures.SingleclassLNExamples;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -196,5 +197,115 @@ public class SolverLNSimpleTest {
         new Activity(model, "A3", Exp.fitMean(0.5)).on(T3).boundTo(E3).repliesTo(E2);
 
         assertResultsMatchSolverLN(model);
+    }
+
+    @Test @Timeout(120)
+    public void testMcA1_TwoClassInfServers() throws Exception {
+        assertResultsMatchSolverLN(MulticlassLNExamples.mc_a1_two_class_inf_servers());
+    }
+
+    @Test @Timeout(120)
+    public void testMcA2_TwoClassSeparatePs() throws Exception {
+        assertResultsMatchSolverLN(MulticlassLNExamples.mc_a2_two_class_separate_ps());
+    }
+
+    @Test @Timeout(120)
+    public void testMcA3_ThreeClassSeparatePs() throws Exception {
+        assertResultsMatchSolverLN(MulticlassLNExamples.mc_a3_three_class_separate_ps());
+    }
+
+    @Test @Timeout(120)
+    public void testMcA4_TwoClassAsymmetricN() throws Exception {
+        assertResultsMatchSolverLN(MulticlassLNExamples.mc_a4_two_class_asymmetric_n());
+    }
+
+    @Test @Timeout(120)
+    public void testMcB1_TwoClassSharedPsSymmetric() throws Exception {
+        assertResultsMatchSolverLN(MulticlassLNExamples.mc_b1_two_class_shared_ps_symmetric());
+    }
+
+    @Test @Timeout(120)
+    public void testMcB2_TwoClassSharedPsAsymmetricN() throws Exception {
+        assertResultsMatchSolverLN(MulticlassLNExamples.mc_b2_two_class_shared_ps_asymmetric_n());
+    }
+
+    @Test @Timeout(120)
+    public void testMcB3_TwoClassSharedPsAsymmetricD() throws Exception {
+        assertResultsMatchSolverLN(MulticlassLNExamples.mc_b3_two_class_shared_ps_asymmetric_d());
+    }
+
+    @Test @Timeout(120)
+    public void testMcB4_TwoClassSharedPsFullyAsymmetric() throws Exception {
+        assertResultsMatchSolverLN(MulticlassLNExamples.mc_b4_two_class_shared_ps_fully_asymmetric());
+    }
+
+    @Test @Timeout(120)
+    public void testMcB5_ThreeClassSharedPsAsymmetric() throws Exception {
+        assertResultsMatchSolverLN(MulticlassLNExamples.mc_b5_three_class_shared_ps_asymmetric());
+    }
+
+    @Test @Timeout(120)
+    public void testMcB6_TwoClassSharedPsAsymmetric() throws Exception {
+        assertResultsMatchSolverLN(MulticlassLNExamples.mc_b6_two_class_shared_ps_asymmetric_z());
+    }
+
+    @Test @Timeout(120)
+    public void testMcC1_TwoClassShared2ServerPsSymmetric() throws Exception {
+        assertResultsMatchSolverLN(MulticlassLNExamples.mc_c1_two_class_shared_2server_ps_symmetric());
+    }
+
+    @Test @Timeout(120)
+    public void testMcC2_TwoClassShared2ServerPsAsymmetric() throws Exception {
+        assertResultsMatchSolverLN(MulticlassLNExamples.mc_c2_two_class_shared_2server_ps_asymmetric());
+    }
+
+    @Test @Timeout(120)
+    public void testMcC3_ThreeClassShared3ServerPsAsymmetric() throws Exception {
+        assertResultsMatchSolverLN(MulticlassLNExamples.mc_c3_three_class_shared_3server_ps_asymmetric());
+    }
+
+    @Test
+    @Timeout(120)
+    public void testScenario1SimpleChain() throws Exception {
+        assertResultsMatchSolverLN(SingleclassLNExamples.sc1_simple_chain());
+    }
+
+    @Test
+    @Timeout(120)
+    public void testScenario3Fanout() throws Exception {
+        assertResultsMatchSolverLN(SingleclassLNExamples.sc3_fanout());
+    }
+
+
+    @Test
+    @Timeout(120)
+    public void testScenario4Serial() throws Exception {
+        assertResultsMatchSolverLN(SingleclassLNExamples.sc4_serial());
+    }
+
+
+    @Test
+    @Timeout(120)
+    public void testScenario5Loop() throws Exception {
+        assertResultsMatchSolverLN(SingleclassLNExamples.sc5_loop());
+    }
+
+    @Test
+    @Timeout(120)
+    public void testScenario7Multicore() throws Exception {
+        assertResultsMatchSolverLN(SingleclassLNExamples.sc7_multicore());
+    }
+
+    @Test
+    @Timeout(120)
+    public void testScenario8Immediate() throws Exception {
+        assertResultsMatchSolverLN(SingleclassLNExamples.sc8_immediate());
+    }
+
+
+    @Test
+    @Timeout(120)
+    public void testScenario9TwoCalls() throws Exception {
+        assertResultsMatchSolverLN(SingleclassLNExamples.sc9_two_calls());
     }
 }
