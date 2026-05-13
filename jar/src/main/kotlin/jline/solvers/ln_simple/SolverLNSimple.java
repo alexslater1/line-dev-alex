@@ -10,6 +10,7 @@ import jline.lang.nodes.Queue;
 import jline.lang.processes.Exp;
 import jline.io.Ret;
 import jline.solvers.LayeredNetworkAvgTable;
+import jline.solvers.ln_simple.mva.MvaInputs;
 import jline.solvers.ln_simple.results.ResultsCollector;
 import jline.util.matrix.Matrix;
 

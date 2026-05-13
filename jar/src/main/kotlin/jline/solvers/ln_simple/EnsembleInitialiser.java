@@ -13,6 +13,7 @@ import jline.lang.nodes.Node;
 import jline.lang.nodes.Queue;
 import jline.lang.processes.Disabled;
 import jline.lang.processes.Exp;
+import jline.solvers.ln_simple.mva.MvaInputs;
 import jline.util.matrix.Matrix;
 
 import java.util.ArrayList;

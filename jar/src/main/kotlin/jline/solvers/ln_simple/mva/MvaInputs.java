@@ -1,4 +1,4 @@
-package jline.solvers.ln_simple;
+package jline.solvers.ln_simple.mva;
 
 import jline.io.Ret;
 import jline.lang.ClosedClass;
@@ -9,6 +9,7 @@ import jline.lang.nodes.Node;
 import jline.lang.nodes.Queue;
 import jline.lang.nodes.ServiceStation;
 import jline.lang.nodes.Station;
+import jline.solvers.ln_simple.SolverLNSimple;
 import jline.util.matrix.Matrix;
 
 import java.lang.reflect.Method;
@@ -154,14 +155,49 @@ public final class MvaInputs {
         return z;
     }
 
-    /** Invoke the Kotlin {@code pfqn_mvams} routine via reflection. Reflection is
-     *  used instead of a direct call to avoid a compile-time dependency on the
-     *  Kotlin module from this Java code. The closed-network case is forced by
-     *  passing a zero {@code lambda} arrival-rate vector. */
+    /** Solve a layer's two-station closed network.
+     *
+     *  <p>The closed multi-server case is handled by {@link MvaLd}, an in-package
+     *  load-dependent MVA that is numerically identical to the shared
+     *  {@code pfqn_mvald} but avoids its per-customer {@code Matrix} allocations —
+     *  without that, a single layer with a few hundred customers and a multi-server
+     *  processor takes seconds. Every other case (single-server queues, mixed
+     *  models) keeps going through the shared {@code pfqn_mvams}, reached via
+     *  reflection to avoid a compile-time dependency on the Kotlin module. The
+     *  closed-network case there is forced by passing a zero {@code lambda}. */
     public static Ret.pfqnMVA callMVA(Matrix l, Matrix n, Matrix z, Matrix s) {
         try {
+            final int M = l.getNumRows();
+
+            // Total (finite) population and whether any station is genuinely multi-server.
+            double ntot = 0.0;
+            boolean allPopFinite = true;
+            for (int r = 0; r < n.getNumCols(); r++) {
+                double nr = n.get(0, r);
+                if (Double.isFinite(nr)) ntot += nr; else allPopFinite = false;
+            }
+            boolean anyMulti = false;
+            for (int i = 0; i < s.getNumRows(); i++) {
+                double si = s.get(i, 0);
+                if (Double.isFinite(si) && si > 1.0) { anyMulti = true; break; }
+            }
+
+            int ntotI = (int) ntot;
+            if (anyMulti && allPopFinite && ntotI >= 1) {
+                // Load-dependent rate matrix, built exactly as pfqn_mvams does for the
+                // closed multi-server branch: mu[i][j] = min(j + 1, S[i]).
+                Matrix mu = new Matrix(M, ntotI);
+                for (int i = 0; i < M; i++) {
+                    double si = s.get(i, 0);
+                    for (int j = 0; j < ntotI; j++) {
+                        mu.set(i, j, Math.min(j + 1.0, si));
+                    }
+                }
+                return MvaLd.solve(l, n, z, mu);
+            }
+
             Matrix lambda = new Matrix(1, n.getNumCols());
-            Matrix mi = Matrix.ones(l.getNumRows(), 1);
+            Matrix mi = Matrix.ones(M, 1);
             Class<?> cls = Class.forName("jline.api.pfqn.mva.Pfqn_mvamsKt");
             Method method = cls.getMethod("pfqn_mvams",
                     Matrix.class, Matrix.class, Matrix.class,

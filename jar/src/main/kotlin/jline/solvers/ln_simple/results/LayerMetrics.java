@@ -8,7 +8,7 @@ import jline.lang.layered.Task;
 import jline.lang.nodes.Node;
 import jline.lang.nodes.Queue;
 import jline.solvers.ln_simple.LqnGraph;
-import jline.solvers.ln_simple.MvaInputs;
+import jline.solvers.ln_simple.mva.MvaInputs;
 import jline.util.matrix.Matrix;
 
 import java.util.HashMap;

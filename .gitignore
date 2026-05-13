@@ -85,3 +85,7 @@ python/test-output.txt
 
 .gemini/
 gha-creds-*.json
+.mvn/
+.vscode/
+LAYERED_NETWORK_GUIDE.md
+jar/jline.iml
