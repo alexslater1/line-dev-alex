@@ -43,7 +43,7 @@ public class SolverLNSimpleFailingTest {
     @Test
     @Timeout(120)
    @Disabled
-    //slightly off
+    //very slightly off
     public void testScenario6MultiCall() throws Exception {
         // 2-tier, N=60, single synchCall multiplier = 5 (heavy multiplicity)
         assertResultsMatchSolverLN(SingleclassLNExamples.sc6_multi_call());
@@ -58,34 +58,7 @@ public class SolverLNSimpleFailingTest {
         assertResultsMatchSolverLN(SingleclassLNExamples.sc10_deep_chain());
     }
 
-    // =========================================================================
-    //  Group 3 — Wide fan-out from one REF
-    //  One REF activity chains synchCalls to k independent INF callees, each on
-    //  its own 4-server PS processor.
-    //
-    //  Reference point that PASSES: sc3_fanout — same topology, but both
-    //  callees live on the SAME INF task T2 (two entries on one task).
-    //  Failure mode is specifically distributing one caller's load across
-    //  multiple separate callee tasks.
-    // =========================================================================
 
-    /** One REF calls three independent INF callees on three processors. */
-    @Test
-    @Timeout(180)
-   @Disabled
-    //very wrong result
-    public void xl_fanOut3_N100() {
-        assertResultsMatchSolverLN(fanOut(3, 100));
-    }
-
-    /** One REF calls four independent INF callees. */
-    @Test
-    @Timeout(180)
-   @Disabled
-    //very wrong result
-    public void xl_fanOut4_N50() {
-        assertResultsMatchSolverLN(fanOut(4, 50));
-    }
 
     // =========================================================================
     //  Group 4 — Mixed LD + AMVA dispatch (hybrid topology)

@@ -400,7 +400,23 @@ public class SolverLNSimpleTest {
     }
 
     @Test @Timeout(120)
-    public void wide5_arm2()   { assertResultsMatchSolverLN(wideWithChainArms(5, 2, 50));  }
+    public void wide5_arm2() {
+        assertResultsMatchSolverLN(wideWithChainArms(5, 2, 50));
+    }
+
+    @Test
+    @Timeout(180)
+    @Disabled
+    public void xl_fanOut3_N100() {
+        assertResultsMatchSolverLN(fanOut(3, 100));
+    }
+
+    @Test
+    @Timeout(180)
+    @Disabled
+    public void xl_fanOut4_N50() {
+        assertResultsMatchSolverLN(fanOut(4, 50));
+    }
 
 
 }

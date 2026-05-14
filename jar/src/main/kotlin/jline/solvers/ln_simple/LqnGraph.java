@@ -116,6 +116,28 @@ public final class LqnGraph {
         return false;
     }
 
+    /** True iff {@code task} synchronously calls two or more <i>distinct</i> callee
+     *  tasks (i.e. fans out). Single-callee callers do not need sibling-callee
+     *  accounting or Z-update damping. */
+    public static boolean callerFansOut(LayeredNetwork model, String taskName) {
+        Task t = findTask(model, taskName);
+        if (t == null) return false;
+        Set<String> distinctCallees = new HashSet<String>();
+        for (Activity act : t.getActivities()) {
+            Map<Integer, String> dests = act.getSyncCallDests();
+            if (dests == null) continue;
+            for (String dest : dests.values()) {
+                Entry e = findEntry(model, dest);
+                if (e == null || e.getParent() == null) continue;
+                String calleeName = e.getParent().getName();
+                if (taskName.equals(calleeName)) continue;
+                distinctCallees.add(calleeName);
+                if (distinctCallees.size() > 1) return true;
+            }
+        }
+        return false;
+    }
+
     /** True iff {@code task} or any (recursive) sync callee has positive host demand. */
     public static boolean hasServerDemandInSubtree(LayeredNetwork model, String taskName) {
         return hasServerDemandInSubtreeImpl(model, taskName, new HashSet<String>());

@@ -3,7 +3,10 @@ package jline.solvers.ln_simple;
 import jline.lang.ClosedClass;
 import jline.lang.JobClass;
 import jline.lang.Network;
+import jline.lang.layered.Activity;
+import jline.lang.layered.Entry;
 import jline.lang.layered.LayeredNetwork;
+import jline.lang.layered.Task;
 import jline.lang.nodes.Delay;
 import jline.lang.nodes.Node;
 import jline.lang.nodes.Queue;
@@ -328,6 +331,14 @@ public class SolverLNSimple {
     /**
      * Step (1): for each caller class in this T: layer, set the Clients delay
      * service to model that caller's blocking + chain time before issuing a call.
+     *
+     * <p>For callers that synchronously invoke more than one distinct callee,
+     * the new Z is under-relaxed: {@code Z = α·target + (1−α)·prior}. MVA's
+     * response slope in Z is steep near saturation, and per-callee cache values
+     * referenced by sibling Z updates change between sweeps, so plain
+     * fixed-point iteration alternates between saturated and unsaturated
+     * states. Single-callee chains keep the un-damped path because they have
+     * no such cross-feedback.
      */
     private void updateTaskLayerClientsThinks(Network layer, String calleeTask) {
         Delay calleeClients = findClientsDelay(layer);
@@ -335,10 +346,22 @@ public class SolverLNSimple {
 
         for (ClosedClass callerCl : MvaInputs.getClosedClasses(layer)) {
             String callerTask_c = LqnGraph.stripPrefix(callerCl.getName());
-            double calleeThink = computeCallerClientsThink(callerCl, callerTask_c, calleeTask);
+            double target = computeCallerClientsThink(callerCl, callerTask_c, calleeTask);
+            double calleeThink;
+            if (LqnGraph.callerFansOut(lqnModel, callerTask_c)) {
+                double prior = calleeClients.getServiceProcess(callerCl).getMean();
+                calleeThink = (Double.isFinite(prior) && prior > 0)
+                        ? Z_RELAX_ALPHA * target + (1.0 - Z_RELAX_ALPHA) * prior
+                        : target;
+            } else {
+                calleeThink = target;
+            }
             calleeClients.setService(callerCl, Exp.fitMean(clamp(calleeThink)));
         }
     }
+
+    /** Under-relaxation weight for fan-out caller Clients-Z updates. */
+    private static final double Z_RELAX_ALPHA = 0.5;
 
     /**
      * Z formula for a single caller class.
@@ -352,6 +375,10 @@ public class SolverLNSimple {
      * <ul><li>chain-think: root REF think time + sum of local demands along the
      * upstream caller chain;</li>
      * <li>direct-think: caller's own think + caller's local demand.</li></ul>
+     * Plus the time the caller spends blocked at <i>sibling</i> callees (other
+     * tasks called by the same caller activity / task) — without this term, a
+     * caller that fans out to k independent callees lets each callee's MVA see
+     * Z ≈ caller's own think and saturate independently.
      */
     private double computeCallerClientsThink(ClosedClass callerCl, String callerTask, String calleeTask) {
         Double xCaller = taskThroughputCache.get(callerTask);
@@ -366,7 +393,61 @@ public class SolverLNSimple {
         double refChainThink = LqnGraph.getRootRefThinkTime(lqnModel, callerTask)
                 + LqnGraph.computeCallerChainDemand(lqnModel, callerTask);
         double directThink   = callerThink + LqnGraph.computeLocalDemand(lqnModel, callerTask);
-        return Math.max(refChainThink, directThink);
+        double siblingBlock  = computeSiblingCalleeBlocking(callerTask, calleeTask);
+        return Math.max(refChainThink, directThink) + siblingBlock;
+    }
+
+    /**
+     * Per-cycle time the caller spends blocked at sibling callees — every callee
+     * of {@code callerTask} except {@code excludedCallee}, weighted by call mean.
+     *
+     * <p>Per-callee contribution = {@code callMean × R(sibling)}:
+     * <ul>
+     *   <li><b>Leaf sibling</b>: cached {@code R_task_total} already embeds
+     *       {@code callMean} (its T: layer demand was set as
+     *       {@code callMean × hostDemand}) → use as-is.</li>
+     *   <li><b>Intermediate sibling</b>: cached R is per-call → multiply by
+     *       caller-specific {@code callMean}.</li>
+     * </ul>
+     * If the sibling has no cache entry yet (first sweep), fall back to
+     * {@code callMean × localDemand(sibling)} as a lower bound so first-iteration
+     * Z is finite and non-degenerate.
+     */
+    private double computeSiblingCalleeBlocking(String callerTask, String excludedCallee) {
+        Task caller = LqnGraph.findTask(lqnModel, callerTask);
+        if (caller == null) return 0.0;
+        Map<String, Double> siblingCallMean = new HashMap<String, Double>();
+        for (Activity act : caller.getActivities()) {
+            Map<Integer, String> dests = act.getSyncCallDests();
+            if (dests == null || dests.isEmpty()) continue;
+            Matrix means = act.getSyncCallMeans();
+            for (Map.Entry<Integer, String> e : dests.entrySet()) {
+                Entry destEntry = LqnGraph.findEntry(lqnModel, e.getValue());
+                if (destEntry == null || destEntry.getParent() == null) continue;
+                String calleeName = destEntry.getParent().getName();
+                if (calleeName.equals(excludedCallee) || calleeName.equals(callerTask)) continue;
+                int idx = e.getKey();
+                double cMean = (means != null && means.getNumCols() > idx) ? means.get(0, idx) : 1.0;
+                if (!Double.isFinite(cMean) || cMean <= 0) cMean = 1.0;
+                Double accum = siblingCallMean.get(calleeName);
+                siblingCallMean.put(calleeName, (accum != null ? accum : 0.0) + cMean);
+            }
+        }
+        double total = 0.0;
+        for (Map.Entry<String, Double> e : siblingCallMean.entrySet()) {
+            String sibling = e.getKey();
+            double cMean = e.getValue();
+            Double rCached = taskSojournCache.get(sibling);
+            double rContrib;
+            if (rCached != null && Double.isFinite(rCached) && rCached > 0) {
+                rContrib = LqnGraph.taskHasSyncCallees(lqnModel, sibling)
+                        ? rCached * cMean : rCached;
+            } else {
+                rContrib = cMean * LqnGraph.computeLocalDemand(lqnModel, sibling);
+            }
+            total += rContrib;
+        }
+        return total;
     }
 
     /** Step (2): keep the caller's own T: layer Clients up-to-date with the
@@ -491,9 +572,15 @@ public class SolverLNSimple {
             if (cls == null) cls = MvaInputs.getMainClass(callerHost);
             if (cls == null) continue;
 
+            // Each per-callee invocation of this method only knows the response
+            // from one callee; the sibling-block term sums response time from
+            // the caller's other callees so the host-layer Z reflects the full
+            // caller cycle rather than just the last callee solved.
+            double siblingBlock = computeSiblingCalleeBlocking(callerTask_r, calleeTask);
             double newZ = LqnGraph.getRootRefThinkTime(lqnModel, callerTask_r)
                     + LqnGraph.computeCallerChainDemand(lqnModel, callerTask_r)
-                    + propagated;
+                    + propagated
+                    + siblingBlock;
             if (!Double.isFinite(newZ)) continue;
             clients.setService(cls, Exp.fitMean(clamp(newZ)));
         }
@@ -528,6 +615,22 @@ public class SolverLNSimple {
         }
 
         List<ClosedClass> hostClasses = MvaInputs.getClosedClasses(s.layer);
+        // For unsaturated multi-server PS processors (c > 1, ρ ≤ 0.9) propagate
+        // the bare per-call demand rather than Q/X — the M/M/c queueing tail is
+        // negligible in this regime and the bare demand is the per-call service
+        // time the task layer should see. Single-server PS keeps Q/X because
+        // R = D/(1−ρ) genuinely tracks queueing for c == 1.
+        int nserv = s.serverQueue.getNumberOfServers();
+        if (nserv == Integer.MAX_VALUE || nserv <= 0) nserv = 1;
+        double totalRho = 0.0;
+        for (int rr = 0; rr < hostClasses.size(); rr++) {
+            double xr = s.res.X.get(0, rr);
+            double dr = s.serverQueue.getServiceProcess(hostClasses.get(rr)).getMean();
+            if (Double.isFinite(xr) && Double.isFinite(dr)) totalRho += xr * dr;
+        }
+        totalRho /= nserv;
+        boolean useBareDemand = nserv > 1 && totalRho <= 0.9;
+
         for (int r = 0; r < hostClasses.size(); r++) {
             double x_r = s.res.X.get(0, r);
             double q_r = s.res.Q.get(s.serverIdx, r);
@@ -537,7 +640,9 @@ public class SolverLNSimple {
 
             String hostedTask = LqnGraph.stripPrefix(hostClasses.get(r).getName());
             Integer taskLayer = queueNameToLayer.get("T:" + hostedTask);
-            double safeR = clamp(R_proc_r);
+            double D_proc = s.serverQueue.getServiceProcess(hostClasses.get(r)).getMean();
+            double safeR = (useBareDemand && Double.isFinite(D_proc) && D_proc > EPS)
+                    ? clamp(D_proc) : clamp(R_proc_r);
 
             if (taskLayer == null) {
                 pushRefTaskHostResponseToCalleeClients(hostedTask, safeR);
@@ -573,7 +678,9 @@ public class SolverLNSimple {
     }
 
     /** REF task with no T: layer: inject R_proc into Clients of every T: layer
-     *  that has this REF task as a caller class. */
+     *  that has this REF task as a caller class, plus the time the REF spends
+     *  at sibling callees so a fan-out caller's Z reflects the full cycle and
+     *  not just R(this callee). */
     private void pushRefTaskHostResponseToCalleeClients(String refTaskName, double safeR) {
         for (Map.Entry<String, Integer> entry : queueNameToLayer.entrySet()) {
             if (!entry.getKey().startsWith("T:")) continue;
@@ -585,22 +692,45 @@ public class SolverLNSimple {
             if (!refTaskName.equals(LqnGraph.stripPrefix(calleeClass.getName()))) continue;
             Delay calleeClients = findClientsDelay(calleeNet);
             if (calleeClients == null) continue;
-            double newZ = clamp(baseClientsThink[calleeLay] + safeR);
+            String calleeTaskName = LqnGraph.stripPrefix(entry.getKey());
+            double siblingBlock = computeSiblingCalleeBlocking(refTaskName, calleeTaskName);
+            double newZ = clamp(baseClientsThink[calleeLay] + safeR + siblingBlock);
             calleeClients.setService(calleeClass, Exp.fitMean(newZ));
         }
     }
 
-    /** Write the same R_proc into every non-Disabled class on the task's
-     *  T: layer queue server (the processor response is the per-call service
-     *  time the task layer should see for all callers). */
+    /** Write {@code safeR} into every non-Disabled class on the task's T: layer
+     *  queue server — the processor response is the per-call service time the
+     *  task layer should see for all callers. For INF tasks on multi-server PS
+     *  processors the host-layer R_proc fluctuates between bare-demand and
+     *  queueing-tail values across sweeps, so the write is under-relaxed in
+     *  that regime to keep the demand channel from oscillating. */
     private void writeHostResponseToTaskLayerServer(int taskLayerIdx, double safeR) {
         Network taskNet = ensemble.get(taskLayerIdx);
         Queue tq = MvaInputs.findNonDelayQueue(taskNet);
         if (tq == null) return;
+        boolean dampD = isInfOnMultiServerPs(LqnGraph.stripPrefix(tq.getName()));
         for (JobClass tc : taskNet.getClasses()) {
             double m = tq.getServiceProcess(tc).getMean();
-            if (!Double.isNaN(m)) tq.setService(tc, Exp.fitMean(safeR));
+            if (Double.isNaN(m)) continue;
+            double value = dampD ? D_RELAX_ALPHA * safeR + (1.0 - D_RELAX_ALPHA) * m : safeR;
+            tq.setService(tc, Exp.fitMean(value));
         }
+    }
+
+    /** Under-relaxation weight for D-writes into T: layers of INF tasks on
+     *  finite-server PS/FCFS processors. */
+    private static final double D_RELAX_ALPHA = 0.5;
+
+    /** True iff {@code taskName} is INF-scheduled on a finite-server PS/FCFS
+     *  processor. */
+    private boolean isInfOnMultiServerPs(String taskName) {
+        if (!LqnGraph.isInfScheduledTask(lqnModel, taskName)) return false;
+        Task t = LqnGraph.findTask(lqnModel, taskName);
+        if (t == null || t.getProcessor() == null) return false;
+        if (LqnGraph.isInfProcessor(lqnModel, t.getProcessor().getName())) return false;
+        int procServers = t.getProcessor().getMultiplicity();
+        return procServers > 1 && procServers != Integer.MAX_VALUE;
     }
 
 
