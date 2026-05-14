@@ -620,6 +620,13 @@ public class SolverLNSimple {
         // negligible in this regime and the bare demand is the per-call service
         // time the task layer should see. Single-server PS keeps Q/X because
         // R = D/(1−ρ) genuinely tracks queueing for c == 1.
+        //
+        // Exception: INF-scheduled hosted tasks. Their T: layer queue is IS, so
+        // it does NOT re-add queueing on top of the demand we write. The
+        // host-layer M/M/c queueing is the only place that delay can come from,
+        // so we MUST send Q/X for INF callees regardless of total ρ. Without
+        // this, fan-out / mixed-INF models lose the host-side queueing tail
+        // entirely and underestimate response times at moderate loads.
         int nserv = s.serverQueue.getNumberOfServers();
         if (nserv == Integer.MAX_VALUE || nserv <= 0) nserv = 1;
         double totalRho = 0.0;
@@ -629,7 +636,7 @@ public class SolverLNSimple {
             if (Double.isFinite(xr) && Double.isFinite(dr)) totalRho += xr * dr;
         }
         totalRho /= nserv;
-        boolean useBareDemand = nserv > 1 && totalRho <= 0.9;
+        boolean baseUseBareDemand = nserv > 1 && totalRho <= 0.9;
 
         for (int r = 0; r < hostClasses.size(); r++) {
             double x_r = s.res.X.get(0, r);
@@ -641,6 +648,8 @@ public class SolverLNSimple {
             String hostedTask = LqnGraph.stripPrefix(hostClasses.get(r).getName());
             Integer taskLayer = queueNameToLayer.get("T:" + hostedTask);
             double D_proc = s.serverQueue.getServiceProcess(hostClasses.get(r)).getMean();
+            boolean useBareDemand = baseUseBareDemand
+                    && !LqnGraph.isInfScheduledTask(lqnModel, hostedTask);
             double safeR = (useBareDemand && Double.isFinite(D_proc) && D_proc > EPS)
                     ? clamp(D_proc) : clamp(R_proc_r);
 

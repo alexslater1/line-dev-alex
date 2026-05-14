@@ -420,7 +420,6 @@ public class SolverLNSimpleTest {
 
     @Test
     @Timeout(180)
-    @Disabled
     public void xl_mixedDispatch_shared4_plus_solo() {
         assertResultsMatchSolverLN(mixedSharedPlusSolo());
     }
