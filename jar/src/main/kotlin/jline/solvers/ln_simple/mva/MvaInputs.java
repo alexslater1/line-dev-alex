@@ -175,20 +175,32 @@ public final class MvaInputs {
         ldCalls = 0L; amvaCalls = 0L;
     }
 
-    /** Solve a layer's two-station closed network.
+    /**
+     * Solve a layer's two-station closed network.
      *
-     *  <p>Every layer the LQN ensemble produces has finite per-class populations,
-     *  so two paths cover everything:
-     *  <ul>
-     *    <li>At least one multi-server queue AND lattice size
-     *        {@code prodN > }{@link #exactLatticeMax} → {@link MvaAmva}
-     *        (Seidmann + BS), cost independent of {@code prodN}.</li>
-     *    <li>Otherwise → {@link MvaLd}, exact load-dependent MVA. When every
-     *        station has {@code S[i] = 1} the {@code mu} matrix collapses to
-     *        all-ones and {@code MvaLd} degenerates to plain exact MVA — same
-     *        answer the dedicated {@code pfqn_mva} would give, at a small
-     *        constant-factor cost.</li>
-     *  </ul>
+     * <p>Three structural cases:
+     * <ul>
+     *   <li><b>Pure-IS layer</b> (e.g. {@code T:<inf-task>}) — no contention
+     *       anywhere, return the closed-form
+     *       {@code X[r] = N[r] / Z_eff[r], Q[i,r] = X[r] · L[i,r]} directly.</li>
+     *   <li><b>{@code prodN > }{@link #exactLatticeMax}</b> → {@link MvaAmva}
+     *       (Seidmann + BS), cost bounded by Schweitzer iterations.</li>
+     *   <li><b>Otherwise</b> → {@link MvaLd}, exact load-dependent MVA.</li>
+     * </ul>
+     *
+     * <p>In all branches we first <i>partition</i>: fold each IS station's
+     * demand into {@code Z}, zero out its row in {@code L}. This is the same
+     * trick {@code Solver_mva}'s {@code infSET}/{@code qSET} partition uses and
+     * is essential — without it the LD-MVA recursion hits the IS+IS topology
+     * its {@code pi(0|n) = 1 − Σ pi(k|n)} underflow can't handle, clamps to
+     * {@code ulp}, and corrupts {@code X}. After the recursion runs on the
+     * non-IS subproblem, {@code Q} at IS rows is reconstructed by Little's law
+     * ({@code Q = X · L_original}).
+     *
+     * <p>IS detection uses the heuristic {@code S[i] >= ntot}: every Delay and
+     * INF Queue has its server count mapped to {@code ntot} by
+     * {@link #buildServerMatrix}, and any finite-multiplicity station with
+     * enough capacity to absorb the entire customer population is IS-equivalent.
      */
     public static Ret.pfqnMVA callMVA(Matrix l, Matrix n, Matrix z, Matrix s) {
         final int M = l.getNumRows();
@@ -198,32 +210,98 @@ public final class MvaInputs {
         for (int r = 0; r < R; r++) ntot += n.get(0, r);
         final int ntotI = (int) ntot;
 
-        boolean anyMulti = false;
-        for (int i = 0; i < s.getNumRows(); i++) {
-            double si = s.get(i, 0);
-            if (Double.isFinite(si) && si > 1.0) { anyMulti = true; break; }
-        }
-        if (anyMulti) {
-            final long cap = exactLatticeMax;
-            long prodN = 1L;
-            for (int r = 0; r < R; r++) {
-                prodN *= (long) (n.get(0, r) + 1);
-                if (prodN > cap) break;
-            }
-            if (prodN > cap) {
-                amvaCalls++;
-                return MvaAmva.solve(l, n, z, s);
-            }
-        }
-        ldCalls++;
-        Matrix mu = new Matrix(M, ntotI);
+        // Detect IS stations and partition: fold L into Z, zero lEff. Keep
+        // original L so post-recursion Q can be rebuilt via Little's law.
+        Matrix lEff = l.copy();
+        Matrix zEff = z.copy();
+        boolean[] isInf = new boolean[M];
+        boolean allInf = true;
         for (int i = 0; i < M; i++) {
             double si = s.get(i, 0);
-            for (int j = 0; j < ntotI; j++) {
-                mu.set(i, j, Math.min(j + 1.0, si));
+            isInf[i] = Double.isFinite(si) && si >= ntot;
+            if (!isInf[i]) { allInf = false; continue; }
+            for (int r = 0; r < R; r++) {
+                double lir = l.get(i, r);
+                if (Double.isFinite(lir) && lir > 0) {
+                    zEff.set(0, r, zEff.get(0, r) + lir);
+                    lEff.set(i, r, 0);
+                }
             }
         }
-        return MvaLd.solve(l, n, z, mu);
+
+        // Pure-IS layer: closed form, no recursion. Avoids both the population-
+        // lattice enumeration cost and the spurious "MVA-LD is numerically
+        // unstable" warning pfqn_mvald would emit with all-zero L.
+        if (allInf) return analyticalISResult(l, n, zEff, isInf);
+
+        // Route by lattice size — pfqn_mvald cost is O(prodN · Nsum) regardless
+        // of multi-server status, so a multi-class layer with even a single-
+        // server non-IS station can hit the lattice trap.
+        long prodN = 1L;
+        for (int r = 0; r < R; r++) {
+            prodN *= (long) (n.get(0, r) + 1);
+            if (prodN > exactLatticeMax) break;
+        }
+        Ret.pfqnMVA res;
+        if (prodN > exactLatticeMax) {
+            amvaCalls++;
+            res = MvaAmva.solve(lEff, n, zEff, s);
+        } else {
+            ldCalls++;
+            Matrix mu = new Matrix(M, ntotI);
+            for (int i = 0; i < M; i++) {
+                double si = s.get(i, 0);
+                for (int j = 0; j < ntotI; j++) mu.set(i, j, Math.min(j + 1.0, si));
+            }
+            res = MvaLd.solve(lEff, n, zEff, mu);
+        }
+        rebuildInfStationQ(res, l, isInf);
+        return res;
+    }
+
+    /** Closed-form result for a layer whose stations are <i>all</i> IS. Per
+     *  class: {@code X[r] = N[r] / Z_eff[r]}, {@code Q[i,r] = X[r] · L_original[i,r]},
+     *  {@code U[i] = 0} (no contention at IS), {@code C[0,r] = N[r]/X[r] − Z_eff[r] = 0}.
+     *  Bypasses {@link MvaLd}'s O(prodN · Nsum) population-lattice enumeration. */
+    private static Ret.pfqnMVA analyticalISResult(Matrix lOriginal, Matrix n,
+                                                  Matrix zEff, boolean[] isInf) {
+        int R = n.getNumCols();
+        int M = lOriginal.getNumRows();
+        Matrix X = new Matrix(1, R);
+        Matrix Q = new Matrix(M, R);
+        Matrix U = new Matrix(M, 1);
+        Matrix C = new Matrix(1, R);
+        for (int r = 0; r < R; r++) {
+            double nr = n.get(0, r);
+            double zr = zEff.get(0, r);
+            double xr = (zr > 0) ? nr / zr : 0.0;
+            X.set(0, r, xr);
+            C.set(0, r, 0.0);
+            for (int i = 0; i < M; i++) {
+                double lir = lOriginal.get(i, r);
+                Q.set(i, r, (isInf[i] && Double.isFinite(lir)) ? xr * lir : 0.0);
+            }
+        }
+        return new Ret.pfqnMVA(X, Q, U, C, Double.NaN);
+    }
+
+    /** Post-MVA fixup: with L[i,r]=0 zeroed for IS stations, the recursion
+     *  leaves Q[i,r]=0 there. The true per-class Q at an IS station is
+     *  {@code X · L_original} by Little's law — patch it back in. */
+    private static void rebuildInfStationQ(Ret.pfqnMVA res, Matrix lOriginal, boolean[] isInf) {
+        if (res == null || res.Q == null || res.X == null) return;
+        int M = res.Q.getNumRows();
+        int R = res.Q.getNumCols();
+        for (int i = 0; i < M; i++) {
+            if (!isInf[i]) continue;
+            for (int r = 0; r < R; r++) {
+                double x = res.X.get(0, r);
+                double lir = lOriginal.get(i, r);
+                if (Double.isFinite(x) && Double.isFinite(lir)) {
+                    res.Q.set(i, r, x * lir);
+                }
+            }
+        }
     }
 
     /** The first {@link Queue} that is not a {@link Delay} — i.e. the server

@@ -127,6 +127,17 @@ public class SolverLNSimple {
         return ensemble;
     }
 
+    public static final int DEFAULT_MAX_ITER = 100;
+    public static final double DEFAULT_TOL = 5e-3;
+
+    public void iterateCoupledMva() {
+        iterateCoupledMva(DEFAULT_MAX_ITER, DEFAULT_TOL, null);
+    }
+
+    public void iterateCoupledMva(Runnable afterIteration) {
+        iterateCoupledMva(DEFAULT_MAX_ITER, DEFAULT_TOL, afterIteration);
+    }
+
     public void iterateCoupledMva(int maxIter, double tol) {
         iterateCoupledMva(maxIter, tol, null);
     }

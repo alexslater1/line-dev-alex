@@ -10,15 +10,19 @@ import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import jline.lang.constant.SchedStrategy;
 import jline.lang.constant.SolverType;
-import jline.lang.layered.LayeredNetwork;
+import jline.lang.layered.*;
+import jline.lang.processes.Exp;
+import jline.lang.processes.Immediate;
 import jline.solvers.LayeredNetworkAvgTable;
 import jline.solvers.ln.SolverLN;
 import jline.solvers.lqns.SolverLQNS;
 
 public class util {
 
-    private static final double TOLERANCE = 5.5e-2;
+    private static final double RTOL = 5e-2;
+    private static final double ATOL = 1e-3;
 
     static {
         Logger.getLogger("").setLevel(Level.OFF);
@@ -78,15 +82,17 @@ public class util {
                     fail(String.format("%s.%s: SolverLN=%.6f SolverLNSimple=%.6f (one is NaN)%s",
                             name, metrics[m], expected, actual, context));
                 }
-                double relDiff = Math.abs(expected - actual) / Math.max(1.0, Math.abs(expected));
-                if (relDiff > maxRelDiff) {
-                    maxRelDiff = relDiff;
-                    worstMsg = String.format("%s.%s: SolverLN=%.6f SolverLNSimple=%.6f (relative diff=%.2e > %.2e)%s",
-                            name, metrics[m], expected, actual, relDiff, TOLERANCE, context);
+                double diff = Math.abs(expected - actual);
+                double allowed = ATOL + RTOL * Math.abs(expected);
+                double slack = diff / allowed;
+                if (slack > maxRelDiff) {
+                    maxRelDiff = slack;
+                    worstMsg = String.format("%s.%s: SolverLN=%.6f SolverLNSimple=%.6f (|diff|=%.2e > atol+rtol*|exp|=%.2e)%s",
+                            name, metrics[m], expected, actual, diff, allowed, context);
                 }
             }
         }
-        if (maxRelDiff > TOLERANCE) {
+        if (maxRelDiff > 1.0) {
             fail(worstMsg);
         }
     }
@@ -95,7 +101,7 @@ public class util {
         SolverLNSimple solver = new SolverLNSimple(model);
         int[] iters = {0};
         long start = System.currentTimeMillis();
-        suppressOutput(() -> solver.iterateCoupledMva(100, 1e-4, () -> iters[0]++));
+        suppressOutput(() -> solver.iterateCoupledMva(() -> iters[0]++));
         System.out.printf("[SolverLNSimple] %.3f s, %d iters%n", (System.currentTimeMillis() - start) / 1000.0, iters[0]);
         return solver.getAvgTable();
     }
@@ -191,10 +197,196 @@ public class util {
                     node, metric, expected, actual, context));
         }
         double diff = Math.abs(expected - actual);
-        double scale = Math.max(1.0, Math.abs(expected));
-        assertTrue(diff / scale <= TOLERANCE,
-                String.format("%s.%s: SolverLN=%.6f SolverLNSimple=%.6f (relative diff=%.2e > %.2e)%s",
-                        node, metric, expected, actual, diff / scale, TOLERANCE, context));
+        double allowed = ATOL + RTOL * Math.abs(expected);
+        assertTrue(diff <= allowed,
+                String.format("%s.%s: SolverLN=%.6f SolverLNSimple=%.6f (|diff|=%.2e > atol+rtol*|exp|=%.2e)%s",
+                        node, metric, expected, actual, diff, allowed, context));
+    }
+
+    // =========================================================================
+    //  Model builders
+    // =========================================================================
+
+    /**
+     * {@code tiers}-tier chain {@code T1 → T2 → … → T_tiers}. {@code T1} is REF
+     * with the given population; intermediate tasks are INF; the leaf task
+     * holds the only non-trivial service time. Each processor has 4 PS servers.
+     */
+    public static LayeredNetwork chain(int tiers, int n) {
+        LayeredNetwork m = new LayeredNetwork("chain" + tiers + "_N" + n);
+        Processor[] P = new Processor[tiers];
+        Task[] T = new Task[tiers];
+        Entry[] E = new Entry[tiers];
+        for (int i = 0; i < tiers; i++) {
+            P[i] = new Processor(m, "P" + (i + 1), 4, SchedStrategy.PS);
+            if (i == 0) {
+                T[i] = new Task(m, "T1", n, SchedStrategy.REF).on(P[i]).setThinkTime(new Exp(2));
+            } else {
+                T[i] = new Task(m, "T" + (i + 1), Integer.MAX_VALUE, SchedStrategy.INF).on(P[i]);
+            }
+            E[i] = new Entry(m, "E" + (i + 1)).on(T[i]);
+        }
+        // Intermediates: immediate activity that calls forward and replies to caller's entry.
+        new Activity(m, "AS1", Immediate.getInstance()).on(T[0]).boundTo(E[0]).synchCall(E[1], 1);
+        for (int i = 1; i < tiers - 1; i++) {
+            new Activity(m, "AS" + (i + 1), Immediate.getInstance())
+                    .on(T[i]).boundTo(E[i]).synchCall(E[i + 1], 1).repliesTo(E[i - 1]);
+        }
+        // Leaf: real service time, replies to its caller.
+        new Activity(m, "AS" + tiers, Exp.fitMean(0.8))
+                .on(T[tiers - 1]).boundTo(E[tiers - 1]).repliesTo(E[tiers - 2]);
+        return m;
+    }
+
+    /**
+     * One REF task with {@code N} customers calls {@code k} independent INF
+     * callees, each on its own 4-server PS processor.
+     */
+    public static LayeredNetwork fanOut(int k, int n) {
+        LayeredNetwork m = new LayeredNetwork("fanOut" + k + "_N" + n);
+        Processor P0 = new Processor(m, "P0", 4, SchedStrategy.PS);
+        Task T0 = new Task(m, "T0", n, SchedStrategy.REF).on(P0).setThinkTime(new Exp(2));
+        Entry E0 = new Entry(m, "E0").on(T0);
+
+        Entry[] calleeEntries = new Entry[k];
+        for (int i = 0; i < k; i++) {
+            Processor Pi = new Processor(m, "P" + (i + 1), 4, SchedStrategy.PS);
+            Task Ti = new Task(m, "T" + (i + 1), Integer.MAX_VALUE, SchedStrategy.INF).on(Pi);
+            calleeEntries[i] = new Entry(m, "E" + (i + 1)).on(Ti);
+            new Activity(m, "AS" + (i + 1), Exp.fitMean(0.6 + 0.2 * i))
+                    .on(Ti).boundTo(calleeEntries[i]).repliesTo(calleeEntries[i]);
+        }
+        // One caller activity chains a synchCall to every callee.
+        Activity caller = new Activity(m, "A0", Immediate.getInstance()).on(T0).boundTo(E0);
+        for (Entry ce : calleeEntries) caller = caller.synchCall(ce, 1);
+        return m;
+    }
+
+    /**
+     * {@code k} REF callers (each with {@code n} customers) onto a shared
+     * {@code c}-server PS callee task. Each caller has its own entry on the
+     * callee for proper per-class accounting.
+     */
+    public static LayeredNetwork sharedCallee(int k, int n, int cShared) {
+        LayeredNetwork m = new LayeredNetwork("shared" + k + "_N" + n);
+        Processor P1 = new Processor(m, "P1", Integer.MAX_VALUE, SchedStrategy.INF);
+        Processor PS = new Processor(m, "PS", cShared, SchedStrategy.PS);
+        Task TS = new Task(m, "TS", Integer.MAX_VALUE, SchedStrategy.INF).on(PS);
+        Task[] callers = new Task[k];
+        Entry[] callerEntries = new Entry[k];
+        Entry[] calleeEntries = new Entry[k];
+        for (int r = 0; r < k; r++) {
+            callers[r] = new Task(m, "T" + (r + 1), n, SchedStrategy.REF)
+                    .on(P1).setThinkTime(Exp.fitMean(2.0 + 0.3 * r));
+            callerEntries[r] = new Entry(m, "E" + (r + 1)).on(callers[r]);
+            calleeEntries[r] = new Entry(m, "ES" + (r + 1)).on(TS);
+        }
+        for (int r = 0; r < k; r++) {
+            new Activity(m, "A" + (r + 1), Immediate.getInstance())
+                    .on(callers[r]).boundTo(callerEntries[r]).synchCall(calleeEntries[r], 1);
+            new Activity(m, "AS" + (r + 1), Exp.fitMean(0.7 + 0.1 * r))
+                    .on(TS).boundTo(calleeEntries[r]).repliesTo(calleeEntries[r]);
+        }
+        return m;
+    }
+
+    /**
+     * Four REF callers (N=30 each) share callee TS on an 8-server PS, AND
+     * caller T1 additionally calls a private callee TX on a 4-server PS.
+     * The TS-side layers carry 4 caller classes (prodN ≈ 9 × 10⁵, AMVA), the
+     * TX-side layers carry just R:T1 (prodN = 31, LD).
+     */
+    public static LayeredNetwork mixedSharedPlusSolo() {
+        LayeredNetwork m = new LayeredNetwork("mixed_shared4_solo1");
+        Processor P1 = new Processor(m, "P1", Integer.MAX_VALUE, SchedStrategy.INF);
+        Processor PS = new Processor(m, "PS", 8, SchedStrategy.PS);
+        Processor PX = new Processor(m, "PX", 4, SchedStrategy.PS);
+        Task TS = new Task(m, "TS", Integer.MAX_VALUE, SchedStrategy.INF).on(PS);
+        Task TX = new Task(m, "TX", Integer.MAX_VALUE, SchedStrategy.INF).on(PX);
+        Task[] callers = new Task[4];
+        Entry[] callerEntries = new Entry[4];
+        Entry[] sharedCalleeEntries = new Entry[4];
+        Entry EX = new Entry(m, "EX").on(TX);
+        for (int r = 0; r < 4; r++) {
+            callers[r] = new Task(m, "T" + (r + 1), 30, SchedStrategy.REF)
+                    .on(P1).setThinkTime(Exp.fitMean(2.0 + 0.3 * r));
+            callerEntries[r] = new Entry(m, "E" + (r + 1)).on(callers[r]);
+            sharedCalleeEntries[r] = new Entry(m, "ES" + (r + 1)).on(TS);
+        }
+        // T1 calls both TS and TX in one activity; T2..T4 only call TS.
+        new Activity(m, "A1", Immediate.getInstance())
+                .on(callers[0]).boundTo(callerEntries[0])
+                .synchCall(sharedCalleeEntries[0], 1)
+                .synchCall(EX, 1);
+        for (int r = 1; r < 4; r++) {
+            new Activity(m, "A" + (r + 1), Immediate.getInstance())
+                    .on(callers[r]).boundTo(callerEntries[r])
+                    .synchCall(sharedCalleeEntries[r], 1);
+        }
+        for (int r = 0; r < 4; r++) {
+            new Activity(m, "AS" + (r + 1), Exp.fitMean(0.7 + 0.1 * r))
+                    .on(TS).boundTo(sharedCalleeEntries[r]).repliesTo(sharedCalleeEntries[r]);
+        }
+        new Activity(m, "AX", Exp.fitMean(1.0)).on(TX).boundTo(EX).repliesTo(EX);
+        return m;
+    }
+
+    /** Three callers, equal N, three orders of magnitude of demand at TS
+     *  (0.2, 1.0, 4.0). */
+    public static LayeredNetwork asymDemands(int n) {
+        LayeredNetwork m = new LayeredNetwork("asymDemands3_N" + n);
+        Processor P1 = new Processor(m, "P1", Integer.MAX_VALUE, SchedStrategy.INF);
+        Processor PS = new Processor(m, "PS", 8, SchedStrategy.PS);
+        Task T1 = new Task(m, "T1", n, SchedStrategy.REF).on(P1).setThinkTime(Exp.fitMean(2.0));
+        Task T2 = new Task(m, "T2", n, SchedStrategy.REF).on(P1).setThinkTime(Exp.fitMean(2.0));
+        Task T3 = new Task(m, "T3", n, SchedStrategy.REF).on(P1).setThinkTime(Exp.fitMean(2.0));
+        Task TS = new Task(m, "TS", Integer.MAX_VALUE, SchedStrategy.INF).on(PS);
+        Entry E1  = new Entry(m, "E1").on(T1);
+        Entry E2  = new Entry(m, "E2").on(T2);
+        Entry E3  = new Entry(m, "E3").on(T3);
+        Entry ES1 = new Entry(m, "ES1").on(TS);
+        Entry ES2 = new Entry(m, "ES2").on(TS);
+        Entry ES3 = new Entry(m, "ES3").on(TS);
+        new Activity(m, "A1", Immediate.getInstance()).on(T1).boundTo(E1).synchCall(ES1, 1);
+        new Activity(m, "A2", Immediate.getInstance()).on(T2).boundTo(E2).synchCall(ES2, 1);
+        new Activity(m, "A3", Immediate.getInstance()).on(T3).boundTo(E3).synchCall(ES3, 1);
+        new Activity(m, "AS1", Exp.fitMean(0.2)).on(TS).boundTo(ES1).repliesTo(ES1);
+        new Activity(m, "AS2", Exp.fitMean(1.0)).on(TS).boundTo(ES2).repliesTo(ES2);
+        new Activity(m, "AS3", Exp.fitMean(4.0)).on(TS).boundTo(ES3).repliesTo(ES3);
+        return m;
+    }
+
+    /** k REF callers each driving its own armDepth-deep INF chain ending in
+     *  a leaf with real Exp demand. Each arm independent → no shared
+     *  contention, just sheer layer count. */
+    public static LayeredNetwork wideWithChainArms(int k, int armDepth, int n) {
+        LayeredNetwork m = new LayeredNetwork("wide" + k + "_arm" + armDepth);
+        Processor PRef = new Processor(m, "PR", Integer.MAX_VALUE, SchedStrategy.INF);
+        for (int caller = 0; caller < k; caller++) {
+            Task R = new Task(m, "R" + caller, n, SchedStrategy.REF)
+                    .on(PRef).setThinkTime(Exp.fitMean(1.0 + 0.1 * caller));
+            Entry ER = new Entry(m, "ER" + caller).on(R);
+
+            // Build a private chain of armDepth INF tasks for this caller.
+            Processor[] P = new Processor[armDepth];
+            Task[] T = new Task[armDepth];
+            Entry[] E = new Entry[armDepth];
+            for (int d = 0; d < armDepth; d++) {
+                P[d] = new Processor(m, "P" + caller + "_" + d, 4, SchedStrategy.PS);
+                T[d] = new Task(m, "T" + caller + "_" + d, Integer.MAX_VALUE, SchedStrategy.INF).on(P[d]);
+                E[d] = new Entry(m, "E" + caller + "_" + d).on(T[d]);
+            }
+            new Activity(m, "A" + caller, Immediate.getInstance())
+                    .on(R).boundTo(ER).synchCall(E[0], 1);
+            for (int d = 0; d < armDepth - 1; d++) {
+                new Activity(m, "AS" + caller + "_" + d, Immediate.getInstance())
+                        .on(T[d]).boundTo(E[d]).synchCall(E[d + 1], 1).repliesTo(d == 0 ? E[0] : E[d - 1]);
+            }
+            new Activity(m, "AS" + caller + "_leaf", Exp.fitMean(0.8))
+                    .on(T[armDepth - 1]).boundTo(E[armDepth - 1])
+                    .repliesTo(armDepth == 1 ? E[0] : E[armDepth - 2]);
+        }
+        return m;
     }
     
 }
