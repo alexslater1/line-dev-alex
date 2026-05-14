@@ -121,18 +121,10 @@ final class LayerMetrics {
         } else {
             // Per-class metrics for non-rebuilt layers. REF tasks get their
             // P:-layer Q stashed in refTaskProcQLen for later activity splitting.
-            // Multi-server PS heuristic (mirrors propagateHostLayerCoupling):
-            // when the processor is not heavily utilized and has c > 1 servers,
-            // SolverLN's reference numbers use R ≈ D (M/M/inf approximation),
-            // not the M/M/c queueing-tail value MVA produces. Apply the same
-            // override here so reported hostLayerResid matches.
-            boolean useBareDemand = !isInfProc && c_eff > 1.0 && totalUtil <= 0.9;
             for (int r2 = 0; r2 < R_host; r2++) {
                 double x_r = res.X.get(0, r2);
                 double q_r = res.Q.get(serverIdx, r2);
-                double d_r = demand.get(serverIdx, r2);
                 double resp_r = (x_r > 0) ? (q_r / x_r) : Double.NaN;
-                if (useBareDemand && Double.isFinite(d_r) && d_r > 0) resp_r = d_r;
                 String hostedTaskName = LqnGraph.stripPrefix(hostClasses.get(r2).getName());
                 Task task = LqnGraph.findTask(model, hostedTaskName);
                 if (task == null) continue;

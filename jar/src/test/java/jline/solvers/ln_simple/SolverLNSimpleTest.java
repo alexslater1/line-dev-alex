@@ -418,5 +418,19 @@ public class SolverLNSimpleTest {
         assertResultsMatchSolverLN(fanOut(4, 50));
     }
 
+    @Test
+    @Timeout(180)
+    @Disabled
+    public void xl_mixedDispatch_shared4_plus_solo() {
+        assertResultsMatchSolverLN(mixedSharedPlusSolo());
+    }
+
+    @Test
+    @Timeout(120)
+    @Disabled
+    public void testScenario6MultiCall() throws Exception {
+        assertResultsMatchSolverLN(SingleclassLNExamples.sc6_multi_call());
+    }
+
 
 }

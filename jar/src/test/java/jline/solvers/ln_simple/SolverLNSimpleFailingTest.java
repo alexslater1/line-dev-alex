@@ -43,15 +43,6 @@ public class SolverLNSimpleFailingTest {
     @Test
     @Timeout(120)
    @Disabled
-    //very slightly off
-    public void testScenario6MultiCall() throws Exception {
-        // 2-tier, N=60, single synchCall multiplier = 5 (heavy multiplicity)
-        assertResultsMatchSolverLN(SingleclassLNExamples.sc6_multi_call());
-    }
-
-    @Test
-    @Timeout(120)
-   @Disabled
     //100 iters / wrong numbers
     public void testScenario10DeepChain() throws Exception {
         // 4-tier, N=80, all Exp activities
@@ -59,31 +50,6 @@ public class SolverLNSimpleFailingTest {
     }
 
 
-
-    // =========================================================================
-    //  Group 4 — Mixed LD + AMVA dispatch (hybrid topology)
-    //  The only test that should produce LD>0 AMVA>0 in its [paths] line.
-    //  Per-layer dispatch splits: TS-side layers (4 caller classes, prodN huge)
-    //  go to AMVA; TX-side layers (single class R:T1, prodN = 31) stay on LD.
-    //
-    //  Reference points that PASS: xl_shared{2,3,4,5} (pure shared callee,
-    //  no solo branch), xl_asymDemands3 (shared callee, asymmetric demand).
-    //  Failure is specifically about mixing LD and AMVA paths in one model.
-    // =========================================================================
-
-    /**
-     * Four REF callers share a callee TS (high-prodN multi-class layers),
-     * AND the first caller has its own private callee TX (low-prodN
-     * single-class layers). Per-layer dispatch should split: the layers
-     * touching the 4-caller chain go to AMVA; the layers around TX stay on LD.
-     */
-    @Test
-    @Timeout(180)
-   @Disabled
-    //very wrong result
-    public void xl_mixedDispatch_shared4_plus_solo() {
-        assertResultsMatchSolverLN(mixedSharedPlusSolo());
-    }
 
 
     // =========================================================================

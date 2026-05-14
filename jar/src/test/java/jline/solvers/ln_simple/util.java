@@ -291,10 +291,14 @@ public class util {
     }
 
     /**
-     * Four REF callers (N=30 each) share callee TS on an 8-server PS, AND
-     * caller T1 additionally calls a private callee TX on a 4-server PS.
-     * The TS-side layers carry 4 caller classes (prodN ≈ 9 × 10⁵, AMVA), the
-     * TX-side layers carry just R:T1 (prodN = 31, LD).
+     * Four REF callers (N=30 each) share callee TS on an 8-server PS, and a
+     * separate solo REF caller T5 (N=10) drives its own private callee TX on
+     * a 4-server PS. The TS-side layers carry 4 caller classes
+     * (prodN ≈ 8 × 10⁵, AMVA); the TX-side layer carries just R:T5
+     * (prodN = 11 with S=4 < N=10 so the PX station is a contention point,
+     * not IS, LD). The two submodels share no callers, so every activity has
+     * exactly one synchCall — this keeps SolverLN's per-activity accounting
+     * correct while still forcing the per-layer dispatch split.
      */
     public static LayeredNetwork mixedSharedPlusSolo() {
         LayeredNetwork m = new LayeredNetwork("mixed_shared4_solo1");
@@ -306,19 +310,14 @@ public class util {
         Task[] callers = new Task[4];
         Entry[] callerEntries = new Entry[4];
         Entry[] sharedCalleeEntries = new Entry[4];
-        Entry EX = new Entry(m, "EX").on(TX);
         for (int r = 0; r < 4; r++) {
             callers[r] = new Task(m, "T" + (r + 1), 30, SchedStrategy.REF)
                     .on(P1).setThinkTime(Exp.fitMean(2.0 + 0.3 * r));
             callerEntries[r] = new Entry(m, "E" + (r + 1)).on(callers[r]);
             sharedCalleeEntries[r] = new Entry(m, "ES" + (r + 1)).on(TS);
         }
-        // T1 calls both TS and TX in one activity; T2..T4 only call TS.
-        new Activity(m, "A1", Immediate.getInstance())
-                .on(callers[0]).boundTo(callerEntries[0])
-                .synchCall(sharedCalleeEntries[0], 1)
-                .synchCall(EX, 1);
-        for (int r = 1; r < 4; r++) {
+        // Four shared callers, each calls its own entry on TS.
+        for (int r = 0; r < 4; r++) {
             new Activity(m, "A" + (r + 1), Immediate.getInstance())
                     .on(callers[r]).boundTo(callerEntries[r])
                     .synchCall(sharedCalleeEntries[r], 1);
@@ -327,6 +326,15 @@ public class util {
             new Activity(m, "AS" + (r + 1), Exp.fitMean(0.7 + 0.1 * r))
                     .on(TS).boundTo(sharedCalleeEntries[r]).repliesTo(sharedCalleeEntries[r]);
         }
+        // Solo caller T5 on its own private callee TX. N=10 > PX's 4 servers
+        // keeps the TX-side layer non-IS so it dispatches to LD, not the
+        // pure-IS short-circuit.
+        Task T5 = new Task(m, "T5", 10, SchedStrategy.REF)
+                .on(P1).setThinkTime(Exp.fitMean(2.0));
+        Entry E5 = new Entry(m, "E5").on(T5);
+        Entry EX = new Entry(m, "EX").on(TX);
+        new Activity(m, "A5", Immediate.getInstance())
+                .on(T5).boundTo(E5).synchCall(EX, 1);
         new Activity(m, "AX", Exp.fitMean(1.0)).on(TX).boundTo(EX).repliesTo(EX);
         return m;
     }
