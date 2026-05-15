@@ -237,7 +237,22 @@ public final class EnsembleInitialiser {
         }
     }
 
-    /** Per-caller R:&lt;caller&gt; class demand on T:- or P:-layer servers. */
+    /**
+     * Per-caller R:&lt;caller&gt; (or aggregate T:&lt;caller&gt;) class demand on
+     * T:- or P:-layer servers.
+     *
+     * <p>Two cases on the caller side:
+     * <ul>
+     *   <li><b>Single-entry caller</b> — sum {@code callMean × hostDemand}
+     *       across all of the caller's activities. A single entry call
+     *       traverses the whole task DAG, so summing captures the full
+     *       per-visit demand.</li>
+     *   <li><b>Multi-entry caller</b> — each visit dispatches to <i>one</i>
+     *       entry's bound activity, not the union of all activities. Compute
+     *       per-entry demand from each entry's bound activity and average
+     *       across entries so the result is the mean per-visit demand.</li>
+     * </ul>
+     */
     private static void setPerCallerDemand(
             LayeredNetwork model, Queue serverQueue, ClosedClass hc,
             String serverName, String serverTaskOrProc,
@@ -248,16 +263,24 @@ public final class EnsembleInitialiser {
         Task callerTask = LqnGraph.findTask(model, callerTaskName);
         if (callerTask == null) return;
 
-        double demand = 0.0;
-        for (Activity act : callerTask.getActivities()) {
-            Map<Integer, String> dests = act.getSyncCallDests();
-            Matrix means = act.getSyncCallMeans();
-            for (int ci = 0; ci < dests.size(); ci++) {
-                Entry destEntry = LqnGraph.findEntry(model, dests.get(ci));
-                if (destEntry == null) continue;
-                Task serverTask = destEntry.getParent();
-                if (!tasksOnServer.containsKey(serverTask.getName())) continue;
-                demand += means.get(0, ci) * LqnGraph.hostDemandOfBoundActivity(destEntry);
+        List<Entry> callerEntries = new ArrayList<Entry>();
+        for (Entry e : model.getEntries().values()) {
+            if (e.getParent() == callerTask) callerEntries.add(e);
+        }
+
+        double demand;
+        if (callerEntries.size() > 1) {
+            double totalDemand = 0.0;
+            for (Entry e : callerEntries) {
+                Activity bound = LqnGraph.findBoundActivity(e);
+                if (bound == null) continue;
+                totalDemand += demandFromActivityToTargets(model, bound, tasksOnServer);
+            }
+            demand = totalDemand / callerEntries.size();
+        } else {
+            demand = 0.0;
+            for (Activity act : callerTask.getActivities()) {
+                demand += demandFromActivityToTargets(model, act, tasksOnServer);
             }
         }
 
@@ -278,6 +301,25 @@ public final class EnsembleInitialiser {
             double selfDemand = LqnGraph.computeLocalDemand(model, callerTask.getName());
             if (selfDemand > 0) serverQueue.setService(hc, Exp.fitMean(selfDemand));
         }
+    }
+
+    /** Σ {@code callMean × hostDemandOfBoundActivity} for {@code act}'s sync calls
+     *  into entries hosted by {@code tasksOnServer}. */
+    private static double demandFromActivityToTargets(LayeredNetwork model, Activity act,
+                                                       Map<String, Task> tasksOnServer) {
+        Map<Integer, String> dests = act.getSyncCallDests();
+        if (dests == null || dests.isEmpty()) return 0.0;
+        Matrix means = act.getSyncCallMeans();
+        double d = 0.0;
+        for (Map.Entry<Integer, String> ce : dests.entrySet()) {
+            Entry destEntry = LqnGraph.findEntry(model, ce.getValue());
+            if (destEntry == null || destEntry.getParent() == null) continue;
+            if (!tasksOnServer.containsKey(destEntry.getParent().getName())) continue;
+            int idx = ce.getKey();
+            double cm = (means != null && means.getNumCols() > idx) ? means.get(0, idx) : 1.0;
+            d += cm * LqnGraph.hostDemandOfBoundActivity(destEntry);
+        }
+        return d;
     }
 
 

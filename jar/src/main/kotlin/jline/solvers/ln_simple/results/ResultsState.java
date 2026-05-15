@@ -47,4 +47,10 @@ final class ResultsState {
     // Host-layer overrides (Phase 2 may copy these into task* maps)
     final Map<String, Double> hostLayerTput  = new HashMap<String, Double>();
     final Map<String, Double> hostLayerResid = new HashMap<String, Double>();
+
+    // Per-callee server-only sojourn (per caller-visit) cached by SolverLNSimple
+    // during iteration. OutputTableBuilder uses this to derive per-call response
+    // time at each callee (= sojourn / per-visit callMean) when computing the
+    // full per-call demand at each entry.
+    Map<String, Double> taskSojournCache = new HashMap<String, Double>();
 }

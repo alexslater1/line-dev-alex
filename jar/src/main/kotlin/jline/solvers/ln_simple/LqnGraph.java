@@ -10,8 +10,10 @@ import jline.lang.layered.LayeredNetwork;
 import jline.lang.layered.Task;
 import jline.util.matrix.Matrix;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -229,23 +231,64 @@ public final class LqnGraph {
         return 0.0;
     }
 
-    /** Σ callMean × hostDemand from {@code caller}'s activities into entries on {@code target}. */
+    /** Activity bound to {@code destEntry}, or {@code null} if none. */
+    public static Activity findBoundActivity(Entry destEntry) {
+        if (destEntry == null || destEntry.getParent() == null) return null;
+        for (Activity a : destEntry.getParent().getActivities()) {
+            if (destEntry.getName().equals(a.getBoundToEntry())) return a;
+        }
+        return null;
+    }
+
+    /**
+     * Per-visit demand the {@code caller} task imposes on the {@code target} task:
+     * Σ {@code callMean × hostDemandOfBoundActivity} for sync calls into entries
+     * on {@code target}.
+     *
+     * <p>For single-entry callers this sums across all of the caller's activities
+     * (one visit traverses the entire task DAG). For multi-entry callers each
+     * visit dispatches to one entry's bound activity, so we average per-entry
+     * bound-activity contributions — the result is the mean per-visit demand
+     * rather than the sum across mutually-exclusive entries.
+     */
     public static double callerDemandOnTask(LayeredNetwork model, String callerName, String targetTaskName) {
         Task caller = findTask(model, callerName);
         if (caller == null) return 0.0;
-        double total = 0.0;
-        for (Activity act : caller.getActivities()) {
-            Map<Integer, String> dests = act.getSyncCallDests();
-            Matrix means = act.getSyncCallMeans();
-            if (dests == null || means == null) continue;
-            for (int ci = 0; ci < dests.size(); ci++) {
-                Entry destEntry = findEntry(model, dests.get(ci));
-                if (destEntry == null || destEntry.getParent() == null) continue;
-                if (!targetTaskName.equals(destEntry.getParent().getName())) continue;
-                total += means.get(0, ci) * hostDemandOfBoundActivity(destEntry);
-            }
+
+        List<Entry> callerEntries = new ArrayList<Entry>();
+        for (Entry e : model.getEntries().values()) {
+            if (e.getParent() == caller) callerEntries.add(e);
         }
-        return total;
+        if (callerEntries.size() <= 1) {
+            double total = 0.0;
+            for (Activity act : caller.getActivities()) {
+                total += demandFromActivityToTask(model, act, targetTaskName);
+            }
+            return total;
+        }
+        double total = 0.0;
+        for (Entry e : callerEntries) {
+            Activity bound = findBoundActivity(e);
+            if (bound == null) continue;
+            total += demandFromActivityToTask(model, bound, targetTaskName);
+        }
+        return total / callerEntries.size();
+    }
+
+    private static double demandFromActivityToTask(LayeredNetwork model, Activity act, String targetTaskName) {
+        Map<Integer, String> dests = act.getSyncCallDests();
+        if (dests == null || dests.isEmpty()) return 0.0;
+        Matrix means = act.getSyncCallMeans();
+        double d = 0.0;
+        for (Map.Entry<Integer, String> ce : dests.entrySet()) {
+            Entry destEntry = findEntry(model, ce.getValue());
+            if (destEntry == null || destEntry.getParent() == null) continue;
+            if (!targetTaskName.equals(destEntry.getParent().getName())) continue;
+            int idx = ce.getKey();
+            double cm = (means != null && means.getNumCols() > idx) ? means.get(0, idx) : 1.0;
+            d += cm * hostDemandOfBoundActivity(destEntry);
+        }
+        return d;
     }
 
     /**
@@ -271,37 +314,39 @@ public final class LqnGraph {
     //  Quantities — call means
     // =================================================================================
 
-    /** Total expected sync calls per caller-visit from {@code caller} to {@code callee}.
-     *  Defaults to 1.0 when no calls are found. */
+    /**
+     * Expected sync calls <i>per caller-visit</i> from {@code caller} to
+     * {@code callee}. For single-entry callers this is the sum across all of
+     * the caller's activities (one visit traverses the whole task DAG); for
+     * multi-entry callers it is the average across entries of each bound
+     * activity's calls into {@code callee}, since each visit dispatches to one
+     * entry. Defaults to 1.0 when no calls are found.
+     */
     public static double getSyncCallMean(LayeredNetwork model, String callerTask, String calleeTask) {
         if (callerTask == null || calleeTask == null) return 1.0;
         Task caller = findTask(model, callerTask);
         if (caller == null) return 1.0;
-        double total = 0.0;
-        for (Activity act : caller.getActivities()) {
-            Map<Integer, String> dests = act.getSyncCallDests();
-            if (dests == null || dests.isEmpty()) continue;
-            Matrix means = act.getSyncCallMeans();
-            for (Map.Entry<Integer, String> e : dests.entrySet()) {
-                Entry called = findEntry(model, e.getValue());
-                if (called == null || called.getParent() == null) continue;
-                if (!calleeTask.equals(called.getParent().getName())) continue;
-                int idx = e.getKey();
-                double m = (means != null && means.getNumCols() > idx) ? means.get(0, idx) : 1.0;
-                if (Double.isFinite(m) && m > 0) total += m;
-            }
-        }
-        return total > 0 ? total : 1.0;
+        double cm = perVisitCallsFromCallerToTarget(model, caller, calleeTask);
+        return cm > 0 ? cm : 1.0;
     }
 
-    /** Maximum per-caller total call mean into {@code target}. Used when scaling
-     *  leaf-task tput to per-call rates: one caller × 2 calls → 2; two callers × 1
-     *  call each → 1. */
+    /**
+     * Maximum <i>per-visit</i> call mean from any caller into {@code target}.
+     * Used as the conversion factor between per-visit and per-call quantities at
+     * a leaf task (T:-layer X × this = per-call rate; per-visit residual ÷ this =
+     * per-call residual).
+     *
+     * <p>For single-entry callers the per-visit call mean is just the sum across
+     * the caller's activities (one visit traverses the whole task DAG). For
+     * multi-entry callers each visit runs <i>one</i> entry's bound activity, so
+     * we take the average across entries of (sum across that entry's bound
+     * activity's sync calls into {@code target}).
+     */
     public static double getTotalInboundCallMean(LayeredNetwork model, String targetTask) {
         double max = 0.0;
         for (Task caller : model.getTasks().values()) {
-            double sum = sumCallsFromCallerToTarget(model, caller, targetTask);
-            if (sum > max) max = sum;
+            double cm = perVisitCallsFromCallerToTarget(model, caller, targetTask);
+            if (cm > max) max = cm;
         }
         return max;
     }
@@ -341,6 +386,40 @@ public final class LqnGraph {
             }
         }
         return sum;
+    }
+
+    /**
+     * Per-visit call mean from {@code caller} into {@code targetTask}: sum across
+     * caller's activities when the caller has a single entry (one visit traverses
+     * the whole task DAG), or the average over entries of each bound activity's
+     * calls to {@code targetTask} when the caller has multiple entries (each visit
+     * dispatches to one entry's bound activity).
+     */
+    private static double perVisitCallsFromCallerToTarget(LayeredNetwork model, Task caller, String targetTask) {
+        List<Entry> callerEntries = new ArrayList<Entry>();
+        for (Entry e : model.getEntries().values()) {
+            if (e.getParent() == caller) callerEntries.add(e);
+        }
+        if (callerEntries.size() <= 1) {
+            return sumCallsFromCallerToTarget(model, caller, targetTask);
+        }
+        double total = 0.0;
+        for (Entry e : callerEntries) {
+            Activity bound = findBoundActivity(e);
+            if (bound == null) continue;
+            Map<Integer, String> dests = bound.getSyncCallDests();
+            if (dests == null || dests.isEmpty()) continue;
+            Matrix means = bound.getSyncCallMeans();
+            for (Map.Entry<Integer, String> ce : dests.entrySet()) {
+                Entry called = findEntry(model, ce.getValue());
+                if (called == null || called.getParent() == null) continue;
+                if (!targetTask.equals(called.getParent().getName())) continue;
+                int idx = ce.getKey();
+                double m = (means != null && means.getNumCols() > idx) ? means.get(0, idx) : 1.0;
+                if (Double.isFinite(m) && m > 0) total += m;
+            }
+        }
+        return total / callerEntries.size();
     }
 
 

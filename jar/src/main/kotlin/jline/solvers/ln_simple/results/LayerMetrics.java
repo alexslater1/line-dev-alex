@@ -151,20 +151,46 @@ final class LayerMetrics {
                                          String taskName,
                                          Map<String, String> taskCalledTask,
                                          ResultsState st) {
-        double x = res.X.get(0, 0);
-        double q = res.Q.get(serverIdx, 0);
+        // Sum across caller classes: task-level X/Q/U are aggregates over all
+        // calls into this task. Taking just class 0 ignores R:R2..R:Rn for
+        // multi-caller task layers (e.g., a shared task called by 4 REF tasks).
+        List<ClosedClass> tLayerClasses = MvaInputs.getClosedClasses(layer);
+        int R_task = tLayerClasses.size();
+        Queue serverQueue = MvaInputs.findNonDelayQueue(layer);
+        double x = 0.0, q_mva = 0.0, q_service = 0.0;
+        for (int rc = 0; rc < R_task; rc++) {
+            double x_rc = res.X.get(0, rc);
+            double q_rc = res.Q.get(serverIdx, rc);
+            if (Double.isFinite(x_rc)) x += x_rc;
+            if (Double.isFinite(q_rc)) q_mva += q_rc;
+            double d_rc = (serverQueue != null)
+                    ? serverQueue.getServiceProcess(tLayerClasses.get(rc)).getMean()
+                    : Double.NaN;
+            if (Double.isFinite(x_rc) && Double.isFinite(d_rc)) {
+                q_service += x_rc * d_rc;
+            }
+        }
+        // Two distinct Q semantics:
+        //   q_display: visit-weighted time at the task (= Σ X_r · D_r). Reported
+        //     on the task row. Matches LN's per-task QLen, which excludes
+        //     customers physically waiting at upstream hosts. Used only when at
+        //     least one class contributes positive demand — otherwise fall back
+        //     to the raw MVA Q (degenerate D ≈ 0 cases).
+        //   q_mva: total customers at the queue station from MVA. Used to derive
+        //     the per-call response time that feeds upstream propagation
+        //     (taskResidT) — it must include layer queueing wait.
+        double q_display = q_service > 0 ? q_service : q_mva;
         double u = res.U.get(serverIdx, 0);
-        double r = (x > 0) ? (q / x) : Double.NaN;
+        double r = (x > 0) ? (q_mva / x) : Double.NaN;
 
         Task currentTask = LqnGraph.findTask(model, taskName);
         boolean isRef = LqnGraph.isRefTask(currentTask);
 
         if (!isRef) {
-            st.taskQLen.put(taskName, q);
+            st.taskQLen.put(taskName, q_display);
             // Per-caller-class Q so multiclass attribution is correct.
-            List<ClosedClass> tLayerClasses = MvaInputs.getClosedClasses(layer);
             Map<String, Double> perCallerQ = new HashMap<String, Double>();
-            for (int rc = 0; rc < tLayerClasses.size(); rc++) {
+            for (int rc = 0; rc < R_task; rc++) {
                 String callerName = LqnGraph.stripPrefix(tLayerClasses.get(rc).getName());
                 perCallerQ.put(callerName, res.Q.get(serverIdx, rc));
             }

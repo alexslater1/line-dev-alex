@@ -50,53 +50,53 @@ public class SolverLNSimpleFailingTest {
     }
 
 
-
-
     // =========================================================================
-    //  Group 5 - Multi-caller shared FCFS bottleneck — exercises AMVA at every sweep
-    //  step and tests Z-feedback convergence under contention.
+    //  Group 6 — Intermediate-task throughput not scaled by upstream callMean.
+    //
+    //  When an upstream task's bound activity issues multiple sync calls into
+    //  a multi-entry intermediate task, the intermediate's reported task
+    //  throughput comes out as the per-caller-cycle rate rather than the
+    //  per-call rate at the intermediate.
+    //  {@link jline.solvers.ln_simple.results.ResultsCollector} only scales
+    //  LEAF tasks by their max inbound callMean (in {@code scaleLeafTaskThroughputs});
+    //  intermediates are skipped.
     // =========================================================================
 
     /**
-     * Mix of three things designed to keep MVA on the slow path AND make the
-     * outer bounce sweep oscillate:
-     *   1. Big multiclass lattice (4 REF callers × N=20 → prodN ≈ 1.9e5) ⇒ AMVA
-     *      fires, not LD-MVA. AMVA is bounded but its Schweitzer iteration count
-     *      grows with class asymmetry, which we provide via varied thinks/demands.
-     *   2. Single-thread FCFS bottleneck (TShared, mult=1, PS). Forces heavy
-     *      contention; Z values at the four caller hosts feed back through the
-     *      Clients delay and oscillate.
-     *   3. A second deep call out of the bottleneck (TShared → TLeaf with
-     *      synchCall callMean=2) so each cycle in the bounce sweep has more
-     *      coupled-state to settle.
+     * Single REF caller whose bound activity issues two sync calls into two
+     * distinct entries of an intermediate task. Each intermediate entry's bound
+     * activity makes one sync call to a leaf.
+     *
+     * <p>Fails with T2.tput reported at the per-T1-cycle rate (T1.tput) rather
+     * than the per-T2-call rate (2 × T1.tput), leaving ER1.RespT roughly 50%
+     * above SolverLN's value.
      */
     @Test
-    @Timeout(300)
+    @Timeout(60)
     @Disabled
-    // very wrong result
-    public void pathological_amva_heavy() {
-        LayeredNetwork m = new LayeredNetwork("pathological_amva_heavy");
-        Processor PRef    = new Processor(m, "PR", Integer.MAX_VALUE, SchedStrategy.INF);
-        Processor PShared = new Processor(m, "PSh", 1, SchedStrategy.PS);
-        Processor PLeaf   = new Processor(m, "PL", 4, SchedStrategy.PS);
+    public void minimal_multiEntryCaller() {
+        LayeredNetwork m = new LayeredNetwork("min_multientry_caller");
+        Processor PRef = new Processor(m, "PR", Integer.MAX_VALUE, SchedStrategy.INF);
+        Processor P2   = new Processor(m, "P2", 1, SchedStrategy.PS);
+        Processor PL   = new Processor(m, "PL", 4, SchedStrategy.PS);
 
-        Task TShared = new Task(m, "TShared", 1, SchedStrategy.FCFS).on(PShared);
-        Task TLeaf   = new Task(m, "TLeaf", Integer.MAX_VALUE, SchedStrategy.INF).on(PLeaf);
+        Task T1    = new Task(m, "T1", 5, SchedStrategy.REF)
+                .on(PRef).setThinkTime(Exp.fitMean(1.0));
+        Task T2    = new Task(m, "T2", 1, SchedStrategy.FCFS).on(P2);
+        Task TLeaf = new Task(m, "TLeaf", Integer.MAX_VALUE, SchedStrategy.INF).on(PL);
 
+        Entry ER1   = new Entry(m, "ER1").on(T1);
+        Entry ES1   = new Entry(m, "ES1").on(T2);
+        Entry ES2   = new Entry(m, "ES2").on(T2);
         Entry ELeaf = new Entry(m, "ELeaf").on(TLeaf);
-        Entry[] ES = new Entry[4];
-        Task[] R = new Task[4];
-        Entry[] ER = new Entry[4];
-        for (int i = 0; i < 4; i++) {
-            ES[i] = new Entry(m, "ES" + (i + 1)).on(TShared);
-            R[i] = new Task(m, "R" + (i + 1), 20, SchedStrategy.REF)
-                    .on(PRef).setThinkTime(Exp.fitMean(0.5 + 0.7 * i));
-            ER[i] = new Entry(m, "ER" + (i + 1)).on(R[i]);
-            new Activity(m, "A" + (i + 1), Immediate.getInstance())
-                    .on(R[i]).boundTo(ER[i]).synchCall(ES[i], 1);
-            new Activity(m, "AS" + (i + 1), Exp.fitMean(0.4 + 0.3 * i))
-                    .on(TShared).boundTo(ES[i]).synchCall(ELeaf, 2).repliesTo(ES[i]);
-        }
+
+        // T1's bound activity routes to both T2 entries (one call each per cycle).
+        new Activity(m, "A1", Immediate.getInstance()).on(T1).boundTo(ER1)
+                .synchCall(ES1, 1).synchCall(ES2, 1);
+        new Activity(m, "AS1", Exp.fitMean(0.4)).on(T2).boundTo(ES1)
+                .synchCall(ELeaf, 1).repliesTo(ES1);
+        new Activity(m, "AS2", Exp.fitMean(0.5)).on(T2).boundTo(ES2)
+                .synchCall(ELeaf, 1).repliesTo(ES2);
         new Activity(m, "AL", Exp.fitMean(0.3)).on(TLeaf).boundTo(ELeaf).repliesTo(ELeaf);
 
         assertResultsMatchSolverLN(m);

@@ -55,6 +55,7 @@ public final class ResultsCollector {
 
         ResultsState st = new ResultsState();
         Map<String, String> taskCalledTask = LqnGraph.buildTaskCalledTaskMap(model);
+        if (taskSojournCache != null) st.taskSojournCache = taskSojournCache;
 
         // Phase 1
         LayerMetrics.extract(model, ensemble, rebuiltHostLayers, taskCalledTask, st);
@@ -177,6 +178,7 @@ public final class ResultsCollector {
             Double c = st.processorServers.get(procName);
             if (c == null || c <= 0) continue;
             double utilSum = 0.0;
+            double demandSum = 0.0;
             boolean hasCaller = false;
             for (Task caller : model.getTasks().values()) {
                 double d = LqnGraph.callerDemandOnTask(model, caller.getName(), hostedTask.getName());
@@ -184,12 +186,25 @@ public final class ResultsCollector {
                 Double xCaller = st.taskTput.get(caller.getName());
                 if (xCaller == null || xCaller <= 0) continue;
                 utilSum += xCaller * d / c;
+                demandSum += xCaller * d;
                 hasCaller = true;
             }
             if (hasCaller) {
                 double utilCapped = Math.min(utilSum, 1.0);
                 st.processorUtil.put(procName, utilCapped);
                 st.taskUtil.put(hostedTask.getName(), utilCapped);
+                // (2e) Mean per-call processor residence = X-weighted mean of per-class
+                // demand = Σ(X_r · D_r) / Σ X_r. Replaces hostLayerResid (which is the
+                // population-weighted aggregate D — wrong when X_r and D_r covary).
+                // Only override for non-leaf tasks: leaves already have a per-call
+                // residual stored by LayerMetrics (it divides by inbound callMean).
+                boolean isLeaf = !taskCalledTask.containsKey(hostedTask.getName());
+                if (!isLeaf) {
+                    Double xTotal = st.taskTput.get(hostedTask.getName());
+                    if (xTotal != null && xTotal > 0 && demandSum > 0) {
+                        st.taskResidT.put(hostedTask.getName(), demandSum / xTotal);
+                    }
+                }
             }
         }
     }

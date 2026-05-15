@@ -431,5 +431,63 @@ public class SolverLNSimpleTest {
         assertResultsMatchSolverLN(SingleclassLNExamples.sc6_multi_call());
     }
 
+    @Test
+    @Timeout(300)
+    public void pathological_amva_heavy() {
+        LayeredNetwork m = new LayeredNetwork("pathological_amva_heavy");
+        Processor PRef    = new Processor(m, "PR", Integer.MAX_VALUE, SchedStrategy.INF);
+        Processor PShared = new Processor(m, "PSh", 1, SchedStrategy.PS);
+        Processor PLeaf   = new Processor(m, "PL", 4, SchedStrategy.PS);
+
+        Task TShared = new Task(m, "TShared", 1, SchedStrategy.FCFS).on(PShared);
+        Task TLeaf   = new Task(m, "TLeaf", Integer.MAX_VALUE, SchedStrategy.INF).on(PLeaf);
+
+        Entry ELeaf = new Entry(m, "ELeaf").on(TLeaf);
+        Entry[] ES = new Entry[4];
+        Task[] R = new Task[4];
+        Entry[] ER = new Entry[4];
+        for (int i = 0; i < 4; i++) {
+            ES[i] = new Entry(m, "ES" + (i + 1)).on(TShared);
+            R[i] = new Task(m, "R" + (i + 1), 20, SchedStrategy.REF)
+                    .on(PRef).setThinkTime(Exp.fitMean(0.5 + 0.7 * i));
+            ER[i] = new Entry(m, "ER" + (i + 1)).on(R[i]);
+            new Activity(m, "A" + (i + 1), Immediate.getInstance())
+                    .on(R[i]).boundTo(ER[i]).synchCall(ES[i], 1);
+            new Activity(m, "AS" + (i + 1), Exp.fitMean(0.4 + 0.3 * i))
+                    .on(TShared).boundTo(ES[i]).synchCall(ELeaf, 2).repliesTo(ES[i]);
+        }
+        new Activity(m, "AL", Exp.fitMean(0.3)).on(TLeaf).boundTo(ELeaf).repliesTo(ELeaf);
+
+        assertResultsMatchSolverLN(m);
+    }
+
+    @Test
+    @Timeout(180)
+    public void minimal_multiClassPushBack() {
+        LayeredNetwork m = new LayeredNetwork("min_multiclass_pushback");
+        Processor PRef = new Processor(m, "PR", Integer.MAX_VALUE, SchedStrategy.INF);
+        Processor PSh  = new Processor(m, "PSh", 1, SchedStrategy.PS);
+        Processor PL   = new Processor(m, "PL", 4, SchedStrategy.PS);
+
+        Task TShared = new Task(m, "TShared", 1, SchedStrategy.FCFS).on(PSh);
+        Task TLeaf   = new Task(m, "TLeaf", Integer.MAX_VALUE, SchedStrategy.INF).on(PL);
+
+        Entry ELeaf = new Entry(m, "ELeaf").on(TLeaf);
+        new Activity(m, "AL", Exp.fitMean(0.3)).on(TLeaf).boundTo(ELeaf).repliesTo(ELeaf);
+
+        for (int i = 0; i < 2; i++) {
+            Entry ES_i = new Entry(m, "ES" + (i + 1)).on(TShared);
+            Task R_i = new Task(m, "R" + (i + 1), 10, SchedStrategy.REF)
+                    .on(PRef).setThinkTime(Exp.fitMean(1.0));
+            Entry ER_i = new Entry(m, "ER" + (i + 1)).on(R_i);
+            new Activity(m, "A" + (i + 1), Immediate.getInstance())
+                    .on(R_i).boundTo(ER_i).synchCall(ES_i, 1);
+            new Activity(m, "AS" + (i + 1), Exp.fitMean(0.4 + 0.3 * i))
+                    .on(TShared).boundTo(ES_i).synchCall(ELeaf, 1).repliesTo(ES_i);
+        }
+
+        assertResultsMatchSolverLN(m);
+    }
+
 
 }

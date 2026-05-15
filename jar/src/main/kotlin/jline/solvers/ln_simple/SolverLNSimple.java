@@ -292,7 +292,19 @@ public class SolverLNSimple {
         Network layer = s.layer;
         String calleeTask = LqnGraph.stripPrefix(s.serverQueue.getName());
         String callerTask = LqnGraph.stripPrefix(MvaInputs.getMainClass(layer).getName());
-        double throughput = s.res.X.get(0, 0);
+        // Sum across caller classes: a multi-class task layer's <i>task</i>-level
+        // throughput is the sum of per-caller-class visit rates, not just the
+        // first class's tput. Q likewise aggregates across classes; R = Q/X is
+        // then the visit-weighted mean per-call response.
+        int R_task = s.res.X.getNumCols();
+        double throughput = 0.0;
+        double q_server = 0.0;
+        for (int rc = 0; rc < R_task; rc++) {
+            double xr = s.res.X.get(0, rc);
+            double qr = s.res.Q.get(s.serverIdx, rc);
+            if (Double.isFinite(xr)) throughput += xr;
+            if (Double.isFinite(qr)) q_server += qr;
+        }
 
         // (1) + (2): refresh think times even if this solve is degenerate, so that
         // later sweeps can recover to finite values.
@@ -303,7 +315,6 @@ public class SolverLNSimple {
 
         // (4) server-only response time.
         double R_task_total = Double.NaN;
-        double q_server = s.res.Q.get(s.serverIdx, 0);
         if (Double.isFinite(q_server)) R_task_total = q_server / throughput;
         if (!Double.isFinite(R_task_total)) return;
 
@@ -319,7 +330,7 @@ public class SolverLNSimple {
         double syncCallMean = LqnGraph.getSyncCallMean(lqnModel, callerTask, calleeTask);
         double propagatedTaskResp = LqnGraph.taskHasSyncCallees(lqnModel, calleeTask)
                 ? R_task_total * syncCallMean : R_task_total;
-        pushResponseToCallerTaskLayer(l, callerTask, propagatedTaskResp);
+        pushResponseToCallerTaskLayer(l, callerTask, calleeTask, propagatedTaskResp, syncCallMean);
 
         // (7) callee's host-layer Clients.
         updateCalleeHostLayerClients(l, calleeTask, s, R_task_total);
@@ -387,8 +398,19 @@ public class SolverLNSimple {
 
         if (xCaller != null && xCaller > EPS && sojournCallee != null && callerThink <= 1e-9) {
             double nCaller = callerCl.getNumberOfJobs();
-            double cMean = Math.max(1.0, LqnGraph.getSyncCallMean(lqnModel, callerTask, calleeTask));
-            return Math.max(0.0, nCaller / xCaller - cMean * sojournCallee);
+            // Time the caller spends per visit at this callee:
+            //   leaf: sojournCallee is already a per-visit R (T:-layer D was set as
+            //         per-visit callMean × hostDemand), so no extra cMean multiplier.
+            //   intermediate: sojournCallee is per single call, so multiply by the
+            //         per-visit call mean to get per-visit time at callee.
+            double timeAtCalleePerVisit;
+            if (LqnGraph.taskHasSyncCallees(lqnModel, calleeTask)) {
+                double cMean = Math.max(1.0, LqnGraph.getSyncCallMean(lqnModel, callerTask, calleeTask));
+                timeAtCalleePerVisit = cMean * sojournCallee;
+            } else {
+                timeAtCalleePerVisit = sojournCallee;
+            }
+            return Math.max(0.0, nCaller / xCaller - timeAtCalleePerVisit);
         }
         double refChainThink = LqnGraph.getRootRefThinkTime(lqnModel, callerTask)
                 + LqnGraph.computeCallerChainDemand(lqnModel, callerTask);
@@ -464,17 +486,92 @@ public class SolverLNSimple {
         clients.setService(mainCls, Exp.fitMean(clamp(newZ)));
     }
 
-    /** Step (6): write {@code D_local_caller + R_callee} to the caller's T: layer server. */
-    private void pushResponseToCallerTaskLayer(int currentLayerIdx, String callerTask, double propagatedTaskResp) {
+    /**
+     * Step (6): write per-class {@code D_local + R_callee_share} to the caller's
+     * T: layer server.
+     *
+     * <p>For a single-class caller layer this reduces to the plain
+     * {@code localDemand(callerTask) + propagatedTaskResp}. For a multi-class
+     * caller layer (e.g. a shared task called by several REF caller classes)
+     * each class's demand is recomputed per-class:
+     *
+     * <ul>
+     *   <li><b>per-class local demand</b> = Σ over class-task activities that
+     *       sync-call into {@code callerTask}: {@code callMean × hostDemand(bound activity)}.
+     *       (This is the same formula {@link EnsembleInitialiser#setPerCallerDemand}
+     *       uses for initial per-class demand.)</li>
+     *   <li><b>per-class downstream share</b> =
+     *       {@code propagatedTaskResp × (perClassCallMean / totalCallMeanToCallee)},
+     *       where {@code perClassCallMean} = Σ over bound activities' sync-calls
+     *       into {@code calleeTask}: {@code callMean(boundAct → calleeTask)}.</li>
+     * </ul>
+     *
+     * Apportioning by callMean fraction works for both leaf and intermediate
+     * callees because {@code propagatedTaskResp} = total {@code callMean} ×
+     * per-call response in both cases (see step (4) → (6) above).
+     */
+    private void pushResponseToCallerTaskLayer(int currentLayerIdx, String callerTask,
+                                                String calleeTask, double propagatedTaskResp,
+                                                double totalCallMeanToCallee) {
         Integer callerTaskLayer = queueNameToLayer.get("T:" + callerTask);
         if (callerTaskLayer == null || callerTaskLayer == currentLayerIdx) return;
         Network callerLayer = ensemble.get(callerTaskLayer);
         Queue callerServer = MvaInputs.findNonDelayQueue(callerLayer);
         if (callerServer == null) return;
-        JobClass cls = findActiveQueueClass(callerLayer);
-        if (cls == null) return;
-        double localDemand = LqnGraph.computeLocalDemand(lqnModel, callerTask);
-        callerServer.setService(cls, Exp.fitMean(clamp(localDemand + propagatedTaskResp)));
+
+        List<ClosedClass> classes = MvaInputs.getClosedClasses(callerLayer);
+        if (classes.size() <= 1) {
+            // Single-class layer: keep the original aggregate formula.
+            JobClass cls = findActiveQueueClass(callerLayer);
+            if (cls == null) return;
+            double localDemand = LqnGraph.computeLocalDemand(lqnModel, callerTask);
+            callerServer.setService(cls, Exp.fitMean(clamp(localDemand + propagatedTaskResp)));
+            return;
+        }
+
+        // Multi-class layer: write per-class D_r = local_r + share_r × propagatedTaskResp.
+        boolean canApportion = Double.isFinite(totalCallMeanToCallee) && totalCallMeanToCallee > 0;
+        for (ClosedClass cc : classes) {
+            String classTaskName = LqnGraph.stripPrefix(cc.getName());
+            Task classTask = LqnGraph.findTask(lqnModel, classTaskName);
+            if (classTask == null) continue;
+
+            double localPerClass = 0.0;
+            double classCallMeanToCallee = 0.0;
+            for (Activity act : classTask.getActivities()) {
+                Map<Integer, String> dests = act.getSyncCallDests();
+                if (dests == null || dests.isEmpty()) continue;
+                Matrix means = act.getSyncCallMeans();
+                for (Map.Entry<Integer, String> ce : dests.entrySet()) {
+                    Entry calledEntry = LqnGraph.findEntry(lqnModel, ce.getValue());
+                    if (calledEntry == null || calledEntry.getParent() == null) continue;
+                    if (!callerTask.equals(calledEntry.getParent().getName())) continue;
+                    int idx = ce.getKey();
+                    double classCM = (means != null && means.getNumCols() > idx) ? means.get(0, idx) : 1.0;
+                    if (!Double.isFinite(classCM) || classCM <= 0) continue;
+                    localPerClass += classCM * LqnGraph.hostDemandOfBoundActivity(calledEntry);
+                    Activity bound = LqnGraph.findBoundActivity(calledEntry);
+                    if (bound == null) continue;
+                    Map<Integer, String> bDests = bound.getSyncCallDests();
+                    if (bDests == null || bDests.isEmpty()) continue;
+                    Matrix bMeans = bound.getSyncCallMeans();
+                    for (Map.Entry<Integer, String> bce : bDests.entrySet()) {
+                        Entry bCallee = LqnGraph.findEntry(lqnModel, bce.getValue());
+                        if (bCallee == null || bCallee.getParent() == null) continue;
+                        if (!calleeTask.equals(bCallee.getParent().getName())) continue;
+                        int bIdx = bce.getKey();
+                        double bCM = (bMeans != null && bMeans.getNumCols() > bIdx) ? bMeans.get(0, bIdx) : 1.0;
+                        if (Double.isFinite(bCM) && bCM > 0) classCallMeanToCallee += classCM * bCM;
+                    }
+                }
+            }
+
+            double share = canApportion ? classCallMeanToCallee / totalCallMeanToCallee : 0.0;
+            double downstream = share * propagatedTaskResp;
+            double dr = localPerClass + downstream;
+            if (!Double.isFinite(dr) || dr <= 0) continue;
+            callerServer.setService(cc, Exp.fitMean(clamp(dr)));
+        }
     }
 
     /**
