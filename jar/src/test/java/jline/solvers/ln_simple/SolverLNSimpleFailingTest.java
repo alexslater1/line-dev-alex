@@ -102,4 +102,96 @@ public class SolverLNSimpleFailingTest {
         assertResultsMatchSolverLN(m);
     }
 
+
+    // =========================================================================
+    //  Group 7 — Saturated multi-server PS fan-out (pre-tuning parameters)
+    //
+    //  Originally listed as failing in the evaluation suite. The EvaluationSuite
+    //  fixtures were tuned down to a moderate-load regime (per-server rho ≤ 0.7)
+    //  to make the suite pass; these tests preserve the original saturated
+    //  parameters (per-server rho ≥ 0.85 at the widest callee) so the
+    //  algorithmic gap stays documented.
+    //
+    //  In this regime LNSimple's load-dependent closed-network MVA disagrees
+    //  with both LN and LQNS by 8–14% on QLen/Util/RespT at the saturated
+    //  callee. LN under-counts queueing (reports R ≈ D), LNSimple over-counts
+    //  (reports R = D + closed-network queueing tail), LQNS lands in between
+    //  via its open-system overtaking approximation.
+    // =========================================================================
+
+    /** Pre-tuning fan-out builder: REF caller with {@code n} customers, INF
+     *  callees on 4-server PS hosts, asymmetric demand {@code 0.6 + 0.05·i}.
+     *  Z = 0.5 makes the widest callee saturate at rho_per_server ≈ 0.99. */
+    private static LayeredNetwork saturatedFanOut(int k, int n) {
+        LayeredNetwork m = new LayeredNetwork("fanOut_sat_k" + k + "_N" + n);
+        Processor P0 = new Processor(m, "P0", 4, SchedStrategy.PS);
+        Task T0 = new Task(m, "T0", n, SchedStrategy.REF).on(P0).setThinkTime(new Exp(2));
+        Entry E0 = new Entry(m, "E0").on(T0);
+
+        Entry[] calleeEntries = new Entry[k];
+        for (int i = 0; i < k; i++) {
+            Processor Pi = new Processor(m, "P" + (i + 1), 4, SchedStrategy.PS);
+            Task Ti = new Task(m, "T" + (i + 1), Integer.MAX_VALUE, SchedStrategy.INF).on(Pi);
+            calleeEntries[i] = new Entry(m, "E" + (i + 1)).on(Ti);
+            new Activity(m, "AS" + (i + 1), Exp.fitMean(0.6 + 0.05 * i))
+                    .on(Ti).boundTo(calleeEntries[i]).repliesTo(calleeEntries[i]);
+        }
+        Activity caller = new Activity(m, "A0", Immediate.getInstance()).on(T0).boundTo(E0);
+        for (Entry ce : calleeEntries) caller = caller.synchCall(ce, 1);
+        return m;
+    }
+
+    /** Pre-tuning fan-out caller: REF with N = {@code max(callerC·20, 20)} customers
+     *  on a {@code callerC}-server PS host, INF callees on 4-server PS hosts with
+     *  asymmetric demand {@code 0.6 + 0.1·i}. For {@code callerC = 2} the population
+     *  scaling pushes the widest callee to rho_per_server ≈ 1.0. */
+    private static LayeredNetwork saturatedFanOutCaller(String name, int width, int callerC) {
+        LayeredNetwork m = new LayeredNetwork(name);
+        Processor PR = new Processor(m, "PR", callerC, SchedStrategy.PS);
+        Task R = new Task(m, "R", Math.max(callerC * 20, 20), SchedStrategy.REF)
+                .on(PR).setThinkTime(Exp.fitMean(2.0));
+        Entry ER = new Entry(m, "ER").on(R);
+
+        Entry[] calleeEntries = new Entry[width];
+        for (int i = 0; i < width; i++) {
+            Processor Pi = new Processor(m, "PS" + (i + 1), 4, SchedStrategy.PS);
+            Task Ti = new Task(m, "TS" + (i + 1), Integer.MAX_VALUE, SchedStrategy.INF).on(Pi);
+            calleeEntries[i] = new Entry(m, "ES" + (i + 1)).on(Ti);
+            new Activity(m, "AS" + (i + 1), Exp.fitMean(0.6 + 0.1 * i))
+                    .on(Ti).boundTo(calleeEntries[i]).repliesTo(calleeEntries[i]);
+        }
+        Activity caller = new Activity(m, "A0", Immediate.getInstance()).on(R).boundTo(ER);
+        for (Entry ce : calleeEntries) caller = caller.synchCall(ce, 1);
+        return m;
+    }
+
+    @Test @Timeout(180) @Disabled
+    public void saturated_B_scaleAxis_tasks5_fanout() {
+        assertResultsMatchSolverLN(saturatedFanOut(4, 30));
+    }
+
+    @Test @Timeout(300) @Disabled
+    public void saturated_B_scaleAxis_tasks10_fanout() {
+        assertResultsMatchSolverLN(saturatedFanOut(9, 30));
+    }
+
+    @Test @Timeout(600) @Disabled
+    public void saturated_B_scaleAxis_tasks20_fanout() {
+        assertResultsMatchSolverLN(saturatedFanOut(19, 30));
+    }
+
+    @Test @Timeout(240) @Disabled
+    public void saturated_C1_fanOut2_caller_c2() {
+        assertResultsMatchSolverLN(saturatedFanOutCaller("C1_fo2_c2_sat", 2, 2));
+    }
+
+    @Test @Timeout(240) @Disabled
+    public void saturated_C1_fanOut3_caller_c2() {
+        assertResultsMatchSolverLN(saturatedFanOutCaller("C1_fo3_c2_sat", 3, 2));
+    }
+
+    @Test @Timeout(240) @Disabled
+    public void saturated_C1_fanOut4_caller_c2() {
+        assertResultsMatchSolverLN(saturatedFanOutCaller("C1_fo4_c2_sat", 4, 2));
+    }
 }

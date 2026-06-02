@@ -158,12 +158,37 @@ public final class ResultsCollector {
         for (Map.Entry<String, List<Task>> e : procToNonRefTasks.entrySet()) {
             if (e.getValue().size() != 1) continue;
             Task hostedTask = e.getValue().get(0);
+            // For multi-class workloads (asymmetric demand per caller) we must
+            // sum X_r · D_r per class, not aggregate tx · d_total. The latter
+            // double-counts when callers split throughput unevenly. (2d) does
+            // this correctly for finite-server processors; for INF processors
+            // (skipped by (2d)) we replicate the per-class sum here.
+            String procName = e.getKey();
+            boolean isInfProc = LqnGraph.isInfProcessor(model, procName);
+            Double c = st.processorServers.get(procName);
+            if (c == null || c <= 0) continue;
+            if (isInfProc) {
+                double utilSum = 0.0;
+                boolean hasCaller = false;
+                for (Task caller : model.getTasks().values()) {
+                    double dr = LqnGraph.callerDemandOnTask(model, caller.getName(), hostedTask.getName());
+                    if (dr <= 0) continue;
+                    Double xCaller = st.taskTput.get(caller.getName());
+                    if (xCaller == null || xCaller <= 0) continue;
+                    utilSum += xCaller * dr / c;
+                    hasCaller = true;
+                }
+                if (hasCaller) {
+                    st.processorUtil.put(procName, utilSum);
+                    st.taskUtil.put(hostedTask.getName(), utilSum);
+                }
+                continue;
+            }
             Double tx = st.taskTput.get(hostedTask.getName());
-            Double d = st.processorDemand.get(e.getKey());
-            Double c = st.processorServers.get(e.getKey());
-            if (tx != null && tx > 0 && d != null && c != null && c > 0) {
+            Double d = st.processorDemand.get(procName);
+            if (tx != null && tx > 0 && d != null) {
                 double newUtil = Math.min(tx * d / c, 1.0);
-                st.processorUtil.put(e.getKey(), newUtil);
+                st.processorUtil.put(procName, newUtil);
                 st.taskUtil.put(hostedTask.getName(), newUtil);
             }
         }
