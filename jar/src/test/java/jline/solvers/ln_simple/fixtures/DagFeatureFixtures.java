@@ -350,9 +350,9 @@ public final class DagFeatureFixtures {
     // =========================================================================
 
     /**
-     * AND_FORK + AND_JOIN, two parallel branches of equal demand on INF
-     * hosts. The join completes in max(1.0, 1.0)=1.0; current code sums
-     * activity demands so caller perceives R(T2)≈2.0.
+     * AND_FORK + AND_JOIN, two parallel branches of equal exponential demand
+     * on INF hosts. LN/LQNS perceived R = E[max(exp(1), exp(1))] = 1.5
+     * (= 1 + 1 − 0.5 by inclusion-exclusion); processor sum = 2.0.
      */
     public static LayeredNetwork D_andForkJoin() {
         LayeredNetwork m = new LayeredNetwork("D_andForkJoin");
@@ -378,9 +378,10 @@ public final class DagFeatureFixtures {
     }
 
     /**
-     * AND_FORK with unequal branches: max should pick the larger (1.0),
-     * not the smaller (0.3) or the sum (1.3). Equal-branch fixtures alone
-     * don't prove max-aggregation is happening — this one does.
+     * AND_FORK with unequal branches D=1.0 and D=0.3 on INF hosts. LN/LQNS
+     * perceived R = E[max(exp(1), exp(0.3))] = 1 + 0.3 − 0.3/1.3 = 1.069;
+     * processor sum = 1.3. Equal-branch fixtures alone don't disambiguate
+     * E[max] from naive max — this one does.
      */
     public static LayeredNetwork D_andForkUnequal() {
         LayeredNetwork m = new LayeredNetwork("D_andForkUnequal");
@@ -402,6 +403,162 @@ public final class DagFeatureFixtures {
 
         T2.addPrecedence(ActivityPrecedence.AndFork(A_fork, Arrays.asList(A_slow, A_fast)));
         T2.addPrecedence(ActivityPrecedence.AndJoin(Arrays.asList(A_slow, A_fast), A_join));
+        return m;
+    }
+
+    // =========================================================================
+    //  AND_FORK diagnostic edge cases
+    //
+    //  These probe distinct aspects of the AND_FORK semantics so failures can
+    //  be localised to a specific dimension (branch count, outside-fork work,
+    //  finite-server host, multi-activity branches). LN/LQNS use the
+    //  Heidelberger–Trivedi E[max] formula (Franks thesis eq. 2.6) for the
+    //  AND-join delay, which the implementation in LqnGraph mirrors.
+    // =========================================================================
+
+    /**
+     * AND_FORK with three equal parallel branches on an INF host. Tests
+     * generalisation of E[max] beyond two branches.
+     * <pre>
+     *   T2: E2 -> A_fork -AndFork-> [A_p1(D=1), A_p2(D=1), A_p3(D=1)] -AndJoin-> A_join
+     * </pre>
+     * E[max of 3 equal exponentials] = D × H_3 = 1·(1+½+⅓) = 1.833;
+     * processor sum = 3.0.
+     */
+    public static LayeredNetwork D_andForkThreeWay() {
+        LayeredNetwork m = new LayeredNetwork("D_andForkThreeWay");
+        Processor PR = new Processor(m, "PR", Integer.MAX_VALUE, SchedStrategy.INF);
+        Processor PS = new Processor(m, "PS", Integer.MAX_VALUE, SchedStrategy.INF);
+
+        Task T1 = new Task(m, "T1", 15, SchedStrategy.REF).on(PR).setThinkTime(Exp.fitMean(2.0));
+        Task T2 = new Task(m, "T2", Integer.MAX_VALUE, SchedStrategy.INF).on(PS);
+
+        Entry E1 = new Entry(m, "E1").on(T1);
+        Entry E2 = new Entry(m, "E2").on(T2);
+
+        new Activity(m, "A1", Immediate.getInstance()).on(T1).boundTo(E1).synchCall(E2, 1);
+
+        Activity A_fork = new Activity(m, "A_fork", Immediate.getInstance()).on(T2).boundTo(E2);
+        Activity A_p1 = new Activity(m, "A_p1", Exp.fitMean(1.0)).on(T2);
+        Activity A_p2 = new Activity(m, "A_p2", Exp.fitMean(1.0)).on(T2);
+        Activity A_p3 = new Activity(m, "A_p3", Exp.fitMean(1.0)).on(T2);
+        Activity A_join = new Activity(m, "A_join", Immediate.getInstance()).on(T2).repliesTo(E2);
+
+        T2.addPrecedence(ActivityPrecedence.AndFork(A_fork, Arrays.asList(A_p1, A_p2, A_p3)));
+        T2.addPrecedence(ActivityPrecedence.AndJoin(Arrays.asList(A_p1, A_p2, A_p3), A_join));
+        return m;
+    }
+
+    /**
+     * AND_FORK sandwiched between non-fork activities. Tests that "outside"
+     * host demand is added to the E[max] correctly (not lost or
+     * summed-twice with branches).
+     * <pre>
+     *   T2: E2 -> A_pre(D=0.2) -> A_fork
+     *           -AndFork-> [A_p1(D=1), A_p2(D=1)]
+     *           -AndJoin-> A_join -> A_post(D=0.3, replies)
+     * </pre>
+     * Caller R = 0.2 + E[max(1,1)] + 0.3 = 0.2 + 1.5 + 0.3 = 2.0;
+     * processor sum = 0.2 + 1 + 1 + 0.3 = 2.5.
+     */
+    public static LayeredNetwork D_andForkOutsideWork() {
+        LayeredNetwork m = new LayeredNetwork("D_andForkOutsideWork");
+        Processor PR = new Processor(m, "PR", Integer.MAX_VALUE, SchedStrategy.INF);
+        Processor PS = new Processor(m, "PS", Integer.MAX_VALUE, SchedStrategy.INF);
+
+        Task T1 = new Task(m, "T1", 15, SchedStrategy.REF).on(PR).setThinkTime(Exp.fitMean(2.0));
+        Task T2 = new Task(m, "T2", Integer.MAX_VALUE, SchedStrategy.INF).on(PS);
+
+        Entry E1 = new Entry(m, "E1").on(T1);
+        Entry E2 = new Entry(m, "E2").on(T2);
+
+        new Activity(m, "A1", Immediate.getInstance()).on(T1).boundTo(E1).synchCall(E2, 1);
+
+        Activity A_pre  = new Activity(m, "A_pre",  Exp.fitMean(0.2)).on(T2).boundTo(E2);
+        Activity A_fork = new Activity(m, "A_fork", Immediate.getInstance()).on(T2);
+        Activity A_p1   = new Activity(m, "A_p1",   Exp.fitMean(1.0)).on(T2);
+        Activity A_p2   = new Activity(m, "A_p2",   Exp.fitMean(1.0)).on(T2);
+        Activity A_join = new Activity(m, "A_join", Immediate.getInstance()).on(T2);
+        Activity A_post = new Activity(m, "A_post", Exp.fitMean(0.3)).on(T2).repliesTo(E2);
+
+        T2.addPrecedence(ActivityPrecedence.Serial(A_pre, A_fork));
+        T2.addPrecedence(ActivityPrecedence.AndFork(A_fork, Arrays.asList(A_p1, A_p2)));
+        T2.addPrecedence(ActivityPrecedence.AndJoin(Arrays.asList(A_p1, A_p2), A_join));
+        T2.addPrecedence(ActivityPrecedence.Serial(A_join, A_post));
+        return m;
+    }
+
+    /**
+     * AND_FORK on a finite-server (c=1 PS) host. Sibling branches contend
+     * for the single server, which the closed-form E[max] does not capture
+     * — Franks thesis §8.2.1 CCD overlap compensation is the principled
+     * fix and is out of scope for Phase B. Kept as a {@code @Disabled}
+     * diagnostic to make the gap visible.
+     * <pre>
+     *   PS = 1-server PS; T2 (INF) hosts AND_FORK with two D=0.5 branches.
+     * </pre>
+     */
+    public static LayeredNetwork D_andForkPsHost() {
+        LayeredNetwork m = new LayeredNetwork("D_andForkPsHost");
+        Processor PR = new Processor(m, "PR", Integer.MAX_VALUE, SchedStrategy.INF);
+        Processor PS = new Processor(m, "PS", 1, SchedStrategy.PS);
+
+        Task T1 = new Task(m, "T1", 10, SchedStrategy.REF).on(PR).setThinkTime(Exp.fitMean(2.0));
+        Task T2 = new Task(m, "T2", Integer.MAX_VALUE, SchedStrategy.INF).on(PS);
+
+        Entry E1 = new Entry(m, "E1").on(T1);
+        Entry E2 = new Entry(m, "E2").on(T2);
+
+        new Activity(m, "A1", Immediate.getInstance()).on(T1).boundTo(E1).synchCall(E2, 1);
+
+        Activity A_fork = new Activity(m, "A_fork", Immediate.getInstance()).on(T2).boundTo(E2);
+        Activity A_p1   = new Activity(m, "A_p1",   Exp.fitMean(0.5)).on(T2);
+        Activity A_p2   = new Activity(m, "A_p2",   Exp.fitMean(0.5)).on(T2);
+        Activity A_join = new Activity(m, "A_join", Immediate.getInstance()).on(T2).repliesTo(E2);
+
+        T2.addPrecedence(ActivityPrecedence.AndFork(A_fork, Arrays.asList(A_p1, A_p2)));
+        T2.addPrecedence(ActivityPrecedence.AndJoin(Arrays.asList(A_p1, A_p2), A_join));
+        return m;
+    }
+
+    /**
+     * Each AND_FORK branch is a two-activity sequence rather than a single
+     * activity. Tests that {@code collectBranchDemand} correctly walks
+     * POST_SEQ continuations within a branch and that
+     * {@code findMatchingAndJoin} matches starters to join preActs
+     * bijectively (since they're not the same set).
+     * <pre>
+     *   T2: E2 -> A_fork
+     *     -AndFork-> [A_p1a -> A_p1b, A_p2a -> A_p2b]
+     *     -AndJoin([A_p1b, A_p2b], A_join, replies to E2)
+     * </pre>
+     * Each branch sums to 0.8 (exponential approximation of the within-branch
+     * total). Caller R = E[max(exp(0.8), exp(0.8))] = 1.2; processor sum = 1.6.
+     */
+    public static LayeredNetwork D_andForkMultiActivityBranches() {
+        LayeredNetwork m = new LayeredNetwork("D_andForkMultiActivityBranches");
+        Processor PR = new Processor(m, "PR", Integer.MAX_VALUE, SchedStrategy.INF);
+        Processor PS = new Processor(m, "PS", Integer.MAX_VALUE, SchedStrategy.INF);
+
+        Task T1 = new Task(m, "T1", 12, SchedStrategy.REF).on(PR).setThinkTime(Exp.fitMean(2.0));
+        Task T2 = new Task(m, "T2", Integer.MAX_VALUE, SchedStrategy.INF).on(PS);
+
+        Entry E1 = new Entry(m, "E1").on(T1);
+        Entry E2 = new Entry(m, "E2").on(T2);
+
+        new Activity(m, "A1", Immediate.getInstance()).on(T1).boundTo(E1).synchCall(E2, 1);
+
+        Activity A_fork = new Activity(m, "A_fork", Immediate.getInstance()).on(T2).boundTo(E2);
+        Activity A_p1a  = new Activity(m, "A_p1a",  Exp.fitMean(0.4)).on(T2);
+        Activity A_p1b  = new Activity(m, "A_p1b",  Exp.fitMean(0.4)).on(T2);
+        Activity A_p2a  = new Activity(m, "A_p2a",  Exp.fitMean(0.6)).on(T2);
+        Activity A_p2b  = new Activity(m, "A_p2b",  Exp.fitMean(0.2)).on(T2);
+        Activity A_join = new Activity(m, "A_join", Immediate.getInstance()).on(T2).repliesTo(E2);
+
+        T2.addPrecedence(ActivityPrecedence.AndFork(A_fork, Arrays.asList(A_p1a, A_p2a)));
+        T2.addPrecedence(ActivityPrecedence.Serial(A_p1a, A_p1b));
+        T2.addPrecedence(ActivityPrecedence.Serial(A_p2a, A_p2b));
+        T2.addPrecedence(ActivityPrecedence.AndJoin(Arrays.asList(A_p1b, A_p2b), A_join));
         return m;
     }
 

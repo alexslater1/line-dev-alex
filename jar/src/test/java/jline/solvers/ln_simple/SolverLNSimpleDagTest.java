@@ -4,6 +4,7 @@ import jline.GlobalConstants;
 import jline.VerboseLevel;
 import jline.solvers.ln_simple.fixtures.DagFeatureFixtures;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
@@ -21,7 +22,7 @@ import static jline.solvers.ln_simple.util.assertResultsMatchSolverLN;
  * <ul>
  *   <li><b>Phase A</b> — visit-weight DAG walk (sequence past bound activity,
  *       OR_FORK branch probabilities, POST_LOOP multipliers).</li>
- *   <li><b>Phase B</b> — AND_FORK response-time max-aggregation.</li>
+ *   <li><b>Phase B</b> — AND_FORK response-time E[max] aggregation.</li>
  *   <li><b>Phase C</b> — REPLY phase-1 / phase-2 split.</li>
  * </ul>
  *
@@ -55,6 +56,18 @@ public class SolverLNSimpleDagTest {
 
     @Test @Timeout(180) public void andForkJoin()        { assertResultsMatchSolverLN(DagFeatureFixtures::D_andForkJoin); }
     @Test @Timeout(180) public void andForkUnequal()     { assertResultsMatchSolverLN(DagFeatureFixtures::D_andForkUnequal); }
+
+    // Diagnostic edge cases — make the AND_FORK semantics gap easier to localise.
+    @Test @Timeout(180) public void andForkThreeWay()            { assertResultsMatchSolverLN(DagFeatureFixtures::D_andForkThreeWay); }
+    @Test @Timeout(180) public void andForkOutsideWork()         { assertResultsMatchSolverLN(DagFeatureFixtures::D_andForkOutsideWork); }
+    @Test @Timeout(180) public void andForkMultiActivityBranches(){ assertResultsMatchSolverLN(DagFeatureFixtures::D_andForkMultiActivityBranches); }
+
+    // AND_FORK on a finite-server (c=1 PS) host. Saturation queueing on
+    // siblings requires CCD overlap compensation (Franks thesis §8.2.1)
+    // which materialises per-branch MVA chains and adjusts the
+    // contention term L_mj — out of scope for Phase B. The closed-form
+    // E[max] used here is only correct when branches don't contend.
+    @Test @Timeout(180) public void andForkPsHost()    { assertResultsMatchSolverLN(DagFeatureFixtures::D_andForkPsHost); }
 
     // =========================================================================
     //  Phase C — REPLY phase split

@@ -140,8 +140,16 @@ final class OutputTableBuilder {
             double taskQ = mapGet(st.taskQLen, parentTaskName, 0.0);
             double parentTput = mapGet(st.taskTput, parentTaskName, 0.0);
             double callerTput = computeEntryCallerTput(entry, model, st.taskTput);
-            double entryFraction = (parentTput > 0 && callerTput > 0) ? Math.min(1.0, callerTput / parentTput) : 1.0;
             Task parentTask = LqnGraph.findTask(model, parentTaskName);
+            // Single-entry tasks: the entry inherits the full task throughput
+            // (no other entry to split with). Skipping the fractional path
+            // matters when parentTput was post-corrected for AND_FORK
+            // (callerTput < parentTput then, so the min(.) cap would clip
+            // wrongly).
+            boolean singleEntry = parentTask != null && parentTask.getEntries() != null
+                    && parentTask.getEntries().size() == 1;
+            double entryFraction = singleEntry ? 1.0
+                    : ((parentTput > 0 && callerTput > 0) ? Math.min(1.0, callerTput / parentTput) : 1.0);
             double qFraction = (parentTask != null && parentTask.getScheduling() != SchedStrategy.REF
                     && entryQlenFraction.containsKey(entry.getName()))
                     ? entryQlenFraction.get(entry.getName())
@@ -289,6 +297,11 @@ final class OutputTableBuilder {
         if (boundEntry == null || boundEntry.isEmpty()) return 1.0;
         Entry boundE = LqnGraph.findEntry(model, boundEntry);
         if (boundE == null) return 1.0;
+        // Single-entry tasks: skip the fractional cap (see appendEntryRows).
+        Task parent = act.getParent();
+        if (parent != null && parent.getEntries() != null && parent.getEntries().size() == 1) {
+            return 1.0;
+        }
         double pTput = mapGet(taskTput, parentTaskName, 0.0);
         double cTput = computeEntryCallerTput(boundE, model, taskTput);
         if (pTput > 0 && cTput > 0) return Math.min(1.0, cTput / pTput);
@@ -531,10 +544,11 @@ final class OutputTableBuilder {
 
     /**
      * Host-demand-weighted entry-Util split. For each non-REF task, weight its
-     * entries by {@code (callerTput × hostDemandOfEntry)} (the processor
-     * occupancy share — no downstream contribution). Companion to
-     * {@link #computeEntryQLenFractions}: utilization splits by host-demand
-     * only, queue length splits by full per-call demand.
+     * entries by {@code (callerTput × processorDemandOfEntry)} (the processor
+     * occupancy share — no downstream contribution, AND_FORK branches summed).
+     * Companion to {@link #computeEntryQLenFractions}: utilization splits by
+     * processor-occupancy host demand, queue length splits by caller-perceived
+     * per-call demand.
      */
     private static Map<String, Double> computeEntryUtilFractions(LayeredNetwork model, ResultsState st) {
         Map<String, Double> fractions = new HashMap<String, Double>();
@@ -546,9 +560,10 @@ final class OutputTableBuilder {
             Map<String, Double> numerators = new HashMap<String, Double>();
             for (Entry e : taskEntries) {
                 double cTput = computeEntryCallerTput(e, model, st.taskTput);
-                // Use the full DAG-walked host demand so multi-activity entries
-                // get a proportional share of the task's processor occupancy.
-                double D = LqnGraph.hostDemandOfEntry(e);
+                // Use the processor-occupancy DAG-walk so multi-activity entries
+                // (including AND_FORK branches) get a proportional share of the
+                // task's processor occupancy.
+                double D = LqnGraph.processorDemandOfEntry(e);
                 double num = cTput * D;
                 numerators.put(e.getName(), num);
                 denom += num;

@@ -10,7 +10,9 @@ import jline.lang.layered.LayeredNetwork;
 import jline.lang.layered.Task;
 import jline.util.matrix.Matrix;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -140,6 +142,24 @@ public final class LqnGraph {
         return false;
     }
 
+    /** True iff {@code task} contains an AND_FORK→AND_JOIN region inside one
+     *  of its entries' activity DAG. Used by host-layer coupling to skip
+     *  overwriting T:-layer D (which holds caller-perceived MAX) with the
+     *  host's processor SUM. */
+    public static boolean taskHasAndFork(LayeredNetwork model, String taskName) {
+        Task t = findTask(model, taskName);
+        if (t == null) return false;
+        List<ActivityPrecedence> precs = t.getPrecedences();
+        if (precs == null) return false;
+        for (ActivityPrecedence p : precs) {
+            if (ActivityPrecedenceType.POST_AND.equals(p.getPostType())) {
+                List<String> post = p.getPostActs();
+                if (post != null && post.size() >= 2) return true;
+            }
+        }
+        return false;
+    }
+
     /** True iff {@code task} or any (recursive) sync callee has positive host demand. */
     public static boolean hasServerDemandInSubtree(LayeredNetwork model, String taskName) {
         return hasServerDemandInSubtreeImpl(model, taskName, new HashSet<String>());
@@ -222,13 +242,27 @@ public final class LqnGraph {
         return total;
     }
 
-    /** Host demand for one call into {@code destEntry}: walks the activity DAG
-     *  starting at the bound activity, summing {@code visitWeight × hostDemand}
-     *  across every activity reachable through the entry's precedence chain
-     *  (sequence, OR_FORK with branch-prob weighting, AND_FORK with weight 1
-     *  per branch, POST_LOOP with loop-count weighting on body activities).
-     *  Returns 0 if the entry has no bound activity. */
+    /** Caller-perceived host demand for one call into {@code destEntry}: walks
+     *  the activity DAG from the bound activity, summing
+     *  {@code visitWeight × hostDemand} across reachable activities. For
+     *  AND_FORK→AND_JOIN regions, branches contribute their expected max of
+     *  exponential service times instead of the per-branch sum — the caller
+     *  only waits for the slowest branch.
+     *  Returns 0 if the entry has no bound activity. Use
+     *  {@link #processorDemandOfEntry} when the SUM (processor-occupancy)
+     *  view is needed instead. */
     public static double hostDemandOfEntry(Entry destEntry) {
+        return hostDemandOfEntryImpl(destEntry, /*processorSemantics=*/ false);
+    }
+
+    /** Processor-occupancy variant of {@link #hostDemandOfEntry}: AND_FORK
+     *  branches sum (both consume processor time) rather than collapsing to
+     *  E[max]. Used to set P:-layer demand and per-class utilization splits. */
+    public static double processorDemandOfEntry(Entry destEntry) {
+        return hostDemandOfEntryImpl(destEntry, /*processorSemantics=*/ true);
+    }
+
+    private static double hostDemandOfEntryImpl(Entry destEntry, boolean processorSemantics) {
         if (destEntry == null || destEntry.getParent() == null) return 0.0;
         Activity bound = findBoundActivity(destEntry);
         if (bound == null) return 0.0;
@@ -242,7 +276,169 @@ public final class LqnGraph {
             if (Double.isNaN(m) || m <= 1e-9) continue;
             total += w * m;
         }
+        if (!processorSemantics) {
+            total += andForkMaxCorrection(task, weights);
+        }
         return total;
+    }
+
+    /** Replaces each AND_FORK→AND_JOIN region's branch-sum with
+     *  {@link #expectedMaxOfExponentials E[max]}. Returns the (non-positive)
+     *  correction {@code E[max] − Σ branchDemand} summed over matched
+     *  fork/join pairs. This is Heidelberger–Trivedi's CD formula (Franks
+     *  thesis eq. 2.6), which is also the join-delay formula LQNS uses for
+     *  exponential branches. Multi-activity branches collapse the in-branch
+     *  total to a single equivalent exponential — fine when branch CV is
+     *  bounded; see Franks §8.2.2 for the higher-fidelity Jiang three-point
+     *  approximation. Unmatched forks leave the total unchanged. */
+    private static double andForkMaxCorrection(Task task, Map<String, Double> weights) {
+        List<ActivityPrecedence> precs = task.getPrecedences();
+        if (precs == null || precs.isEmpty()) return 0.0;
+        double correction = 0.0;
+        for (ActivityPrecedence forkP : precs) {
+            if (!ActivityPrecedenceType.POST_AND.equals(forkP.getPostType())) continue;
+            List<String> branchStarters = forkP.getPostActs();
+            if (branchStarters == null || branchStarters.size() < 2) continue;
+            ActivityPrecedence joinP = findMatchingAndJoin(precs, branchStarters);
+            if (joinP == null) continue;
+            Set<String> joinPreSet = new HashSet<String>(joinP.getPreActs());
+            List<Double> branchDemands = new ArrayList<Double>();
+            double sum = 0.0;
+            for (String branchStart : branchStarters) {
+                double d = collectBranchDemand(task, branchStart, joinPreSet, weights);
+                if (d > 1e-12) {
+                    branchDemands.add(d);
+                    sum += d;
+                }
+            }
+            if (branchDemands.size() < 2) continue;
+            double emax = expectedMaxOfExponentials(branchDemands);
+            correction += (emax - sum);
+        }
+        return correction;
+    }
+
+    /** Expected value of the maximum of {@code n} independent exponential
+     *  random variables with means {@code D_i}. Uses the inclusion-exclusion
+     *  identity {@code E[max] = Σ_{∅ ≠ S} (−1)^{|S|+1} / Σ_{i∈S} (1/D_i)}.
+     *  Has 2^n − 1 terms; cheap for n ≤ ~10 (typical AND_FORK fanout). */
+    private static double expectedMaxOfExponentials(List<Double> means) {
+        int n = means.size();
+        if (n == 0) return 0.0;
+        if (n == 1) return means.get(0);
+        double total = 0.0;
+        int subsets = 1 << n;
+        for (int mask = 1; mask < subsets; mask++) {
+            double rateSum = 0.0;
+            int bits = 0;
+            for (int i = 0; i < n; i++) {
+                if ((mask & (1 << i)) != 0) {
+                    double d = means.get(i);
+                    if (d <= 1e-12) { rateSum = Double.POSITIVE_INFINITY; break; }
+                    rateSum += 1.0 / d;
+                    bits++;
+                }
+            }
+            if (rateSum <= 0 || !Double.isFinite(rateSum)) continue;
+            double term = 1.0 / rateSum;
+            if ((bits & 1) == 0) term = -term;
+            total += term;
+        }
+        return total;
+    }
+
+    /** Find the PRE_AND precedence that joins the fork with these branch
+     *  starters: each starter has a forward POST_SEQ path to one join preAct,
+     *  with a bijective starter→tip mapping. Handles both direct joins
+     *  (starters == join preActs) and multi-activity branches. Returns
+     *  {@code null} if no such precedence exists. */
+    private static ActivityPrecedence findMatchingAndJoin(List<ActivityPrecedence> precs,
+                                                          List<String> branchStarters) {
+        Set<String> starterSet = new HashSet<String>(branchStarters);
+        for (ActivityPrecedence p : precs) {
+            if (!ActivityPrecedenceType.PRE_AND.equals(p.getPreType())) continue;
+            List<String> joinPre = p.getPreActs();
+            if (joinPre == null) continue;
+            Set<String> joinSet = new HashSet<String>(joinPre);
+            if (joinSet.size() != starterSet.size()) continue;
+            if (joinSet.equals(starterSet)) return p;
+            Set<String> reached = new HashSet<String>();
+            boolean ok = true;
+            for (String start : branchStarters) {
+                String hit = firstReachableJoinPre(start, joinSet, precs);
+                if (hit == null || !reached.add(hit)) { ok = false; break; }
+            }
+            if (ok && reached.equals(joinSet)) return p;
+        }
+        return null;
+    }
+
+    /** Forward DFS from {@code start} along POST_SEQ precedences. Returns the
+     *  first activity in {@code joinPreActs} reached (inclusive of {@code start}
+     *  itself if it is already a join preAct), or {@code null} if none. */
+    private static String firstReachableJoinPre(String start, Set<String> joinPreActs,
+                                                List<ActivityPrecedence> precs) {
+        if (joinPreActs.contains(start)) return start;
+        Set<String> visited = new HashSet<String>();
+        Deque<String> stack = new ArrayDeque<String>();
+        stack.push(start);
+        while (!stack.isEmpty()) {
+            String cur = stack.pop();
+            if (!visited.add(cur)) continue;
+            if (joinPreActs.contains(cur)) return cur;
+            for (ActivityPrecedence p : precs) {
+                if (!ActivityPrecedenceType.POST_SEQ.equals(p.getPostType())) continue;
+                List<String> pre = p.getPreActs();
+                List<String> post = p.getPostActs();
+                if (pre == null || post == null || pre.size() != 1) continue;
+                if (!cur.equals(pre.get(0))) continue;
+                for (String n : post) stack.push(n);
+            }
+        }
+        return null;
+    }
+
+    /** Sum of {@code weight × hostDemand} for one branch of an AND_FORK,
+     *  collected by forward DFS from {@code branchStart} along POST_SEQ
+     *  precedences, including the branch tip (an activity in {@code joinPreActs})
+     *  and stopping there. Avoids re-entering the join. */
+    private static double collectBranchDemand(Task task, String branchStart,
+                                              Set<String> joinPreActs,
+                                              Map<String, Double> weights) {
+        List<ActivityPrecedence> precs = task.getPrecedences();
+        double demand = 0.0;
+        Set<String> visited = new HashSet<String>();
+        Deque<String> stack = new ArrayDeque<String>();
+        stack.push(branchStart);
+        while (!stack.isEmpty()) {
+            String actName = stack.pop();
+            if (!visited.add(actName)) continue;
+            Activity a = findActivityInTask(task, actName);
+            if (a != null) {
+                Double w = weights.get(actName);
+                double m = a.getHostDemandMean();
+                if (w != null && w > 1e-12 && !Double.isNaN(m) && m > 1e-9) {
+                    demand += w * m;
+                }
+            }
+            if (joinPreActs.contains(actName)) continue;
+            for (ActivityPrecedence p : precs) {
+                if (!ActivityPrecedenceType.POST_SEQ.equals(p.getPostType())) continue;
+                List<String> pre = p.getPreActs();
+                List<String> post = p.getPostActs();
+                if (pre == null || post == null) continue;
+                if (pre.size() != 1 || !actName.equals(pre.get(0))) continue;
+                for (String n : post) stack.push(n);
+            }
+        }
+        return demand;
+    }
+
+    private static Activity findActivityInTask(Task task, String name) {
+        for (Activity a : task.getActivities()) {
+            if (name.equals(a.getName())) return a;
+        }
+        return null;
     }
 
     /** Activity bound to {@code destEntry}, or {@code null} if none. */
@@ -266,6 +462,19 @@ public final class LqnGraph {
      * per-visit demand rather than the sum across mutually-exclusive entries.
      */
     public static double callerDemandOnTask(LayeredNetwork model, String callerName, String targetTaskName) {
+        return callerDemandOnTaskImpl(model, callerName, targetTaskName, /*processorSemantics=*/ false);
+    }
+
+    /** Processor-occupancy variant of {@link #callerDemandOnTask}: every branch
+     *  of an AND_FORK in the callee contributes its host demand additively
+     *  rather than collapsing into branch-max. Use when setting P:-layer
+     *  demand or computing {@code Util = ΣX·D/c}. */
+    public static double callerProcessorDemandOnTask(LayeredNetwork model, String callerName, String targetTaskName) {
+        return callerDemandOnTaskImpl(model, callerName, targetTaskName, /*processorSemantics=*/ true);
+    }
+
+    private static double callerDemandOnTaskImpl(LayeredNetwork model, String callerName,
+                                                 String targetTaskName, boolean processorSemantics) {
         Task caller = findTask(model, callerName);
         if (caller == null) return 0.0;
 
@@ -279,7 +488,7 @@ public final class LqnGraph {
             for (Activity act : caller.getActivities()) {
                 Double w = weights.get(act.getName());
                 if (w == null || w <= 1e-12) continue;
-                total += w * demandFromActivityToTask(model, act, targetTaskName);
+                total += w * demandFromActivityToTask(model, act, targetTaskName, processorSemantics);
             }
             return total;
         }
@@ -291,7 +500,7 @@ public final class LqnGraph {
             for (Activity act : caller.getActivities()) {
                 Double w = weights.get(act.getName());
                 if (w == null || w <= 1e-12) continue;
-                total += w * demandFromActivityToTask(model, act, targetTaskName);
+                total += w * demandFromActivityToTask(model, act, targetTaskName, processorSemantics);
             }
         }
         return total / callerEntries.size();
@@ -300,8 +509,12 @@ public final class LqnGraph {
     /** Per-visit demand <i>contributed by one activity</i> into {@code targetTaskName}:
      *  Σ {@code callMean × hostDemandOfEntry(destEntry)} across this activity's
      *  sync calls into entries of the target. Caller-side visit weighting is
-     *  applied externally so this stays a pure per-activity quantity. */
-    private static double demandFromActivityToTask(LayeredNetwork model, Activity act, String targetTaskName) {
+     *  applied externally so this stays a pure per-activity quantity. When
+     *  {@code processorSemantics} is true each call's contribution uses
+     *  {@link #processorDemandOfEntry} (SUM over AND_FORK branches) instead of
+     *  the caller-perceived {@link #hostDemandOfEntry} (MAX over branches). */
+    private static double demandFromActivityToTask(LayeredNetwork model, Activity act,
+                                                   String targetTaskName, boolean processorSemantics) {
         Map<Integer, String> dests = act.getSyncCallDests();
         if (dests == null || dests.isEmpty()) return 0.0;
         Matrix means = act.getSyncCallMeans();
@@ -312,7 +525,7 @@ public final class LqnGraph {
             if (!targetTaskName.equals(destEntry.getParent().getName())) continue;
             int idx = ce.getKey();
             double cm = (means != null && means.getNumCols() > idx) ? means.get(0, idx) : 1.0;
-            d += cm * hostDemandOfEntry(destEntry);
+            d += cm * (processorSemantics ? processorDemandOfEntry(destEntry) : hostDemandOfEntry(destEntry));
         }
         return d;
     }

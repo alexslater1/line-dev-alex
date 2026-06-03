@@ -11,8 +11,10 @@ import jline.solvers.ln_simple.LqnGraph;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Public entry point for final-result assembly after
@@ -68,6 +70,7 @@ public final class ResultsCollector {
 
         // Phase 4
         scaleLeafTaskThroughputs(model, taskCalledTask, st);
+        adjustAndForkTaskThroughputs(model, st);
 
         // Phase 5
         LayeredNetworkAvgTable table = OutputTableBuilder.build(model, taskCalledTask, st);
@@ -171,7 +174,7 @@ public final class ResultsCollector {
                 double utilSum = 0.0;
                 boolean hasCaller = false;
                 for (Task caller : model.getTasks().values()) {
-                    double dr = LqnGraph.callerDemandOnTask(model, caller.getName(), hostedTask.getName());
+                    double dr = LqnGraph.callerProcessorDemandOnTask(model, caller.getName(), hostedTask.getName());
                     if (dr <= 0) continue;
                     Double xCaller = st.taskTput.get(caller.getName());
                     if (xCaller == null || xCaller <= 0) continue;
@@ -206,7 +209,7 @@ public final class ResultsCollector {
             double demandSum = 0.0;
             boolean hasCaller = false;
             for (Task caller : model.getTasks().values()) {
-                double d = LqnGraph.callerDemandOnTask(model, caller.getName(), hostedTask.getName());
+                double d = LqnGraph.callerProcessorDemandOnTask(model, caller.getName(), hostedTask.getName());
                 if (d <= 0) continue;
                 Double xCaller = st.taskTput.get(caller.getName());
                 if (xCaller == null || xCaller <= 0) continue;
@@ -262,5 +265,75 @@ public final class ResultsCollector {
                 st.taskTput.put(tName, tx * maxCM);
             }
         }
+    }
+
+
+    // =====================================================================
+    //  Phase 4b — AND_FORK reported-throughput correction (INF hosts only)
+    // =====================================================================
+
+    /**
+     * Post-iteration correction that re-derives reported {@code taskTput /
+     * taskQLen / taskResidT} and the hosted processor's util for tasks with
+     * AND_FORK on an INF host. The iteration converges with SUM-based
+     * demand (which keeps the root-REF cycle X = N/(Z+sum) matching LN).
+     * The fork-modeled closed network LN/LQNS actually solve instead sees
+     * cycle_callee = cycle_root − (sum − E[max]), so we apply that delta to
+     * the AND-fork task's reported throughput and propagate to QLen/Util.
+     *
+     * <p>Restricted to INF processors: finite-server PS adds real branch
+     * contention that the closed-form E[max] doesn't capture (Franks §8.2.1
+     * CCD overlap compensation — out of scope here).
+     */
+    private static void adjustAndForkTaskThroughputs(LayeredNetwork model, ResultsState st) {
+        for (Task task : model.getTasks().values()) {
+            if (LqnGraph.isRefTask(task)) continue;
+            if (!LqnGraph.taskHasAndFork(model, task.getName())) continue;
+            if (task.getProcessor() == null) continue;
+            String procName = task.getProcessor().getName();
+            if (!LqnGraph.isInfProcessor(model, procName)) continue;
+
+            double procD = 0.0, callerD = 0.0;
+            for (jline.lang.layered.Entry e : task.getEntries()) {
+                procD += LqnGraph.processorDemandOfEntry(e);
+                callerD += LqnGraph.hostDemandOfEntry(e);
+            }
+            double delta = procD - callerD;
+            if (delta <= 1e-12) continue;
+
+            String rootRef = findRootRefForTask(model, task.getName());
+            Task refTask = (rootRef != null) ? LqnGraph.findTask(model, rootRef) : null;
+            Double xRef = (rootRef != null) ? st.taskTput.get(rootRef) : null;
+            if (refTask == null || xRef == null || xRef <= 0) continue;
+            int nRef = refTask.getMultiplicity();
+            if (nRef <= 0 || nRef == Integer.MAX_VALUE) continue;
+
+            double cycleEmax = (nRef / xRef) - delta;
+            if (cycleEmax <= 0) continue;
+            double xNew = nRef / cycleEmax;
+
+            st.taskTput.put(task.getName(), xNew);
+            st.taskQLen.put(task.getName(), xNew * procD);
+            st.taskResidT.put(task.getName(), procD);
+
+            Double cVal = st.processorServers.get(procName);
+            if (cVal == null || cVal <= 0) continue;
+            double util = xNew * procD / cVal;
+            st.processorUtil.put(procName, util);
+            st.taskUtil.put(task.getName(), util);
+        }
+    }
+
+    /** Walk the caller chain upward until a REF task is reached, or
+     *  {@code null} if none. */
+    private static String findRootRefForTask(LayeredNetwork model, String taskName) {
+        Set<String> visited = new HashSet<String>();
+        String current = taskName;
+        while (current != null && visited.add(current)) {
+            Task t = LqnGraph.findTask(model, current);
+            if (t != null && LqnGraph.isRefTask(t)) return current;
+            current = LqnGraph.findCallerTask(model, current);
+        }
+        return null;
     }
 }

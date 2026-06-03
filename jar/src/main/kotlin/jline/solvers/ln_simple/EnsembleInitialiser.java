@@ -217,10 +217,13 @@ public final class EnsembleInitialiser {
 
     /** Population-weighted average host demand across all callers of the
      *  hosted task, kept in per-cycle units so the host-layer MVA matches
-     *  the T:-layer Z (also per-cycle). When no REF caller is finite-mult,
-     *  the fallback uses {@code computeLocalDemand × maxInboundCallMean} so
-     *  the value is the per-cycle demand a single inbound call cycle imposes
-     *  on the server, matching {@link LqnGraph#callerDemandOnTask}'s basis. */
+     *  the T:-layer Z (also per-cycle). Uses the processor-occupancy
+     *  semantics ({@link LqnGraph#callerProcessorDemandOnTask}) so AND_FORK
+     *  branches contribute their full work to the host — the caller-perceived
+     *  branch-max collapse only applies at the T: layer. When no REF caller is
+     *  finite-mult, the fallback uses {@code computeLocalDemand × maxInboundCallMean}
+     *  so the value is the per-cycle demand a single inbound call cycle imposes
+     *  on the server. */
     private static void setAggregateHostDemand(LayeredNetwork model,
                                                Queue serverQueue, ClosedClass hc) {
         String aggTaskName = LqnGraph.stripPrefix(hc.getName());
@@ -228,7 +231,7 @@ public final class EnsembleInitialiser {
         for (Task caller : model.getTasks().values()) {
             int mult = caller.getMultiplicity();
             if (mult <= 0 || mult == Integer.MAX_VALUE) continue;
-            double d_r = LqnGraph.callerDemandOnTask(model, caller.getName(), aggTaskName);
+            double d_r = LqnGraph.callerProcessorDemandOnTask(model, caller.getName(), aggTaskName);
             if (d_r <= 0) continue;
             weightedD += mult * d_r;
             totalN += mult;
