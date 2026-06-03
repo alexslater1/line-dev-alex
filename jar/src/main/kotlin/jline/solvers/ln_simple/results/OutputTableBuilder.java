@@ -162,6 +162,21 @@ final class OutputTableBuilder {
                     ? q / t
                     : QueueLengthSolver.resolveTaskResponseTime(model, parentTaskName,
                             st.taskResidT, taskCalledTask, new HashSet<String>());
+            // Adjust reported Entry RespT for the LQN phase-1/phase-2 split
+            // (LN's "servt vs residt"). Iteration dynamics keep using full
+            // residence so the closed-loop cycle remains correct — only the
+            // displayed value is shortened here. No-op for entries without
+            // phase-2 background.
+            if (parentTask != null && parentTask.getScheduling() != SchedStrategy.REF
+                    && Double.isFinite(resp) && resp > 0 && t > 0) {
+                int hostServerCount = 1;
+                if (parentTask.getProcessor() != null
+                        && parentTask.getProcessor().getScheduling() != SchedStrategy.INF) {
+                    int mult = parentTask.getProcessor().getMultiplicity();
+                    if (mult > 0 && mult != Integer.MAX_VALUE) hostServerCount = mult;
+                }
+                resp = LqnGraph.phase1AdjustedResponseTime(entry, resp, t, hostServerCount);
+            }
 
             names.add(entry.getName());
             types.add("Entry");

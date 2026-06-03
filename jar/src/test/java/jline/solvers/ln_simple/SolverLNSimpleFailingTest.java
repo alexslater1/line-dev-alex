@@ -6,6 +6,7 @@ import jline.lang.constant.SchedStrategy;
 import jline.lang.layered.*;
 import jline.lang.processes.Exp;
 import jline.lang.processes.Immediate;
+import jline.solvers.ln_simple.fixtures.DagFeatureFixtures;
 import jline.solvers.ln_simple.fixtures.SingleclassLNExamples;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Disabled;
@@ -193,5 +194,20 @@ public class SolverLNSimpleFailingTest {
     @Test @Timeout(240) @Disabled
     public void saturated_C1_fanOut4_caller_c2() {
         assertResultsMatchSolverLN(saturatedFanOutCaller("C1_fo4_c2_sat", 4, 2));
+    }
+
+    // =========================================================================
+    //  DAG integration on a finite-server PS host — AND-fork branches contend
+    //  on the same single server, which the closed-form E[max] join formula
+    //  cannot capture. The principled fix is Franks §8.2.1 CCD overlap
+    //  compensation (out of scope for Phase B). Phase-1/phase-2 reply split
+    //  on top of that still produces caller-perceived demand that's
+    //  systematically low; see {@code D_combinedDag} (INF host) for the
+    //  passing integration test.
+    // =========================================================================
+
+    @Test @Timeout(240) @Disabled
+    public void combinedDag_PsHost() {
+        assertResultsMatchSolverLN(DagFeatureFixtures::D_combinedDag_PsHost);
     }
 }

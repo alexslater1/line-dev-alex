@@ -293,12 +293,15 @@ public final class ResultsCollector {
             String procName = task.getProcessor().getName();
             if (!LqnGraph.isInfProcessor(model, procName)) continue;
 
-            double procD = 0.0, callerD = 0.0;
+            double procD = 0.0, andForkCollapsedD = 0.0;
             for (jline.lang.layered.Entry e : task.getEntries()) {
                 procD += LqnGraph.processorDemandOfEntry(e);
-                callerD += LqnGraph.hostDemandOfEntry(e);
+                // E[max]-collapsed view keeps phase-2 in — delta is then
+                // purely the AND-fork join-delay gap, not the reply split
+                // (which is reporting-only, not coupled into the cycle).
+                andForkCollapsedD += LqnGraph.andForkCollapsedDemandOfEntry(e);
             }
-            double delta = procD - callerD;
+            double delta = procD - andForkCollapsedD;
             if (delta <= 1e-12) continue;
 
             String rootRef = findRootRefForTask(model, task.getName());

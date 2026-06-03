@@ -242,32 +242,49 @@ public final class LqnGraph {
         return total;
     }
 
-    /** Caller-perceived host demand for one call into {@code destEntry}: walks
-     *  the activity DAG from the bound activity, summing
-     *  {@code visitWeight × hostDemand} across reachable activities. For
-     *  AND_FORK→AND_JOIN regions, branches contribute their expected max of
-     *  exponential service times instead of the per-branch sum — the caller
-     *  only waits for the slowest branch.
-     *  Returns 0 if the entry has no bound activity. Use
-     *  {@link #processorDemandOfEntry} when the SUM (processor-occupancy)
-     *  view is needed instead. */
+    /** Caller-perceived per-call demand: phase-1 only, AND-fork branches
+     *  collapsed via E[max] (caller waits for the slowest branch).
+     *  See {@link #processorDemandOfEntry} for the full-DAG SUM view. */
     public static double hostDemandOfEntry(Entry destEntry) {
-        return hostDemandOfEntryImpl(destEntry, /*processorSemantics=*/ false);
+        return hostDemandOfEntryImpl(destEntry, /*sumBranches=*/ false, /*phase1Only=*/ true);
     }
 
-    /** Processor-occupancy variant of {@link #hostDemandOfEntry}: AND_FORK
-     *  branches sum (both consume processor time) rather than collapsing to
-     *  E[max]. Used to set P:-layer demand and per-class utilization splits. */
+    /** Processor-occupancy per-call demand: full DAG (phase-1 + phase-2),
+     *  AND-fork branches summed (both run on the processor). */
     public static double processorDemandOfEntry(Entry destEntry) {
-        return hostDemandOfEntryImpl(destEntry, /*processorSemantics=*/ true);
+        return hostDemandOfEntryImpl(destEntry, /*sumBranches=*/ true, /*phase1Only=*/ false);
     }
 
-    private static double hostDemandOfEntryImpl(Entry destEntry, boolean processorSemantics) {
+    /** Full DAG demand with AND-fork branches collapsed via E[max].
+     *  {@code processorDemandOfEntry − andForkCollapsedDemandOfEntry} is
+     *  exactly the join-delay gap, isolating it from the phase split for
+     *  the throughput adjustment in {@code adjustAndForkTaskThroughputs}. */
+    public static double andForkCollapsedDemandOfEntry(Entry destEntry) {
+        return hostDemandOfEntryImpl(destEntry, /*sumBranches=*/ false, /*phase1Only=*/ false);
+    }
+
+    /** Phase-1 raw SUM demand (no E[max] collapse). Used as LN's
+     *  {@code raw_ph1} in {@link #phase1AdjustedResponseTime} so the
+     *  AND-fork join-delay gap stays out of the phase-split S1/S2 ratio. */
+    public static double phase1SumDemandOfEntry(Entry destEntry) {
+        return hostDemandOfEntryImpl(destEntry, /*sumBranches=*/ true, /*phase1Only=*/ true);
+    }
+
+    private static double hostDemandOfEntryImpl(Entry destEntry, boolean sumBranches,
+                                                 boolean phase1Only) {
         if (destEntry == null || destEntry.getParent() == null) return 0.0;
         Activity bound = findBoundActivity(destEntry);
         if (bound == null) return 0.0;
         Task task = destEntry.getParent();
         Map<String, Double> weights = computeWeightsFromBound(task, bound);
+        if (phase1Only) {
+            Set<String> phase1 = phase1ActivitiesFromBound(destEntry, bound);
+            Map<String, Double> filtered = new HashMap<String, Double>(weights.size());
+            for (Map.Entry<String, Double> e : weights.entrySet()) {
+                filtered.put(e.getKey(), phase1.contains(e.getKey()) ? e.getValue() : 0.0);
+            }
+            weights = filtered;
+        }
         double total = 0.0;
         for (Activity a : task.getActivities()) {
             Double w = weights.get(a.getName());
@@ -276,10 +293,48 @@ public final class LqnGraph {
             if (Double.isNaN(m) || m <= 1e-9) continue;
             total += w * m;
         }
-        if (!processorSemantics) {
+        if (!sumBranches) {
             total += andForkMaxCorrection(task, weights);
         }
         return total;
+    }
+
+    /** Activity names in phase 1 of {@code destEntry}: forward-reachable
+     *  from the bound activity, with expansion stopped at any reply
+     *  activity. The reply itself is included (it happens at the end of
+     *  the activity); only its successors are not. */
+    private static Set<String> phase1ActivitiesFromBound(Entry destEntry, Activity bound) {
+        Set<String> replyActs = new HashSet<String>();
+        Map<Integer, String> replies = destEntry.getReplyActivity();
+        if (replies != null) {
+            for (String a : replies.values()) {
+                if (a != null) replyActs.add(a);
+            }
+        }
+        Set<String> visited = new HashSet<String>();
+        Task task = destEntry.getParent();
+        if (task == null) return visited;
+        List<ActivityPrecedence> precs = task.getPrecedences();
+        Deque<String> stack = new ArrayDeque<String>();
+        stack.push(bound.getName());
+        while (!stack.isEmpty()) {
+            String cur = stack.pop();
+            if (!visited.add(cur)) continue;
+            if (replyActs.contains(cur)) continue;
+            if (precs == null) continue;
+            for (ActivityPrecedence p : precs) {
+                List<String> pre = p.getPreActs();
+                List<String> post = p.getPostActs();
+                if (pre == null || post == null || post.isEmpty()) continue;
+                boolean isPredecessor = false;
+                for (String a : pre) {
+                    if (cur.equals(a)) { isPredecessor = true; break; }
+                }
+                if (!isPredecessor) continue;
+                for (String n : post) stack.push(n);
+            }
+        }
+        return visited;
     }
 
     /** Replaces each AND_FORK→AND_JOIN region's branch-sum with
@@ -439,6 +494,88 @@ public final class LqnGraph {
             if (name.equals(a.getName())) return a;
         }
         return null;
+    }
+
+    /** True iff some activity reachable from the bound is post-reply
+     *  background. Gates the overtake correction so AND-fork-only entries
+     *  (where hostDemand &lt; processorDemand for an unrelated reason) are
+     *  not mistakenly treated as having phase 2. */
+    private static boolean hasPhase2Background(Entry entry) {
+        if (entry == null || entry.getParent() == null) return false;
+        Activity bound = findBoundActivity(entry);
+        if (bound == null) return false;
+        Task task = entry.getParent();
+        Set<String> phase1 = phase1ActivitiesFromBound(entry, bound);
+        Set<String> fullReachable = new HashSet<String>();
+        List<ActivityPrecedence> precs = task.getPrecedences();
+        Deque<String> stack = new ArrayDeque<String>();
+        stack.push(bound.getName());
+        while (!stack.isEmpty()) {
+            String cur = stack.pop();
+            if (!fullReachable.add(cur)) continue;
+            if (precs == null) continue;
+            for (ActivityPrecedence p : precs) {
+                List<String> pre = p.getPreActs();
+                List<String> post = p.getPostActs();
+                if (pre == null || post == null || post.isEmpty()) continue;
+                boolean isPredecessor = false;
+                for (String a : pre) {
+                    if (cur.equals(a)) { isPredecessor = true; break; }
+                }
+                if (!isPredecessor) continue;
+                for (String n : post) stack.push(n);
+            }
+        }
+        for (String a : fullReachable) {
+            if (!phase1.contains(a)) return true;
+        }
+        return false;
+    }
+
+    /** Caller-perceived response time at {@code entry} given the entry's
+     *  full per-call residence {@code rProc}, arrival rate {@code lambda},
+     *  and host server count {@code c}. Applies LQN's 3-state overtaking
+     *  correction (Franks thesis §2; SolverLN {@code overtakeProb}):
+     *  {@code R = S1 + prOt · S2} where {@code Si = rProc · D_phase_i /
+     *  D_total}. {@code rProc} is returned unchanged when there is no
+     *  phase-2 background or inputs are degenerate. */
+    public static double phase1AdjustedResponseTime(Entry entry, double rProc,
+                                                     double lambda, int c) {
+        if (entry == null) return rProc;
+        if (!Double.isFinite(rProc) || rProc <= 0) return rProc;
+        if (!hasPhase2Background(entry)) return rProc;
+        double dFull = processorDemandOfEntry(entry);
+        if (dFull <= 1e-12) return rProc;
+        // Use raw SUM phase-1 (not E[max]-collapsed) so the AND-fork
+        // join-delay gap stays out of S2 — it is already in rProc.
+        double dP1Sum = phase1SumDemandOfEntry(entry);
+        if (dP1Sum >= dFull - 1e-9) return rProc;
+        double s1 = rProc * dP1Sum / dFull;
+        double s2 = rProc - s1;
+        if (s1 <= 1e-12 || s2 <= 1e-12 || !Double.isFinite(lambda) || lambda <= 1e-12) {
+            return s1 > 0 ? s1 : rProc;
+        }
+        // lambda_eff = lambda / (1 + rho) interpolates from the open CTMC
+        // (rho → 0) to a Schweitzer-style halving at saturation (rho → 1).
+        // Empirically tracks SolverLN's relaxed converged residt.
+        double rhoOpen = lambda * dFull / Math.max(1, c);
+        if (rhoOpen > 1.0) rhoOpen = 1.0;
+        double lambdaEff = lambda / (1.0 + rhoOpen);
+        double prOt;
+        if (c <= 1) {
+            double mu1 = 1.0 / s1;
+            double mu2 = 1.0 / s2;
+            double denom = lambdaEff * mu2 + mu1 * mu2 + lambdaEff * mu1;
+            prOt = (denom > 1e-12) ? (lambdaEff * mu1 / denom) : 0.0;
+        } else {
+            double util = lambdaEff * (s1 + s2) / c;
+            if (util > 1.0) util = 1.0;
+            if (util < 0) util = 0;
+            prOt = util * s2 / (s1 + s2);
+        }
+        if (prOt < 0) prOt = 0;
+        if (prOt > 1) prOt = 1;
+        return s1 + prOt * s2;
     }
 
     /** Activity bound to {@code destEntry}, or {@code null} if none. */

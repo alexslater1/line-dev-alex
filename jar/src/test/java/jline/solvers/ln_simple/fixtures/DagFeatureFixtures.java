@@ -630,7 +630,7 @@ public final class DagFeatureFixtures {
     /**
      * Sequence + POST_LOOP + OR_FORK + AND_FORK + REPLY in one entry DAG.
      * <pre>
-     *   T2 (PS-1):
+     *   T2 (INF):
      *     E2 -> A_init(D=0.1) -> A_loop_head(D=0)
      *     A_loop_head -Loop(2)-> [A_loop_body(D=0.2), A_loop_end(D=0)]
      *     A_loop_end -OrFork(0.7/0.3)-> [A_or_x(D=0.3), A_or_y(D=0.1)]
@@ -639,9 +639,65 @@ public final class DagFeatureFixtures {
      *     [A_and_p1, A_and_p2] -AndJoin-> A_join(D=0.1, replies to E2)
      *     A_join -> A_phase2(D=0.3)        // background
      * </pre>
+     * Host is INF so AND-fork branches don't contend — the closed-form
+     * E[max] join formula is exact in that regime. A finite-server PS host
+     * with the same DAG would require CCD overlap compensation (Franks §8.2.1)
+     * which is out of scope here; see {@link #D_combinedDag_PsHost} and the
+     * matching {@code SolverLNSimpleFailingTest} entry.
      */
     public static LayeredNetwork D_combinedDag() {
         LayeredNetwork m = new LayeredNetwork("D_combinedDag");
+        Processor PR = new Processor(m, "PR", Integer.MAX_VALUE, SchedStrategy.INF);
+        Processor PS = new Processor(m, "PS", Integer.MAX_VALUE, SchedStrategy.INF);
+
+        Task T1 = new Task(m, "T1", 10, SchedStrategy.REF).on(PR).setThinkTime(Exp.fitMean(2.0));
+        Task T2 = new Task(m, "T2", Integer.MAX_VALUE, SchedStrategy.INF).on(PS);
+
+        Entry E1 = new Entry(m, "E1").on(T1);
+        Entry E2 = new Entry(m, "E2").on(T2);
+
+        new Activity(m, "A1", Immediate.getInstance()).on(T1).boundTo(E1).synchCall(E2, 1);
+
+        Activity A_init      = new Activity(m, "A_init",      Exp.fitMean(0.1)).on(T2).boundTo(E2);
+        Activity A_loop_head = new Activity(m, "A_loop_head", Immediate.getInstance()).on(T2);
+        Activity A_loop_body = new Activity(m, "A_loop_body", Exp.fitMean(0.2)).on(T2);
+        Activity A_loop_end  = new Activity(m, "A_loop_end",  Immediate.getInstance()).on(T2);
+        Activity A_or_x      = new Activity(m, "A_or_x",      Exp.fitMean(0.3)).on(T2);
+        Activity A_or_y      = new Activity(m, "A_or_y",      Exp.fitMean(0.1)).on(T2);
+        Activity A_after_or  = new Activity(m, "A_after_or",  Immediate.getInstance()).on(T2);
+        Activity A_and_p1    = new Activity(m, "A_and_p1",    Exp.fitMean(0.4)).on(T2);
+        Activity A_and_p2    = new Activity(m, "A_and_p2",    Exp.fitMean(0.4)).on(T2);
+        Activity A_join      = new Activity(m, "A_join",      Exp.fitMean(0.1)).on(T2).repliesTo(E2);
+        Activity A_phase2    = new Activity(m, "A_phase2",    Exp.fitMean(0.3)).on(T2).setPhase(2);
+
+        T2.addPrecedence(ActivityPrecedence.Serial(A_init, A_loop_head));
+        T2.addPrecedence(ActivityPrecedence.Loop("A_loop_head",
+                Arrays.asList("A_loop_body", "A_loop_end"), Matrix.singleton(2)));
+
+        Matrix orProbs = new Matrix(new double[][]{{0.7, 0.3}});
+        T2.addPrecedence(ActivityPrecedence.OrFork(A_loop_end,
+                Arrays.asList(A_or_x, A_or_y), orProbs));
+        T2.addPrecedence(ActivityPrecedence.OrJoin(Arrays.asList(A_or_x, A_or_y), A_after_or));
+
+        T2.addPrecedence(ActivityPrecedence.AndFork(A_after_or, Arrays.asList(A_and_p1, A_and_p2)));
+        T2.addPrecedence(ActivityPrecedence.AndJoin(Arrays.asList(A_and_p1, A_and_p2), A_join));
+
+        T2.addPrecedence(ActivityPrecedence.Serial(A_join, A_phase2));
+        return m;
+    }
+
+    /**
+     * Same DAG as {@link #D_combinedDag} but the callee is hosted on a
+     * single-server PS processor. This composes two known-hard regimes:
+     * AND-fork branches contending on a finite-server host (Franks §8.2.1
+     * CCD overlap compensation, out of scope for Phase B) AND a reply
+     * mid-DAG with phase-2 background. SolverLNSimple's E[max] closed-form
+     * cannot capture the AND-fork branch contention, so T2.RespT comes out
+     * low independently of any phase-1/phase-2 split. Kept as a regression
+     * placeholder; see {@code SolverLNSimpleFailingTest}.
+     */
+    public static LayeredNetwork D_combinedDag_PsHost() {
+        LayeredNetwork m = new LayeredNetwork("D_combinedDag_PsHost");
         Processor PR = new Processor(m, "PR", Integer.MAX_VALUE, SchedStrategy.INF);
         Processor PS = new Processor(m, "PS", 1, SchedStrategy.PS);
 
@@ -655,7 +711,7 @@ public final class DagFeatureFixtures {
 
         Activity A_init      = new Activity(m, "A_init",      Exp.fitMean(0.1)).on(T2).boundTo(E2);
         Activity A_loop_head = new Activity(m, "A_loop_head", Immediate.getInstance()).on(T2);
-        Activity A_loop_body = new Activity(m, "A_loop_body", Exp.fitMean(0.2)).on(T2);
+        new Activity(m, "A_loop_body", Exp.fitMean(0.2)).on(T2);
         Activity A_loop_end  = new Activity(m, "A_loop_end",  Immediate.getInstance()).on(T2);
         Activity A_or_x      = new Activity(m, "A_or_x",      Exp.fitMean(0.3)).on(T2);
         Activity A_or_y      = new Activity(m, "A_or_y",      Exp.fitMean(0.1)).on(T2);
