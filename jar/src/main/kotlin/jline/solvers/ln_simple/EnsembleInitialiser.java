@@ -215,7 +215,12 @@ public final class EnsembleInitialiser {
         }
     }
 
-    /** Population-weighted average host demand across all callers of the hosted task. */
+    /** Population-weighted average host demand across all callers of the
+     *  hosted task, kept in per-cycle units so the host-layer MVA matches
+     *  the T:-layer Z (also per-cycle). When no REF caller is finite-mult,
+     *  the fallback uses {@code computeLocalDemand × maxInboundCallMean} so
+     *  the value is the per-cycle demand a single inbound call cycle imposes
+     *  on the server, matching {@link LqnGraph#callerDemandOnTask}'s basis. */
     private static void setAggregateHostDemand(LayeredNetwork model,
                                                Queue serverQueue, ClosedClass hc) {
         String aggTaskName = LqnGraph.stripPrefix(hc.getName());
@@ -231,9 +236,16 @@ public final class EnsembleInitialiser {
         if (totalN > 0 && weightedD > 0) {
             serverQueue.setService(hc, Exp.fitMean(weightedD / totalN));
         } else {
-            // REF / self-contained task: no inbound calls — use own activity demand.
+            // No finite-mult REF caller (e.g. only intermediate INF callers).
+            // computeLocalDemand returns per-call host demand for a leaf; scale
+            // by the per-cycle inbound call mean so the value matches the
+            // per-cycle basis the host-layer MVA expects.
             double selfDemand = LqnGraph.computeLocalDemand(model, aggTaskName);
-            if (selfDemand > 0) serverQueue.setService(hc, Exp.fitMean(selfDemand));
+            if (selfDemand > 0) {
+                double maxCM = LqnGraph.getTotalInboundCallMean(model, aggTaskName);
+                if (maxCM > 1.0 + 1e-9) selfDemand *= maxCM;
+                serverQueue.setService(hc, Exp.fitMean(selfDemand));
+            }
         }
     }
 
@@ -274,13 +286,21 @@ public final class EnsembleInitialiser {
             for (Entry e : callerEntries) {
                 Activity bound = LqnGraph.findBoundActivity(e);
                 if (bound == null) continue;
-                totalDemand += demandFromActivityToTargets(model, bound, tasksOnServer);
+                Map<String, Double> weights = LqnGraph.computeWeightsFromBound(callerTask, bound);
+                for (Activity act : callerTask.getActivities()) {
+                    Double w = weights.get(act.getName());
+                    if (w == null || w <= 1e-12) continue;
+                    totalDemand += w * demandFromActivityToTargets(model, act, tasksOnServer);
+                }
             }
             demand = totalDemand / callerEntries.size();
         } else {
             demand = 0.0;
+            Map<String, Double> weights = LqnGraph.computeActivityVisitWeights(callerTask);
             for (Activity act : callerTask.getActivities()) {
-                demand += demandFromActivityToTargets(model, act, tasksOnServer);
+                Double w = weights.get(act.getName());
+                if (w == null || w <= 1e-12) continue;
+                demand += w * demandFromActivityToTargets(model, act, tasksOnServer);
             }
         }
 
@@ -303,8 +323,10 @@ public final class EnsembleInitialiser {
         }
     }
 
-    /** Σ {@code callMean × hostDemandOfBoundActivity} for {@code act}'s sync calls
-     *  into entries hosted by {@code tasksOnServer}. */
+    /** Σ {@code callMean × hostDemandOfEntry} for {@code act}'s sync calls
+     *  into entries hosted by {@code tasksOnServer}. The destination entry's
+     *  full DAG demand is used so multi-activity entries (sequence past the
+     *  bound activity, OR/LOOP/AND fan-out) contribute correctly. */
     private static double demandFromActivityToTargets(LayeredNetwork model, Activity act,
                                                        Map<String, Task> tasksOnServer) {
         Map<Integer, String> dests = act.getSyncCallDests();
@@ -317,7 +339,7 @@ public final class EnsembleInitialiser {
             if (!tasksOnServer.containsKey(destEntry.getParent().getName())) continue;
             int idx = ce.getKey();
             double cm = (means != null && means.getNumCols() > idx) ? means.get(0, idx) : 1.0;
-            d += cm * LqnGraph.hostDemandOfBoundActivity(destEntry);
+            d += cm * LqnGraph.hostDemandOfEntry(destEntry);
         }
         return d;
     }

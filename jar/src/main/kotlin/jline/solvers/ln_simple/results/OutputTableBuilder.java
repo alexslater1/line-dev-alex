@@ -104,9 +104,9 @@ final class OutputTableBuilder {
                                        List<Double> arvR, List<Double> tput) {
         for (Task task : model.getTasks().values()) {
             double resid = st.taskResidT.containsKey(task.getName()) ? st.taskResidT.get(task.getName()) : 0.0;
-            // For non-REF leaf tasks with hostLayerResid, prefer that. With
-            // multi-call (callMean > 1) divide by max inbound callMean to get
-            // per-call residual.
+            // For non-REF leaf tasks with hostLayerResid, prefer that. The
+            // value is per-cycle (Q/X at the host layer, both per-cycle);
+            // LN reports per-call ResidT, so divide by maxCM to convert.
             if (task.getScheduling() != SchedStrategy.REF
                     && !taskCalledTask.containsKey(task.getName())
                     && st.hostLayerResid.containsKey(task.getName())) {
@@ -186,18 +186,23 @@ final class OutputTableBuilder {
             double q = isRefActivity
                     ? refActivityQLen(act, parentTask, parentTaskName, actFraction,
                                       taskCalledTask, st, model)
-                    : nonRefActivityQLen(act, parentTaskName, actFraction, entryQlenFraction, st);
+                    : nonRefActivityQLen(model, act, parentTaskName, actFraction, entryQlenFraction, st);
 
             double activityUtil = isRefActivity
                     ? actFraction * computeRefActivityDemandFraction(parentTask, act)
                             * mapGet(st.taskUtil, parentTaskName, 0.0)
                     : nonRefActivityUtil(act, parentTaskName, actFraction, entryUtilFraction, st);
 
-            // Throughput: loop bodies on REF tasks fire visitCount times per visit.
+            // Throughput: scale by DAG visit weight (loop bodies fire loopCount
+            // times per entry visit, OR_FORK branches fire branch-prob times,
+            // etc.). For REF activities the bound activity's weight implicitly
+            // accounts for nested loops; for non-REF activities the weight
+            // captures per-visit firing rate inside the entry's DAG.
             double actVisitCount = 1.0;
-            if (isRefActivity) {
-                Map<String, Double> vc = LqnGraph.computeActivityVisitCounts(parentTask);
-                actVisitCount = vc.containsKey(act.getName()) ? vc.get(act.getName()) : 1.0;
+            if (parentTask != null) {
+                Map<String, Double> vc = LqnGraph.computeActivityVisitWeights(parentTask);
+                Double w = vc.get(act.getName());
+                if (w != null && w > 0) actVisitCount = w;
             }
             double t = actFraction * actVisitCount * mapGet(st.taskTput, parentTaskName, 0.0);
 
@@ -220,21 +225,35 @@ final class OutputTableBuilder {
                 resid = actFraction * computeRefActivityDemandFraction(parentTask, act) * t1ResidT;
             } else if (parentTask != null
                     && !taskHasExternalSyncCall(model, parentTaskName)) {
-                String boundER = act.getBoundToEntry();
-                double residFrac = (boundER != null && entryQlenFraction.containsKey(boundER))
-                        ? entryQlenFraction.get(boundER) : actFraction;
-                resid = residFrac * deriveLocalTaskResid(parentTaskName, st);
+                // Leaf non-REF task: split task.ResidT by visit-weighted
+                // host-demand share within the task. Pure routing activities
+                // (Immediate + no sync calls) report ResidT=0 to match LN.
+                double share = activityDemandShare(act, entryUtilFraction);
+                Map<Integer, String> syncDestsR = act.getSyncCallDests();
+                boolean pureRouting = (syncDestsR == null || syncDestsR.isEmpty())
+                        && (Double.isNaN(act.getHostDemandMean()) || act.getHostDemandMean() <= 1e-8);
+                if (share > 0) {
+                    resid = share * deriveLocalTaskResid(parentTaskName, st);
+                } else if (pureRouting) {
+                    resid = 0.0;
+                } else {
+                    String boundER = act.getBoundToEntry();
+                    double residFrac = (boundER != null && entryQlenFraction.containsKey(boundER))
+                            ? entryQlenFraction.get(boundER) : actFraction;
+                    resid = residFrac * deriveLocalTaskResid(parentTaskName, st);
+                }
             } else {
                 // Non-REF activity in a task that issues external sync calls.
-                // Residence at the processor is just the host-demand portion, scaled
-                // by this activity's share of the parent's visit rate. Equivalent to
-                // util_AS / X_parent = X_AS · hostDemand_AS / X_parent (LN's
-                // per-call processor residence convention).
+                // Per-cycle processor residence = visit_weight × hostDemand,
+                // matching LN's convention where an activity that fires N times
+                // per entry visit (POST_LOOP body, OR_FORK branch with prob<1
+                // averaged over many calls) reports its total time on the
+                // processor per entry visit.
                 double hd = act.getHostDemandMean();
                 if (Double.isNaN(hd) || hd <= 1e-9) {
                     resid = 0.0;
                 } else {
-                    resid = actFraction * hd;
+                    resid = actFraction * actVisitCount * hd;
                 }
             }
 
@@ -254,18 +273,42 @@ final class OutputTableBuilder {
     //  Activity-row helpers
     // =====================================================================
 
-    /** Activity's share of parent-task throughput = bound-entry caller-tput / parent-tput. */
+    /** Activity's share of parent-task throughput = bound-entry caller-tput / parent-tput.
+     *  For activities not explicitly bound to an entry, falls back to the
+     *  entry whose DAG walk reaches them — multi-entry tasks otherwise
+     *  default unbound activities to {@code actFraction = 1.0} which inflates
+     *  their reported throughput when the task has more than one entry. */
     private static double computeActFraction(Activity act, LayeredNetwork model,
                                              Map<String, Double> taskTput,
                                              String parentTaskName) {
         String boundEntry = act.getBoundToEntry();
-        if (boundEntry == null) return 1.0;
+        if (boundEntry == null || boundEntry.isEmpty()) {
+            // Unbound activity: locate the entry whose DAG reaches it.
+            boundEntry = findOwnerEntry(act, act.getParent());
+        }
+        if (boundEntry == null || boundEntry.isEmpty()) return 1.0;
         Entry boundE = LqnGraph.findEntry(model, boundEntry);
         if (boundE == null) return 1.0;
         double pTput = mapGet(taskTput, parentTaskName, 0.0);
         double cTput = computeEntryCallerTput(boundE, model, taskTput);
         if (pTput > 0 && cTput > 0) return Math.min(1.0, cTput / pTput);
         return 1.0;
+    }
+
+    /** Name of the entry whose bound activity's DAG reaches {@code act}, or
+     *  {@code null} if {@code act} is not reachable from any entry. Used to
+     *  attribute unbound activities (sequence steps, OR branches, AND branches,
+     *  loop bodies) back to the entry that triggered them. */
+    private static String findOwnerEntry(Activity act, Task parent) {
+        if (parent == null) return null;
+        for (Activity bound : parent.getActivities()) {
+            String boundBE = bound.getBoundToEntry();
+            if (boundBE == null || boundBE.isEmpty()) continue;
+            Map<String, Double> weights = LqnGraph.computeWeightsFromBound(parent, bound);
+            Double w = weights.get(act.getName());
+            if (w != null && w > 1e-12) return boundBE;
+        }
+        return null;
     }
 
     /**
@@ -322,11 +365,28 @@ final class OutputTableBuilder {
         return actFraction * (q_proc + q_callee);
     }
 
-    /** Non-REF activity QLen: split parent's Q by the demand-weighted entry fraction. */
-    private static double nonRefActivityQLen(Activity act, String parentTaskName,
+    /** Non-REF activity QLen: split the task's Q by this activity's share of
+     *  visit-weighted host demand. Equivalent to LN's
+     *  {@code Q_act = (X_act × D_act / Σ X_act × D_act) × Q_task} when all
+     *  activities share the same throughput, which holds inside a single task.
+     *  Pure routing activities (Immediate, no sync calls — e.g. AND/OR fork
+     *  heads, loop heads) report Q=0 since they contribute no host work and
+     *  no downstream blocking. */
+    private static double nonRefActivityQLen(LayeredNetwork model, Activity act, String parentTaskName,
                                              double actFraction,
                                              Map<String, Double> entryQlenFraction,
                                              ResultsState st) {
+        double share = activityFullDemandShare(model, act, st, entryQlenFraction);
+        if (share > 0) return share * mapGet(st.taskQLen, parentTaskName, 0.0);
+        // Pure routing activity (Immediate + no outgoing sync calls): no host
+        // work, no downstream blocking → Q=0 to match LN's reporting.
+        Map<Integer, String> syncDests = act.getSyncCallDests();
+        if ((syncDests == null || syncDests.isEmpty())
+                && (Double.isNaN(act.getHostDemandMean()) || act.getHostDemandMean() <= 1e-8)) {
+            return 0.0;
+        }
+        // Activity has no host demand but issues sync calls: it blocks waiting
+        // for the callee. Fall back to the entry-fraction split.
         String boundE = act.getBoundToEntry();
         double qFrac = (boundE != null && entryQlenFraction.containsKey(boundE))
                 ? entryQlenFraction.get(boundE) : actFraction;
@@ -334,20 +394,134 @@ final class OutputTableBuilder {
     }
 
     /** Non-REF activity Util: parent task's processor utilization × this
-     *  activity's host-demand share among the task's entries. Uses the
-     *  host-demand-weighted entry fraction (no downstream contribution) so
-     *  the share matches the processor-only utilization split.
-     *  Zero-demand activities (immediate) contribute zero. */
+     *  activity's visit-weighted host-demand share within the task. Captures
+     *  OR_FORK / POST_LOOP / sequence weighting so per-activity utilizations
+     *  sum to the task total. Zero-demand activities (Immediate) report zero. */
     private static double nonRefActivityUtil(Activity act, String parentTaskName,
                                              double actFraction,
                                              Map<String, Double> entryUtilFraction,
                                              ResultsState st) {
         double hd = act.getHostDemandMean();
         if (Double.isNaN(hd) || hd <= 1e-8) return 0.0;
+        double share = activityDemandShare(act, entryUtilFraction);
+        if (share > 0) return share * mapGet(st.taskUtil, parentTaskName, 0.0);
         String boundEU = act.getBoundToEntry();
         double utilFrac = (boundEU != null && entryUtilFraction.containsKey(boundEU))
                 ? entryUtilFraction.get(boundEU) : actFraction;
         return utilFrac * mapGet(st.taskUtil, parentTaskName, 0.0);
+    }
+
+    /** Share of the task's host work this activity is responsible for, used
+     *  for Util splits. Per-activity weight = host demand; activities with
+     *  zero or NaN host demand contribute nothing. */
+    private static double activityDemandShare(Activity act,
+                                              Map<String, Double> entryFraction) {
+        return activityShareWithinTask(act, entryFraction, OutputTableBuilder::hostDemandWeight);
+    }
+
+    /** Share of the task's Q this activity is responsible for, used for QLen
+     *  splits. Per-activity weight = host demand + Σ {@code callMean ·
+     *  R_per_call(callee)}, matching LN's {@code Q_act = X_act · R_act}
+     *  reporting where R_act includes downstream callee response.
+     *  Activities whose effective response is zero (Immediate with no sync
+     *  call — e.g. AND/OR fork heads, loop heads) contribute nothing. */
+    private static double activityFullDemandShare(LayeredNetwork model, Activity act,
+                                                  ResultsState st,
+                                                  Map<String, Double> entryFraction) {
+        return activityShareWithinTask(act, entryFraction,
+                a -> activityEffectiveResponse(model, a, st));
+    }
+
+    /** Common shape for {@link #activityDemandShare} and
+     *  {@link #activityFullDemandShare}: locate the entry whose DAG reaches
+     *  {@code act}, compute the visit-weighted share within that entry's DAG
+     *  (using {@code weightFn} to score each activity's contribution), then
+     *  scale by the entry's fraction of the task's processor work. The
+     *  entry-fraction map is per-entry caller-tput × demand weight (see
+     *  {@link #computeEntryUtilFractions} / {@link #computeEntryQLenFractions}). */
+    private static double activityShareWithinTask(Activity act,
+                                                  Map<String, Double> entryFraction,
+                                                  java.util.function.ToDoubleFunction<Activity> weightFn) {
+        double actWeight = weightFn.applyAsDouble(act);
+        if (actWeight <= 1e-12) return 0.0;
+        Task parent = act.getParent();
+        if (parent == null) return 0.0;
+
+        String ownerEntry = act.getBoundToEntry();
+        if (ownerEntry == null || ownerEntry.isEmpty()) {
+            ownerEntry = findOwnerEntry(act, parent);
+        }
+        if (ownerEntry == null || ownerEntry.isEmpty()) return 0.0;
+
+        Activity bound = null;
+        for (Activity a : parent.getActivities()) {
+            if (ownerEntry.equals(a.getBoundToEntry())) { bound = a; break; }
+        }
+        if (bound == null) return 0.0;
+
+        Map<String, Double> weights = LqnGraph.computeWeightsFromBound(parent, bound);
+        Double w = weights.get(act.getName());
+        if (w == null || w <= 1e-12) return 0.0;
+        double numer = w * actWeight;
+        double denom = 0.0;
+        for (Activity other : parent.getActivities()) {
+            Double oW = weights.get(other.getName());
+            if (oW == null || oW <= 1e-12) continue;
+            double oWeight = weightFn.applyAsDouble(other);
+            if (oWeight <= 1e-12) continue;
+            denom += oW * oWeight;
+        }
+        if (denom <= 1e-12) return 0.0;
+        double withinEntryShare = numer / denom;
+
+        // For single-entry tasks this is 1.0 by construction; for multi-entry
+        // tasks it captures how much of the task is dispatched to this entry.
+        double entryShare = (entryFraction != null && entryFraction.containsKey(ownerEntry))
+                ? entryFraction.get(ownerEntry) : 1.0;
+        return entryShare * withinEntryShare;
+    }
+
+    /** Host demand mean treated as a non-negative weight: NaN / non-positive
+     *  values return 0 so the activity does not contribute. */
+    private static double hostDemandWeight(Activity a) {
+        double hd = a.getHostDemandMean();
+        return (Double.isNaN(hd) || hd <= 1e-8) ? 0.0 : hd;
+    }
+
+    /** Per-visit effective service time at this activity: host demand plus,
+     *  for each outgoing sync call, {@code callMean × R_per_call(callee)}
+     *  derived from {@code taskSojournCache}. Per-call R falls back to the
+     *  callee's host demand when no cached sojourn is available (first
+     *  iteration or callee has no T: layer). */
+    private static double activityEffectiveResponse(LayeredNetwork model, Activity act,
+                                                    ResultsState st) {
+        double hd = act.getHostDemandMean();
+        double r = (Double.isNaN(hd) || hd <= 1e-8) ? 0.0 : hd;
+        Map<Integer, String> dests = act.getSyncCallDests();
+        if (dests == null || dests.isEmpty()) return r;
+        Matrix means = act.getSyncCallMeans();
+        for (Map.Entry<Integer, String> ce : dests.entrySet()) {
+            int idx = ce.getKey();
+            double cm = (means != null && means.getNumCols() > idx) ? means.get(0, idx) : 1.0;
+            if (!Double.isFinite(cm) || cm <= 0) continue;
+            String destName = ce.getValue();
+            Entry destEntry = LqnGraph.findEntry(model, destName);
+            if (destEntry == null || destEntry.getParent() == null) continue;
+            String calleeTask = destEntry.getParent().getName();
+            String callerTask = (act.getParent() != null) ? act.getParent().getName() : null;
+            // R_per_call at callee = cached sojourn / per-visit callMean.
+            Double sojourn = (st.taskSojournCache != null && callerTask != null)
+                    ? st.taskSojournCache.get(calleeTask) : null;
+            double rPerCall;
+            if (sojourn != null && Double.isFinite(sojourn) && sojourn > 0) {
+                double perVisitCM = LqnGraph.getSyncCallMean(model, callerTask, calleeTask);
+                rPerCall = (perVisitCM > 0) ? sojourn / perVisitCM : sojourn;
+            } else {
+                rPerCall = LqnGraph.hostDemandOfEntry(destEntry);
+            }
+            r += cm * rPerCall;
+        }
+        return r;
     }
 
 
@@ -356,20 +530,8 @@ final class OutputTableBuilder {
     // =====================================================================
 
     /**
-     * Demand-weighted entry-Q split. For each non-REF task, weight its entries
-     * by {@code (callerTput × perCallDemand)} and produce a fraction summing to 1.
-     *
-     * <p>{@code perCallDemand} is the full per-call cost of an entry: the bound
-     * activity's host demand plus, for each downstream sync call, the per-call
-     * response time at the callee (= cached per-visit sojourn ÷ per-visit
-     * callMean). Using the full demand — not just the bound activity's host
-     * demand — keeps per-entry Q proportional to {@code X · D_per_call} when
-     * the entry blocks for downstream callees, which is the basis of LN's
-     * {@code Q_entry = X_entry · R_entry} reporting.
-     */
-    /**
      * Host-demand-weighted entry-Util split. For each non-REF task, weight its
-     * entries by {@code (callerTput × hostDemandOfBoundActivity)} (the processor
+     * entries by {@code (callerTput × hostDemandOfEntry)} (the processor
      * occupancy share — no downstream contribution). Companion to
      * {@link #computeEntryQLenFractions}: utilization splits by host-demand
      * only, queue length splits by full per-call demand.
@@ -384,7 +546,9 @@ final class OutputTableBuilder {
             Map<String, Double> numerators = new HashMap<String, Double>();
             for (Entry e : taskEntries) {
                 double cTput = computeEntryCallerTput(e, model, st.taskTput);
-                double D = getEntryHostDemand(e);
+                // Use the full DAG-walked host demand so multi-activity entries
+                // get a proportional share of the task's processor occupancy.
+                double D = LqnGraph.hostDemandOfEntry(e);
                 double num = cTput * D;
                 numerators.put(e.getName(), num);
                 denom += num;
@@ -398,6 +562,16 @@ final class OutputTableBuilder {
         return fractions;
     }
 
+    /**
+     * Demand-weighted entry-Q split. For each non-REF task, weight its entries
+     * by {@code (callerTput × perCallDemand)} and produce a fraction summing
+     * to 1. {@code perCallDemand} is the full per-call cost of an entry: full
+     * DAG-walked host demand plus, for each downstream sync call, the per-call
+     * response time at the callee (cached per-visit sojourn ÷ per-visit call
+     * mean). Using the full demand keeps per-entry Q proportional to
+     * {@code X · D_per_call} when the entry blocks for downstream callees,
+     * matching LN's {@code Q_entry = X_entry · R_entry} reporting.
+     */
     private static Map<String, Double> computeEntryQLenFractions(LayeredNetwork model, ResultsState st) {
         Map<String, Double> fractions = new HashMap<String, Double>();
         for (Task tk : model.getTasks().values()) {
@@ -433,7 +607,12 @@ final class OutputTableBuilder {
      * iteration of an unsolved layer).
      */
     private static double perCallDemandAtEntry(LayeredNetwork model, Entry entry, ResultsState st) {
-        double d = getEntryHostDemand(entry);
+        // Full per-call demand at this entry: walk the DAG from the bound
+        // activity to sum visit-weighted host demand across every activity
+        // reachable through the entry's precedence chain. Then add the
+        // per-call downstream-blocking contribution for each sync call out
+        // of the bound activity.
+        double d = LqnGraph.hostDemandOfEntry(entry);
         Activity bound = LqnGraph.findBoundActivity(entry);
         if (bound == null) return d;
         Map<Integer, String> dests = bound.getSyncCallDests();
@@ -453,7 +632,7 @@ final class OutputTableBuilder {
                 double perVisitCM = LqnGraph.getSyncCallMean(model, parentTaskName, calleeTaskName);
                 rPerCall = (perVisitCM > 0) ? sojourn / perVisitCM : sojourn;
             } else {
-                rPerCall = LqnGraph.hostDemandOfBoundActivity(destEntry);
+                rPerCall = LqnGraph.hostDemandOfEntry(destEntry);
             }
             d += cm * rPerCall;
         }
@@ -463,10 +642,15 @@ final class OutputTableBuilder {
     /**
      * Share of a parent task's visit-weighted demand attributable to this activity.
      * Used to split a REF task's Q, Util, ResidT proportionally across activities.
-     * Returns 0 if either the activity or the parent has no positive demand.
+     *
+     * <p>For tasks where every activity is Immediate (D=0) — common in REF
+     * tasks that only dispatch sync calls — the visit-weighted share is used
+     * instead so the activity still inherits its slice of processor queueing
+     * (otherwise an Immediate REF activity's QLen drops the {@code q_p1}
+     * contribution and undercounts the cycle time).
      */
     private static double computeRefActivityDemandFraction(Task parentTask, Activity act) {
-        Map<String, Double> visitCounts = LqnGraph.computeActivityVisitCounts(parentTask);
+        Map<String, Double> visitCounts = LqnGraph.computeActivityVisitWeights(parentTask);
         double dTotal = 0.0;
         for (Activity a : parentTask.getActivities()) {
             double vc = visitCounts.containsKey(a.getName()) ? visitCounts.get(a.getName()) : 1.0;
@@ -476,16 +660,34 @@ final class OutputTableBuilder {
         double vcAct = visitCounts.containsKey(act.getName()) ? visitCounts.get(act.getName()) : 1.0;
         double hdAct = act.getHostDemandMean();
         double dAct = (!Double.isNaN(hdAct) && hdAct > 1e-8) ? vcAct * hdAct : 0.0;
-        return (dTotal > 0 && dAct > 0) ? dAct / dTotal : 0.0;
+        if (dTotal > 0 && dAct > 0) return dAct / dTotal;
+
+        // All-immediate fallback: share by visit weight so REF activities that
+        // make sync calls (but no local host demand) still inherit their slice
+        // of the REF processor's queue.
+        double vTotal = 0.0;
+        for (Activity a : parentTask.getActivities()) {
+            double vc = visitCounts.containsKey(a.getName()) ? visitCounts.get(a.getName()) : 1.0;
+            if (vc > 1e-12) vTotal += vc;
+        }
+        if (vTotal > 1e-12 && vcAct > 1e-12) return vcAct / vTotal;
+        return 0.0;
     }
 
-    /** Total call rate into {@code entry} = Σ over callers of caller_tput × callMean. */
+    /** Total call rate into {@code entry} =
+     *  Σ over callers of {@code caller_tput × visitWeight(callingActivity) × callMean}.
+     *  Visit weight captures POST_LOOP / OR_FORK / sequence multiplicity inside
+     *  the caller task's DAG, so a loop body that fires 3× per caller visit
+     *  contributes 3× its raw call-mean. */
     private static double computeEntryCallerTput(Entry entry, LayeredNetwork model,
                                                  Map<String, Double> taskTput) {
         double total = 0.0;
         for (Task task : model.getTasks().values()) {
+            Map<String, Double> visitWeights = LqnGraph.computeActivityVisitWeights(task);
             for (Activity act : task.getActivities()) {
                 if (act.getSyncCallDests() == null) continue;
+                Double w = visitWeights.get(act.getName());
+                if (w == null || w <= 1e-12) continue;
                 for (Map.Entry<Integer, String> syncCall : act.getSyncCallDests().entrySet()) {
                     if (!syncCall.getValue().equals(entry.getName())) continue;
                     Double x = taskTput.get(task.getName());
@@ -497,24 +699,13 @@ final class OutputTableBuilder {
                         double m = means.get(0, idx);
                         if (Double.isFinite(m) && m > 0) callMean = m;
                     }
-                    total += x * callMean;
+                    total += x * w * callMean;
                 }
             }
         }
         return total;
     }
 
-    /** Host demand of the activity bound to {@code entry}. 0 if missing / NaN. */
-    private static double getEntryHostDemand(Entry entry) {
-        if (entry.getParent() == null) return 0.0;
-        for (Activity act : entry.getParent().getActivities()) {
-            if (entry.getName().equals(act.getBoundToEntry())) {
-                double hd = act.getHostDemandMean();
-                return (Double.isNaN(hd) || hd < 0) ? 0.0 : hd;
-            }
-        }
-        return 0.0;
-    }
 
 
     // =====================================================================
@@ -538,7 +729,11 @@ final class OutputTableBuilder {
         return false;
     }
 
-    /** Per-call residual fallback: prefer Q/X if both finite, else the residual map. */
+    /** Per-call residual fallback: prefer Q/X if both finite, else the residual map.
+     *  {@code st.taskQLen} stores the visit-weighted {@code X · D} (service-only
+     *  Q) so {@code Q / X = D}, the host residence per call ignoring queueing.
+     *  {@code st.taskResidT} stores the MVA's per-visit response including
+     *  queueing, which is not what LN reports for the activity ResidT column. */
     private static double deriveLocalTaskResid(String taskName, ResultsState st) {
         Double q = st.taskQLen.get(taskName);
         Double x = st.taskTput.get(taskName);

@@ -438,10 +438,13 @@ public class SolverLNSimple {
     private double computeSiblingCalleeBlocking(String callerTask, String excludedCallee) {
         Task caller = LqnGraph.findTask(lqnModel, callerTask);
         if (caller == null) return 0.0;
+        Map<String, Double> visitWeights = LqnGraph.computeActivityVisitWeights(caller);
         Map<String, Double> siblingCallMean = new HashMap<String, Double>();
         for (Activity act : caller.getActivities()) {
             Map<Integer, String> dests = act.getSyncCallDests();
             if (dests == null || dests.isEmpty()) continue;
+            Double actWeight = visitWeights.get(act.getName());
+            if (actWeight == null || actWeight <= 1e-12) continue;
             Matrix means = act.getSyncCallMeans();
             for (Map.Entry<Integer, String> e : dests.entrySet()) {
                 Entry destEntry = LqnGraph.findEntry(lqnModel, e.getValue());
@@ -451,8 +454,9 @@ public class SolverLNSimple {
                 int idx = e.getKey();
                 double cMean = (means != null && means.getNumCols() > idx) ? means.get(0, idx) : 1.0;
                 if (!Double.isFinite(cMean) || cMean <= 0) cMean = 1.0;
+                double weighted = actWeight * cMean;
                 Double accum = siblingCallMean.get(calleeName);
-                siblingCallMean.put(calleeName, (accum != null ? accum : 0.0) + cMean);
+                siblingCallMean.put(calleeName, (accum != null ? accum : 0.0) + weighted);
             }
         }
         double total = 0.0;
@@ -530,17 +534,25 @@ public class SolverLNSimple {
         }
 
         // Multi-class layer: write per-class D_r = local_r + share_r × propagatedTaskResp.
+        // The chain classTask → callerTask → calleeTask means downstream call
+        // count = classCM (calls from classTask to callerTask, per classTask
+        // cycle) × per-callerTask-cycle calls to calleeTask. The latter does
+        // not depend on the (act, classCM) inner loop and is hoisted.
         boolean canApportion = Double.isFinite(totalCallMeanToCallee) && totalCallMeanToCallee > 0;
+        double callerToCalleeCM = LqnGraph.getSyncCallMean(lqnModel, callerTask, calleeTask);
         for (ClosedClass cc : classes) {
             String classTaskName = LqnGraph.stripPrefix(cc.getName());
             Task classTask = LqnGraph.findTask(lqnModel, classTaskName);
             if (classTask == null) continue;
 
+            Map<String, Double> classVisitWeights = LqnGraph.computeActivityVisitWeights(classTask);
             double localPerClass = 0.0;
             double classCallMeanToCallee = 0.0;
             for (Activity act : classTask.getActivities()) {
                 Map<Integer, String> dests = act.getSyncCallDests();
                 if (dests == null || dests.isEmpty()) continue;
+                Double actW = classVisitWeights.get(act.getName());
+                if (actW == null || actW <= 1e-12) continue;
                 Matrix means = act.getSyncCallMeans();
                 for (Map.Entry<Integer, String> ce : dests.entrySet()) {
                     Entry calledEntry = LqnGraph.findEntry(lqnModel, ce.getValue());
@@ -549,20 +561,8 @@ public class SolverLNSimple {
                     int idx = ce.getKey();
                     double classCM = (means != null && means.getNumCols() > idx) ? means.get(0, idx) : 1.0;
                     if (!Double.isFinite(classCM) || classCM <= 0) continue;
-                    localPerClass += classCM * LqnGraph.hostDemandOfBoundActivity(calledEntry);
-                    Activity bound = LqnGraph.findBoundActivity(calledEntry);
-                    if (bound == null) continue;
-                    Map<Integer, String> bDests = bound.getSyncCallDests();
-                    if (bDests == null || bDests.isEmpty()) continue;
-                    Matrix bMeans = bound.getSyncCallMeans();
-                    for (Map.Entry<Integer, String> bce : bDests.entrySet()) {
-                        Entry bCallee = LqnGraph.findEntry(lqnModel, bce.getValue());
-                        if (bCallee == null || bCallee.getParent() == null) continue;
-                        if (!calleeTask.equals(bCallee.getParent().getName())) continue;
-                        int bIdx = bce.getKey();
-                        double bCM = (bMeans != null && bMeans.getNumCols() > bIdx) ? bMeans.get(0, bIdx) : 1.0;
-                        if (Double.isFinite(bCM) && bCM > 0) classCallMeanToCallee += classCM * bCM;
-                    }
+                    localPerClass += actW * classCM * LqnGraph.hostDemandOfEntry(calledEntry);
+                    classCallMeanToCallee += actW * classCM * callerToCalleeCM;
                 }
             }
 
@@ -806,11 +806,13 @@ public class SolverLNSimple {
     }
 
     /** Write {@code safeR} into every non-Disabled class on the task's T: layer
-     *  queue server — the processor response is the per-call service time the
-     *  task layer should see for all callers. For INF tasks on multi-server PS
-     *  processors the host-layer R_proc fluctuates between bare-demand and
-     *  queueing-tail values across sweeps, so the write is under-relaxed in
-     *  that regime to keep the demand channel from oscillating. */
+     *  queue server — the processor response is the per-cycle service time
+     *  the T: layer expects. {@link EnsembleInitialiser#setAggregateHostDemand}
+     *  always writes per-cycle demand to the host, so the host's R_proc is
+     *  per-cycle too and the writeback is plain {@code safeR}. INF tasks on
+     *  multi-server PS processors use under-relaxation since R_proc
+     *  fluctuates between bare-demand and queueing-tail values across
+     *  sweeps. */
     private void writeHostResponseToTaskLayerServer(int taskLayerIdx, double safeR) {
         Network taskNet = ensemble.get(taskLayerIdx);
         Queue tq = MvaInputs.findNonDelayQueue(taskNet);

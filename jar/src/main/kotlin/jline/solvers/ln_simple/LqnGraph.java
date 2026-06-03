@@ -188,18 +188,22 @@ public final class LqnGraph {
         return 0.0;
     }
 
-    /** Task's <i>local</i> demand: Σ visitCount × hostDemand across its activities,
-     *  where visitCount &gt; 1 for activities inside a POST_LOOP precedence. */
+    /** Task's <i>local</i> demand: Σ visitWeight × hostDemand across its activities,
+     *  where visitWeight follows the per-task DAG walk (sequence + OR_FORK +
+     *  AND_FORK + POST_LOOP). For multi-entry tasks the per-entry walks are
+     *  summed: if every entry is called once per outer cycle, each activity
+     *  fires once and the result equals Σ hostDemand over the task's DAG-
+     *  reachable activities. */
     public static double computeLocalDemand(LayeredNetwork model, String taskName) {
         Task task = findTask(model, taskName);
         if (task == null) return 0.0;
-        Map<String, Double> visitCounts = computeActivityVisitCounts(task);
+        Map<String, Double> visitWeights = computeActivityVisitWeights(task);
         double total = 0.0;
         for (Activity act : task.getActivities()) {
             double m = act.getHostDemandMean();
             if (Double.isNaN(m) || m <= 1e-7) continue;
-            Double c = visitCounts.get(act.getName());
-            total += (c != null ? c : 1.0) * m;
+            Double w = visitWeights.get(act.getName());
+            total += (w != null ? w : 1.0) * m;
         }
         return total;
     }
@@ -218,17 +222,27 @@ public final class LqnGraph {
         return total;
     }
 
-    /** Host demand of the activity bound to {@code destEntry} (i.e. "service time
-     *  per call into that entry"). 0 if missing / NaN. */
-    public static double hostDemandOfBoundActivity(Entry destEntry) {
+    /** Host demand for one call into {@code destEntry}: walks the activity DAG
+     *  starting at the bound activity, summing {@code visitWeight × hostDemand}
+     *  across every activity reachable through the entry's precedence chain
+     *  (sequence, OR_FORK with branch-prob weighting, AND_FORK with weight 1
+     *  per branch, POST_LOOP with loop-count weighting on body activities).
+     *  Returns 0 if the entry has no bound activity. */
+    public static double hostDemandOfEntry(Entry destEntry) {
         if (destEntry == null || destEntry.getParent() == null) return 0.0;
-        for (Activity a : destEntry.getParent().getActivities()) {
-            if (destEntry.getName().equals(a.getBoundToEntry())) {
-                double m = a.getHostDemandMean();
-                return Double.isNaN(m) ? 0.0 : m;
-            }
+        Activity bound = findBoundActivity(destEntry);
+        if (bound == null) return 0.0;
+        Task task = destEntry.getParent();
+        Map<String, Double> weights = computeWeightsFromBound(task, bound);
+        double total = 0.0;
+        for (Activity a : task.getActivities()) {
+            Double w = weights.get(a.getName());
+            if (w == null || w <= 1e-12) continue;
+            double m = a.getHostDemandMean();
+            if (Double.isNaN(m) || m <= 1e-9) continue;
+            total += w * m;
         }
-        return 0.0;
+        return total;
     }
 
     /** Activity bound to {@code destEntry}, or {@code null} if none. */
@@ -242,14 +256,14 @@ public final class LqnGraph {
 
     /**
      * Per-visit demand the {@code caller} task imposes on the {@code target} task:
-     * Σ {@code callMean × hostDemandOfBoundActivity} for sync calls into entries
-     * on {@code target}.
+     * Σ {@code visitWeight(act) × callMean × hostDemandOfEntry(destEntry)} for
+     * sync calls into entries on {@code target}.
      *
      * <p>For single-entry callers this sums across all of the caller's activities
-     * (one visit traverses the entire task DAG). For multi-entry callers each
-     * visit dispatches to one entry's bound activity, so we average per-entry
-     * bound-activity contributions — the result is the mean per-visit demand
-     * rather than the sum across mutually-exclusive entries.
+     * weighted by the per-activity DAG visit weight (one visit traverses the
+     * entire task DAG). For multi-entry callers each visit dispatches to one
+     * entry's DAG, so we average the per-entry walks — the result is the mean
+     * per-visit demand rather than the sum across mutually-exclusive entries.
      */
     public static double callerDemandOnTask(LayeredNetwork model, String callerName, String targetTaskName) {
         Task caller = findTask(model, callerName);
@@ -260,9 +274,12 @@ public final class LqnGraph {
             if (e.getParent() == caller) callerEntries.add(e);
         }
         if (callerEntries.size() <= 1) {
+            Map<String, Double> weights = computeActivityVisitWeights(caller);
             double total = 0.0;
             for (Activity act : caller.getActivities()) {
-                total += demandFromActivityToTask(model, act, targetTaskName);
+                Double w = weights.get(act.getName());
+                if (w == null || w <= 1e-12) continue;
+                total += w * demandFromActivityToTask(model, act, targetTaskName);
             }
             return total;
         }
@@ -270,11 +287,20 @@ public final class LqnGraph {
         for (Entry e : callerEntries) {
             Activity bound = findBoundActivity(e);
             if (bound == null) continue;
-            total += demandFromActivityToTask(model, bound, targetTaskName);
+            Map<String, Double> weights = computeWeightsFromBound(caller, bound);
+            for (Activity act : caller.getActivities()) {
+                Double w = weights.get(act.getName());
+                if (w == null || w <= 1e-12) continue;
+                total += w * demandFromActivityToTask(model, act, targetTaskName);
+            }
         }
         return total / callerEntries.size();
     }
 
+    /** Per-visit demand <i>contributed by one activity</i> into {@code targetTaskName}:
+     *  Σ {@code callMean × hostDemandOfEntry(destEntry)} across this activity's
+     *  sync calls into entries of the target. Caller-side visit weighting is
+     *  applied externally so this stays a pure per-activity quantity. */
     private static double demandFromActivityToTask(LayeredNetwork model, Activity act, String targetTaskName) {
         Map<Integer, String> dests = act.getSyncCallDests();
         if (dests == null || dests.isEmpty()) return 0.0;
@@ -286,27 +312,211 @@ public final class LqnGraph {
             if (!targetTaskName.equals(destEntry.getParent().getName())) continue;
             int idx = ce.getKey();
             double cm = (means != null && means.getNumCols() > idx) ? means.get(0, idx) : 1.0;
-            d += cm * hostDemandOfBoundActivity(destEntry);
+            d += cm * hostDemandOfEntry(destEntry);
         }
         return d;
     }
 
     /**
-     * Returns visit count per task-entry visit for each activity, accounting for
-     * POST_LOOP precedences: pre-acts fire {@code loopCount} times per visit;
-     * post-acts (loop exits) fire once.
+     * Per-activity visit weight for the whole task, summing per-entry DAG walks.
+     *
+     * <p>The walk starts at each entry's bound activity with weight 1, then
+     * propagates forward through precedences:
+     * <ul>
+     *   <li><b>POST_SEQ</b>: postAct inherits preAct's weight.</li>
+     *   <li><b>POST_AND</b>: each postAct inherits preAct's weight (every branch
+     *       fires once per visit).</li>
+     *   <li><b>POST_OR</b>: postAct[i] inherits preAct's weight × branch
+     *       probability ({@code postParams[0][i]}).</li>
+     *   <li><b>POST_LOOP</b>: postAct[i] in {@code 0..postParams.cols-1}
+     *       inherits preAct's weight × loop count ({@code postParams[0][i]});
+     *       the trailing post-act (when {@code postActs.size() == postParams.cols + 1})
+     *       inherits preAct's weight × 1.</li>
+     *   <li><b>PRE_AND</b> (AND_JOIN): postAct inherits {@code max} of preActs'
+     *       weights (they should already be equal coming from a matched fork).</li>
+     *   <li><b>PRE_OR</b> (OR_JOIN): postAct inherits sum of preActs' weights —
+     *       branches contribute their probability mass.</li>
+     * </ul>
+     *
+     * <p>Multi-entry tasks sum per-entry walks; an activity reachable only
+     * from one entry gets weight 1.0 across the task. Tasks with no bound
+     * activities OR no precedences fall back to weight 1.0 per activity (the
+     * historical bag-of-activities default).
      */
-    public static Map<String, Double> computeActivityVisitCounts(Task task) {
-        Map<String, Double> counts = new HashMap<String, Double>();
-        for (Activity a : task.getActivities()) counts.put(a.getName(), 1.0);
-        for (ActivityPrecedence prec : task.getPrecedences()) {
-            if (!ActivityPrecedenceType.POST_LOOP.equals(prec.getPostType())) continue;
-            Matrix p = prec.getPostParams();
-            double loopCount = (p != null && p.getNumRows() > 0 && p.getNumCols() > 0)
-                    ? p.get(0, 0) : 1.0;
-            for (String actName : prec.getPreActs()) counts.put(actName, loopCount);
+    public static Map<String, Double> computeActivityVisitWeights(Task task) {
+        Map<String, Double> total = new HashMap<String, Double>();
+        for (Activity a : task.getActivities()) total.put(a.getName(), 0.0);
+
+        List<ActivityPrecedence> precs = task.getPrecedences();
+        boolean hasPrecs = precs != null && !precs.isEmpty();
+
+        boolean anyBound = false;
+        for (Activity a : task.getActivities()) {
+            String be = a.getBoundToEntry();
+            if (be == null || be.isEmpty()) continue;
+            anyBound = true;
+            Map<String, Double> w = computeWeightsFromBound(task, a);
+            for (Map.Entry<String, Double> e : w.entrySet()) {
+                Double cur = total.get(e.getKey());
+                total.put(e.getKey(), (cur != null ? cur : 0.0) + e.getValue());
+            }
         }
-        return counts;
+        if (!anyBound || !hasPrecs) {
+            // Bag fallback: tasks without entry bindings or precedences are
+            // treated as the historical "every activity fires once" model.
+            for (Activity a : task.getActivities()) total.put(a.getName(), 1.0);
+        }
+        return total;
+    }
+
+    /** Backward-compatible alias retained for callers expecting visit counts.
+     *  Now returns the DAG-aware per-activity visit weight. */
+    public static Map<String, Double> computeActivityVisitCounts(Task task) {
+        return computeActivityVisitWeights(task);
+    }
+
+    /**
+     * Per-activity visit weight for the DAG rooted at one bound activity.
+     * The bound activity starts at weight 1.0; all others at 0.0. Precedences
+     * are applied in fixed-point iteration (declarations are usually in topo
+     * order, but iteration tolerates out-of-order declarations and the loop
+     * caps at one pass per activity so it always terminates).
+     *
+     * <p>Public because {@link EnsembleInitialiser} and the results-collector
+     * package both need per-entry weights when computing per-caller demand
+     * and per-activity ownership for multi-entry callers.
+     */
+    public static Map<String, Double> computeWeightsFromBound(Task task, Activity boundAct) {
+        List<Activity> activities = task.getActivities();
+        List<ActivityPrecedence> precs = task.getPrecedences();
+
+        Map<String, Double> w = new HashMap<String, Double>();
+        for (Activity a : activities) w.put(a.getName(), 0.0);
+        w.put(boundAct.getName(), 1.0);
+
+        if (precs == null || precs.isEmpty()) return w;
+
+        int maxIter = activities.size() + 5;
+        for (int iter = 0; iter < maxIter; iter++) {
+            Map<String, Double> next = new HashMap<String, Double>();
+            for (Activity a : activities) {
+                next.put(a.getName(), a.getName().equals(boundAct.getName()) ? 1.0 : 0.0);
+            }
+            for (ActivityPrecedence p : precs) {
+                applyPrecedence(p, w, next);
+            }
+            if (mapsEqual(next, w)) return next;
+            w = next;
+        }
+        return w;
+    }
+
+    /** Apply one precedence: read fan-in weight from {@code in}, write
+     *  contributions to {@code out}. Multiple precedences targeting the same
+     *  activity sum (which is what OR-style merging across precedences wants;
+     *  AND-style joins are already collapsed to {@code max} on the pre side). */
+    private static void applyPrecedence(ActivityPrecedence p,
+                                        Map<String, Double> in,
+                                        Map<String, Double> out) {
+        String preType = p.getPreType();
+        String postType = p.getPostType();
+        List<String> preActs = p.getPreActs();
+        List<String> postActs = p.getPostActs();
+        Matrix postParams = p.getPostParams();
+
+        if (preActs == null || preActs.isEmpty() || postActs == null || postActs.isEmpty()) return;
+
+        // Fan-in: aggregate predecessor weights by preType.
+        double fanIn;
+        if (ActivityPrecedenceType.PRE_AND.equals(preType)) {
+            double m = 0.0;
+            for (String pre : preActs) {
+                Double v = in.get(pre);
+                if (v != null && v > m) m = v;
+            }
+            fanIn = m;
+        } else if (ActivityPrecedenceType.PRE_OR.equals(preType)) {
+            double s = 0.0;
+            for (String pre : preActs) {
+                Double v = in.get(pre);
+                if (v != null) s += v;
+            }
+            fanIn = s;
+        } else {  // PRE_SEQ — single preAct
+            Double v = in.get(preActs.get(0));
+            fanIn = (v != null) ? v : 0.0;
+        }
+        if (fanIn <= 1e-12) return;
+
+        // Fan-out: distribute to postActs by postType.
+        if (ActivityPrecedenceType.POST_OR.equals(postType)) {
+            int n = postActs.size();
+            int paramCols = (postParams != null) ? postParams.getNumCols() : 0;
+            for (int i = 0; i < n; i++) {
+                double prob = (i < paramCols) ? postParams.get(0, i) : 0.0;
+                addWeight(out, postActs.get(i), fanIn * prob);
+            }
+        } else if (ActivityPrecedenceType.POST_LOOP.equals(postType)) {
+            int n = postActs.size();
+            int paramCols = (postParams != null) ? postParams.getNumCols() : 0;
+            // POST_LOOP has two conventions depending on whether the call
+            // supplied an explicit end activity:
+            //   * postActs.size() == paramCols + 1 (e.g. Loop(pre, [body, end], n)):
+            //     preActs are the loop entry (fires once via fan-in),
+            //     postActs[0..paramCols-1] are loop bodies (×count), and
+            //     postActs[last] is the end activity firing once.
+            //   * postActs.size() == paramCols (e.g. Loop(pre, [body], n)):
+            //     no separate end activity. preActs are themselves the loop
+            //     body (fire {@code count} times), modelled as a self-loop
+            //     with edge weight (N-1)/N back to preAct and 1/N forward to
+            //     each postAct (matches LN's reporting on this form, verified
+            //     against sc5_loop). The fractional split is what makes the
+            //     fixed-point iteration converge: bound activity weight 1
+            //     plus self-loop weight (N-1)/N × N = N-1 yields N total.
+            boolean hasEndAct = n == paramCols + 1;
+            if (hasEndAct) {
+                for (int i = 0; i < n; i++) {
+                    double mult = (i < paramCols) ? postParams.get(0, i) : 1.0;
+                    addWeight(out, postActs.get(i), fanIn * mult);
+                }
+            } else {
+                // preActs are themselves the loop body. Scale their existing
+                // weight in {@code out} (from the bound-activity init or
+                // earlier precedences) by loopCount; emit postActs once each
+                // as the sequential continuation, using the pre-multiplication
+                // {@code out} value rather than {@code in} so the fixed-point
+                // iteration converges in one pass instead of decaying
+                // geometrically.
+                double loopCount = (paramCols > 0) ? postParams.get(0, 0) : 1.0;
+                double preInTotal = 0.0;
+                for (String pre : preActs) {
+                    Double cur = out.get(pre);
+                    if (cur == null) continue;
+                    preInTotal += cur;
+                    if (loopCount > 1.0) out.put(pre, cur * loopCount);
+                }
+                for (String post : postActs) addWeight(out, post, preInTotal);
+            }
+        } else if (ActivityPrecedenceType.POST_AND.equals(postType)) {
+            for (String post : postActs) addWeight(out, post, fanIn);
+        } else {  // POST_SEQ — single postAct
+            addWeight(out, postActs.get(0), fanIn);
+        }
+    }
+
+    private static void addWeight(Map<String, Double> map, String key, double delta) {
+        if (delta == 0.0 || !map.containsKey(key)) return;
+        map.put(key, map.get(key) + delta);
+    }
+
+    private static boolean mapsEqual(Map<String, Double> a, Map<String, Double> b) {
+        if (a.size() != b.size()) return false;
+        for (Map.Entry<String, Double> e : a.entrySet()) {
+            Double bv = b.get(e.getKey());
+            if (bv == null) return false;
+            if (Math.abs(e.getValue() - bv) > 1e-12) return false;
+        }
+        return true;
     }
 
 
@@ -371,10 +581,13 @@ public final class LqnGraph {
     }
 
     private static double sumCallsFromCallerToTarget(LayeredNetwork model, Task caller, String targetTask) {
+        Map<String, Double> visitWeights = computeActivityVisitWeights(caller);
         double sum = 0.0;
         for (Activity act : caller.getActivities()) {
             Map<Integer, String> dests = act.getSyncCallDests();
             if (dests == null || dests.isEmpty()) continue;
+            Double w = visitWeights.get(act.getName());
+            if (w == null || w <= 1e-12) continue;
             Matrix means = act.getSyncCallMeans();
             for (Map.Entry<Integer, String> e : dests.entrySet()) {
                 Entry called = findEntry(model, e.getValue());
@@ -382,7 +595,7 @@ public final class LqnGraph {
                 if (!targetTask.equals(called.getParent().getName())) continue;
                 int idx = e.getKey();
                 double m = (means != null && means.getNumCols() > idx) ? means.get(0, idx) : 1.0;
-                if (Double.isFinite(m) && m > 0) sum += m;
+                if (Double.isFinite(m) && m > 0) sum += w * m;
             }
         }
         return sum;
@@ -390,10 +603,12 @@ public final class LqnGraph {
 
     /**
      * Per-visit call mean from {@code caller} into {@code targetTask}: sum across
-     * caller's activities when the caller has a single entry (one visit traverses
-     * the whole task DAG), or the average over entries of each bound activity's
-     * calls to {@code targetTask} when the caller has multiple entries (each visit
-     * dispatches to one entry's bound activity).
+     * caller's activities weighted by the DAG visit weight (single-entry
+     * callers traverse the whole task DAG per visit, so all activities
+     * reachable from the bound activity contribute according to their visit
+     * weight). For multi-entry callers each visit dispatches to one entry's
+     * own DAG, so we average per-entry contributions, with each entry's
+     * contribution being the weighted sum across its own reachable activities.
      */
     private static double perVisitCallsFromCallerToTarget(LayeredNetwork model, Task caller, String targetTask) {
         List<Entry> callerEntries = new ArrayList<Entry>();
@@ -407,16 +622,21 @@ public final class LqnGraph {
         for (Entry e : callerEntries) {
             Activity bound = findBoundActivity(e);
             if (bound == null) continue;
-            Map<Integer, String> dests = bound.getSyncCallDests();
-            if (dests == null || dests.isEmpty()) continue;
-            Matrix means = bound.getSyncCallMeans();
-            for (Map.Entry<Integer, String> ce : dests.entrySet()) {
-                Entry called = findEntry(model, ce.getValue());
-                if (called == null || called.getParent() == null) continue;
-                if (!targetTask.equals(called.getParent().getName())) continue;
-                int idx = ce.getKey();
-                double m = (means != null && means.getNumCols() > idx) ? means.get(0, idx) : 1.0;
-                if (Double.isFinite(m) && m > 0) total += m;
+            Map<String, Double> weights = computeWeightsFromBound(caller, bound);
+            for (Activity act : caller.getActivities()) {
+                Double w = weights.get(act.getName());
+                if (w == null || w <= 1e-12) continue;
+                Map<Integer, String> dests = act.getSyncCallDests();
+                if (dests == null || dests.isEmpty()) continue;
+                Matrix means = act.getSyncCallMeans();
+                for (Map.Entry<Integer, String> ce : dests.entrySet()) {
+                    Entry called = findEntry(model, ce.getValue());
+                    if (called == null || called.getParent() == null) continue;
+                    if (!targetTask.equals(called.getParent().getName())) continue;
+                    int idx = ce.getKey();
+                    double m = (means != null && means.getNumCols() > idx) ? means.get(0, idx) : 1.0;
+                    if (Double.isFinite(m) && m > 0) total += w * m;
+                }
             }
         }
         return total / callerEntries.size();
