@@ -7,6 +7,7 @@ import jline.lang.layered.ActivityPrecedence;
 import jline.lang.layered.Entry;
 import jline.lang.layered.Host;
 import jline.lang.layered.LayeredNetwork;
+import jline.lang.layered.LayeredNetworkStruct;
 import jline.lang.layered.Task;
 import jline.util.matrix.Matrix;
 
@@ -76,18 +77,24 @@ public final class LqnGraph {
     private static volatile ModelCache     lastCache;
 
     /** Memoised structural lookups for one {@link LayeredNetwork}. The name
-     *  indexes are built eagerly; every other map is filled lazily on first
-     *  query. Values are never {@code null} once present, so a {@code null}
-     *  from {@code get} means "not yet computed" — except {@link #callerOfTask},
-     *  whose answer can legitimately be {@code null} and so is guarded with
-     *  {@code containsKey}. */
+     *  indexes and the struct-derived caller relation are built eagerly; every
+     *  other map is filled lazily on first query. Lazy values are never
+     *  {@code null} once present, so a {@code null} from {@code get} means
+     *  "not yet computed". */
     private static final class ModelCache {
         // Eager name → object indexes.
         final Map<String, Task>  taskByName  = new HashMap<String, Task>();
         final Map<String, Entry> entryByName = new HashMap<String, Entry>();
 
+        // Struct-derived task-level caller relation, used by findCallerTask.
+        // Built once from model.getStruct().issynccaller (see buildCallerRelation).
+        // Task index t runs 1..ntasks; callerOfT[t] is the first sync-caller of
+        // task t in task-index order (0 = no caller).
+        Map<String, Integer> taskIndexByName;  // bare task name → t
+        String[]             taskNameByT;       // t → bare task name
+        int[]                callerOfT;         // t → first sync-caller t (0 = none)
+
         // Lazy structural predicates, keyed by task or processor name.
-        final Map<String, String>  callerOfTask             = new HashMap<String, String>();
         final Map<String, Boolean> taskHasSyncCallees       = new HashMap<String, Boolean>();
         final Map<String, Boolean> callerFansOut            = new HashMap<String, Boolean>();
         final Map<String, Boolean> isInfScheduledTask       = new HashMap<String, Boolean>();
@@ -129,7 +136,8 @@ public final class LqnGraph {
         Map<String, String> refTaskCalledTaskMap;
     }
 
-    /** Cache for {@code model}, building the name indexes on first use. */
+    /** Cache for {@code model}, building the name indexes and the struct-derived
+     *  caller relation on first use. */
     private static ModelCache cacheFor(LayeredNetwork model) {
         if (model == lastModel) {
             ModelCache lc = lastCache;
@@ -141,11 +149,45 @@ public final class LqnGraph {
                 mc = new ModelCache();
                 for (Task t : model.getTasks().values())   mc.taskByName.put(t.getName(), t);
                 for (Entry e : model.getEntries().values()) mc.entryByName.put(e.getName(), e);
+                buildCallerRelation(model, mc);
                 CACHE.put(model, mc);
             }
             lastModel = model;
             lastCache = mc;
             return mc;
+        }
+    }
+
+    /** Derive the task-level caller relation from {@code model.getStruct()} once
+     *  per model. The struct exposes {@code issynccaller(callerTidx, calleeTidx)
+     *  != 0} iff the caller task sync-calls the callee task; {@code callerOfT[t]}
+     *  records the first such caller in task-index order. The struct assigns task
+     *  indices in {@code model.getTasks()} insertion order, so that first caller
+     *  is exactly the one the previous OO graph walk returned. Absolute task
+     *  index is {@code tidx = t + tshift}. */
+    private static void buildCallerRelation(LayeredNetwork model, ModelCache mc) {
+        LayeredNetworkStruct s = model.getStruct();
+        final int tshift = s.tshift;
+        final int nt = s.ntasks;
+        mc.taskIndexByName = new HashMap<String, Integer>(nt * 2);
+        mc.taskNameByT = new String[nt + 1];
+        mc.callerOfT = new int[nt + 1];
+        for (int t = 1; t <= nt; t++) {
+            String name = s.names.get(tshift + t);
+            mc.taskNameByT[t] = name;
+            if (name != null) mc.taskIndexByName.put(name, t);
+        }
+        Matrix sc = s.issynccaller;
+        if (sc != null) {
+            for (int caller = 1; caller <= nt; caller++) {
+                int callerTidx = tshift + caller;
+                for (int callee = 1; callee <= nt; callee++) {
+                    if (callee == caller) continue;
+                    if (mc.callerOfT[callee] == 0 && sc.get(callerTidx, tshift + callee) != 0.0) {
+                        mc.callerOfT[callee] = caller;
+                    }
+                }
+            }
         }
     }
 
@@ -208,29 +250,17 @@ public final class LqnGraph {
     }
 
     /** Name of <i>any</i> task whose activities issue a sync call into a task
-     *  named {@code calleeName}, or {@code null} if no caller exists. The
-     *  answer is topological, so it is walked once and memoised. */
+     *  named {@code calleeName}, or {@code null} if no caller exists. Resolved in
+     *  O(1) from the struct-derived caller relation (see
+     *  {@link #buildCallerRelation}) — the first caller in task-index order,
+     *  which matches what the previous OO graph walk returned. */
     public static String findCallerTask(LayeredNetwork model, String calleeName) {
         if (calleeName == null) return null;
         ModelCache mc = cacheFor(model);
-        if (mc.callerOfTask.containsKey(calleeName)) return mc.callerOfTask.get(calleeName);
-
-        String caller = null;
-        search:
-        for (Task task : model.getTasks().values()) {
-            for (Activity act : task.getActivities()) {
-                for (String dest : act.getSyncCallDests().values()) {
-                    Entry e = mc.entryByName.get(dest);
-                    if (e != null && e.getParent() != null
-                            && calleeName.equals(e.getParent().getName())) {
-                        caller = task.getName();
-                        break search;
-                    }
-                }
-            }
-        }
-        mc.callerOfTask.put(calleeName, caller);
-        return caller;
+        Integer t = mc.taskIndexByName.get(calleeName);
+        if (t == null) return null;
+        int caller = mc.callerOfT[t];
+        return caller == 0 ? null : mc.taskNameByT[caller];
     }
 
 
