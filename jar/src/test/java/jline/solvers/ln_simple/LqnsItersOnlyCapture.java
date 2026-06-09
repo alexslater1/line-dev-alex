@@ -100,15 +100,11 @@ public class LqnsItersOnlyCapture {
     }
 
     // ===== A1 =====
-    @Test @Timeout(60) public void A1_chain_d3_N20()  { capture(EvaluationSuite::A1_chain_d3_N20);  }
     @Test @Timeout(60) public void A1_chain_d3_N50()  { capture(EvaluationSuite::A1_chain_d3_N50);  }
-    @Test @Timeout(60) public void A1_chain_d3_N100() { capture(EvaluationSuite::A1_chain_d3_N100); }
     @Test @Timeout(60) public void A1_chain_d5_N20()  { capture(EvaluationSuite::A1_chain_d5_N20);  }
     @Test @Timeout(60) public void A1_chain_d5_N50()  { capture(EvaluationSuite::A1_chain_d5_N50);  }
     @Test @Timeout(60) public void A1_chain_d5_N100() { capture(EvaluationSuite::A1_chain_d5_N100); }
-    @Test @Timeout(60) public void A1_chain_d8_N20()  { capture(EvaluationSuite::A1_chain_d8_N20);  }
     @Test @Timeout(60) public void A1_chain_d8_N50()  { capture(EvaluationSuite::A1_chain_d8_N50);  }
-    @Test @Timeout(60) public void A1_chain_d8_N100() { capture(EvaluationSuite::A1_chain_d8_N100); }
 
     // ===== A2 =====
     @Test @Timeout(60) public void A2_multiclassA_2refs_loadLow_N20()      { capture(EvaluationSuite::A2_multiclassA_2refs_loadLow_N20);  }

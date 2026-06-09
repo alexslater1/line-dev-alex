@@ -326,11 +326,15 @@ public class util {
         if (fixtureName.startsWith("A2_")) return "A2";
         if (fixtureName.startsWith("A3_")) return "A3";
         if (fixtureName.startsWith("A4_")) return "A4";
+        if (fixtureName.startsWith("A5_")) return "A5";
         if (fixtureName.startsWith("B_"))  return "B";
         if (fixtureName.startsWith("C1_")) return "C1";
         if (fixtureName.startsWith("C2_")) return "C2";
         if (fixtureName.startsWith("C3_")) return "C3";
         if (fixtureName.startsWith("C4_")) return "C4";
+        if (fixtureName.startsWith("C5_")) return "C5";
+        if (fixtureName.startsWith("C6_")) return "C6";
+        if (fixtureName.startsWith("C7_")) return "C7";
         return "?";
     }
 

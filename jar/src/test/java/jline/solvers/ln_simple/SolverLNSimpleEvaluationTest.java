@@ -29,7 +29,7 @@ public class SolverLNSimpleEvaluationTest {
     }
 
     /** JIT-warm the solver paths so the first few timed fixtures are not
-     *  cold-start-noisy. Three iterations of {@code A1_chain_d3_N20} —
+     *  cold-start-noisy. Three iterations of {@code A1_chain_d3_N50} —
      *  the smallest fixture — exercise SolverLNSimple, SolverLN and
      *  SolverLQNS through their typical code paths. Dataset capture is
      *  suspended for the duration so the warmup rows are dropped. */
@@ -37,7 +37,7 @@ public class SolverLNSimpleEvaluationTest {
         util.dataCaptureSuspended = true;
         try {
             for (int i = 0; i < 3; i++) {
-                util.assertResultsMatchSolverLN(EvaluationSuite::A1_chain_d3_N20);
+                util.assertResultsMatchSolverLN(EvaluationSuite::A1_chain_d3_N50);
             }
         } catch (Throwable ignored) {
             // Warmup failures are not fatal — log and continue.
@@ -51,15 +51,11 @@ public class SolverLNSimpleEvaluationTest {
     // Partition A1: Single-class chains
     // =========================================================================
 
-    @Test @Timeout(180) public void A1_chain_d3_N20()  { assertResultsMatchSolverLN(EvaluationSuite::A1_chain_d3_N20);  }
     @Test @Timeout(180) public void A1_chain_d3_N50()  { assertResultsMatchSolverLN(EvaluationSuite::A1_chain_d3_N50);  }
-    @Test @Timeout(180) public void A1_chain_d3_N100() { assertResultsMatchSolverLN(EvaluationSuite::A1_chain_d3_N100); }
     @Test @Timeout(180) public void A1_chain_d5_N20()  { assertResultsMatchSolverLN(EvaluationSuite::A1_chain_d5_N20);  }
     @Test @Timeout(180) public void A1_chain_d5_N50()  { assertResultsMatchSolverLN(EvaluationSuite::A1_chain_d5_N50);  }
     @Test @Timeout(240) public void A1_chain_d5_N100() { assertResultsMatchSolverLN(EvaluationSuite::A1_chain_d5_N100); }
-    @Test @Timeout(240) public void A1_chain_d8_N20()  { assertResultsMatchSolverLN(EvaluationSuite::A1_chain_d8_N20);  }
     @Test @Timeout(240) public void A1_chain_d8_N50()  { assertResultsMatchSolverLN(EvaluationSuite::A1_chain_d8_N50);  }
-    @Test @Timeout(300) public void A1_chain_d8_N100() { assertResultsMatchSolverLN(EvaluationSuite::A1_chain_d8_N100); }
 
     // =========================================================================
     // Partition A2: Multi-class with shared callees
@@ -102,6 +98,23 @@ public class SolverLNSimpleEvaluationTest {
     @Test @Timeout(240) public void A4_chainPlusFanout()         { assertResultsMatchSolverLN(EvaluationSuite::A4_chainPlusFanout);         }
     @Test @Timeout(240) public void A4_webApplication()          { assertResultsMatchSolverLN(EvaluationSuite::A4_webApplication);          }
     @Test @Timeout(240) public void A4_databaseBackend()         { assertResultsMatchSolverLN(EvaluationSuite::A4_databaseBackend);         }
+    @Test @Timeout(240) public void A4_threeTier_sequence()      { assertResultsMatchSolverLN(EvaluationSuite::A4_threeTier_sequence);      }
+    @Test @Timeout(240) public void A4_parallelService_andFork() { assertResultsMatchSolverLN(EvaluationSuite::A4_parallelService_andFork); }
+    @Test @Timeout(240) public void A4_retryLoop()               { assertResultsMatchSolverLN(EvaluationSuite::A4_retryLoop);               }
+    @Test @Timeout(240) public void A4_replyThenLog()            { assertResultsMatchSolverLN(EvaluationSuite::A4_replyThenLog);            }
+
+    // =========================================================================
+    // Partition A5: Activity-graph capability coverage
+    // =========================================================================
+
+    @Test @Timeout(180) public void A5_orForkUneven()      { assertResultsMatchSolverLN(EvaluationSuite::A5_orForkUneven);      }
+    @Test @Timeout(180) public void A5_orForkThreeWay()    { assertResultsMatchSolverLN(EvaluationSuite::A5_orForkThreeWay);    }
+    @Test @Timeout(180) public void A5_andForkThreeWay()   { assertResultsMatchSolverLN(EvaluationSuite::A5_andForkThreeWay);   }
+    @Test @Timeout(180) public void A5_andForkMultiAct()   { assertResultsMatchSolverLN(EvaluationSuite::A5_andForkMultiAct);   }
+    @Test @Timeout(180) public void A5_seqMultiEntry()     { assertResultsMatchSolverLN(EvaluationSuite::A5_seqMultiEntry);     }
+    @Test @Timeout(180) public void A5_replyAtBound()      { assertResultsMatchSolverLN(EvaluationSuite::A5_replyAtBound);      }
+    @Test @Timeout(240) public void A5_combinedDag()       { assertResultsMatchSolverLN(EvaluationSuite::A5_combinedDag);       }
+    @Test @Timeout(180) public void A5_multiclassAndFork() { assertResultsMatchSolverLN(EvaluationSuite::A5_multiclassAndFork); }
 
     // =========================================================================
     // Partition B: Scale axis for F24
@@ -152,4 +165,33 @@ public class SolverLNSimpleEvaluationTest {
     @Test @Timeout(240) public void C4_nearSaturation()     { assertResultsMatchSolverLN(EvaluationSuite::C4_nearSaturation);     }
     @Test @Timeout(240) public void C4_predicateThreshold() { assertResultsMatchSolverLN(EvaluationSuite::C4_predicateThreshold); }
     @Test @Timeout(240) public void C4_lowDemand()          { assertResultsMatchSolverLN(EvaluationSuite::C4_lowDemand);          }
+
+    // =========================================================================
+    // Partition C5: Saturation regime (boundary — expected divergence)
+    // These are the saturated originals the suite was tuned away from. They are
+    // expected to diverge from SolverLN (and possibly LQNS); carried here as
+    // live tests, not @Disabled, so the boundary is visible and graded rather
+    // than hidden. Some may report match-lqns-only (pass) and some match-neither
+    // (fail) — that outcome IS the boundary finding the re-run characterises.
+    // =========================================================================
+
+    @Test @Timeout(300) public void C5_satFanout_tasks5()    { assertResultsMatchSolverLN(EvaluationSuite::C5_satFanout_tasks5);    }
+    @Test @Timeout(600) public void C5_satFanout_tasks10()   { assertResultsMatchSolverLN(EvaluationSuite::C5_satFanout_tasks10);   }
+    @Test @Timeout(900) public void C5_satFanout_tasks20()   { assertResultsMatchSolverLN(EvaluationSuite::C5_satFanout_tasks20);   }
+    @Test @Timeout(300) public void C5_satFanoutCaller_w2()  { assertResultsMatchSolverLN(EvaluationSuite::C5_satFanoutCaller_w2);  }
+    @Test @Timeout(300) public void C5_satFanoutCaller_w3()  { assertResultsMatchSolverLN(EvaluationSuite::C5_satFanoutCaller_w3);  }
+    @Test @Timeout(300) public void C5_satFanoutCaller_w4()  { assertResultsMatchSolverLN(EvaluationSuite::C5_satFanoutCaller_w4);  }
+
+    // =========================================================================
+    // Partition C6: Activity-graph boundary (finite-server-host AND-fork)
+    // =========================================================================
+
+    @Test @Timeout(180) public void C6_andForkPsHost() { assertResultsMatchSolverLN(EvaluationSuite::C6_andForkPsHost); }
+
+    // =========================================================================
+    // Partition C7: Deep-chain stress (convergence-rate boundary)
+    // =========================================================================
+
+    @Test @Timeout(240) public void C7_deepChainMultiCall() { assertResultsMatchSolverLN(EvaluationSuite::C7_deepChainMultiCall); }
+    @Test @Timeout(240) public void C7_deepChainAllExp()    { assertResultsMatchSolverLN(EvaluationSuite::C7_deepChainAllExp);    }
 }

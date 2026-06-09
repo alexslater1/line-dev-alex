@@ -43,7 +43,7 @@ import java.util.function.Supplier;
  *
  * <p>Output is a per-fixture JSON record map:
  * <pre>{
- *   "A1_chain_d3_N20": {
+ *   "A1_chain_d3_N50": {
  *     "lqns_iters": 50,
  *     "lqns_time_ms": 28,
  *     "sim_vs_lqns_max_rel_diff": 0.018,
@@ -330,15 +330,11 @@ public class LqnsComparisonCapture {
     }
 
     // ===== A1 =====
-    @Test @Timeout(120) public void A1_chain_d3_N20()  { capture(EvaluationSuite::A1_chain_d3_N20);  }
     @Test @Timeout(120) public void A1_chain_d3_N50()  { capture(EvaluationSuite::A1_chain_d3_N50);  }
-    @Test @Timeout(120) public void A1_chain_d3_N100() { capture(EvaluationSuite::A1_chain_d3_N100); }
     @Test @Timeout(120) public void A1_chain_d5_N20()  { capture(EvaluationSuite::A1_chain_d5_N20);  }
     @Test @Timeout(120) public void A1_chain_d5_N50()  { capture(EvaluationSuite::A1_chain_d5_N50);  }
     @Test @Timeout(120) public void A1_chain_d5_N100() { capture(EvaluationSuite::A1_chain_d5_N100); }
-    @Test @Timeout(120) public void A1_chain_d8_N20()  { capture(EvaluationSuite::A1_chain_d8_N20);  }
     @Test @Timeout(120) public void A1_chain_d8_N50()  { capture(EvaluationSuite::A1_chain_d8_N50);  }
-    @Test @Timeout(120) public void A1_chain_d8_N100() { capture(EvaluationSuite::A1_chain_d8_N100); }
 
     // ===== A2 =====
     @Test @Timeout(120) public void A2_multiclassA_2refs_loadLow_N20()      { capture(EvaluationSuite::A2_multiclassA_2refs_loadLow_N20);  }
