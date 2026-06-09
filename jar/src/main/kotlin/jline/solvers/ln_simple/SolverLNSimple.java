@@ -133,6 +133,24 @@ public class SolverLNSimple {
     public static final int DEFAULT_MAX_ITER = 100;
     public static final double DEFAULT_TOL = 5e-3;
 
+    /**
+     * Limit-cycle detection thresholds for the outer fixed-point loop. When the
+     * fixed-point iteration enters a 2-cycle (state alternating A,B,A,B,…),
+     * maxDeltaX repeats to many digits and {@code maxDeltaX < tol} never fires,
+     * so the solver previously ran all the way to maxIter (e.g. chainPlusFanout
+     * at 100 iters). Detecting the cycle lets it stop early at the most recent
+     * state, which empirically stays within the project's standard tolerance vs
+     * SolverLN/SolverLQNS.
+     *
+     * <p>Rule: if {@code |Δ_k − Δ_{k−1}| / max(Δ_k, ε) < LIMIT_CYCLE_REL} for
+     * {@code LIMIT_CYCLE_WINDOW} consecutive iters while Δ_k is past the initial
+     * transient ({@code Δ_k < LIMIT_CYCLE_DELTA_CAP}), declare limit-cycle
+     * convergence and break.
+     */
+    private static final int    LIMIT_CYCLE_WINDOW    = 3;
+    private static final double LIMIT_CYCLE_REL        = 1e-4;
+    private static final double LIMIT_CYCLE_DELTA_CAP  = 10.0;
+
     public void iterateCoupledMva() {
         iterateCoupledMva(DEFAULT_MAX_ITER, DEFAULT_TOL, null);
     }
@@ -154,6 +172,9 @@ public class SolverLNSimple {
     public void iterateCoupledMva(int maxIter, double tol, Runnable afterIteration) {
         long outerStartTime = System.nanoTime();
         double[][] prevX = new double[N_LAYERS][];
+
+        double prevMaxDelta = Double.NaN;
+        int    stableHits   = 0;
 
         for (int iter = 0; iter < maxIter; iter++) {
             long solveStartTime = System.nanoTime();
@@ -183,6 +204,26 @@ public class SolverLNSimple {
                     iter + 1, solveTime, synchTime, totalRuntime);
 
             if (maxDeltaX < tol) break;
+
+            // Limit-cycle convergence: stop early when the iteration has
+            // entered a stable cycle that {@code maxDeltaX < tol} will never
+            // break. See LIMIT_CYCLE_* for the detection rule.
+            if (!Double.isNaN(prevMaxDelta)
+                    && Double.isFinite(maxDeltaX) && maxDeltaX < LIMIT_CYCLE_DELTA_CAP) {
+                double denom = Math.max(maxDeltaX, 1e-12);
+                double rel = Math.abs(maxDeltaX - prevMaxDelta) / denom;
+                if (rel < LIMIT_CYCLE_REL) {
+                    stableHits++;
+                    if (stableHits >= LIMIT_CYCLE_WINDOW) {
+                        System.out.printf("[limit-cycle] convergence detected at iter %d (Δ=%.6e, stable for %d iters)%n",
+                                iter + 1, maxDeltaX, stableHits);
+                        break;
+                    }
+                } else {
+                    stableHits = 0;
+                }
+            }
+            prevMaxDelta = maxDeltaX;
         }
 
         lastAvgTable = ResultsCollector.collectAndPrintFinalResults(
