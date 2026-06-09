@@ -12,12 +12,17 @@ import jline.util.matrix.Matrix;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.WeakHashMap;
+import java.util.function.Function;
+import java.util.function.Supplier;
 
 /**
  * Pure read-only queries on a {@link LayeredNetwork} model.
@@ -46,43 +51,186 @@ public final class LqnGraph {
     private LqnGraph() {}
 
     // =================================================================================
+    //  Per-model memoisation
+    //
+    //  Almost every query here is structural: it depends only on the LQN
+    //  topology — tasks, entries, activities, sync-call destinations, host and
+    //  task scheduling, fork/join precedence — which SolverLNSimple never
+    //  mutates during a solve (it varies only the per-class service processes
+    //  on the ensemble Networks). So each structural lookup can be memoised for
+    //  the lifetime of a LayeredNetwork, keyed on the model itself through a
+    //  WeakHashMap that imposes no ownership on the model.
+    //
+    //  This matters because the solver issues hundreds of these queries per
+    //  outer iteration against a single model; profiling flagged the linear
+    //  name scans findEntry/findCallerTask (the latter quadratic, calling
+    //  findEntry in its inner loop) as the top non-EJML CPU and allocation
+    //  hotspots.
+    // =================================================================================
+    private static final WeakHashMap<LayeredNetwork, ModelCache> CACHE = new WeakHashMap<LayeredNetwork, ModelCache>();
+
+    /** Single-entry fast path: consecutive queries hit the same model, so the
+     *  most-recent (model, cache) pair is held behind volatiles and a
+     *  pointer-identity match skips the synchronized map lookup entirely. */
+    private static volatile LayeredNetwork lastModel;
+    private static volatile ModelCache     lastCache;
+
+    /** Memoised structural lookups for one {@link LayeredNetwork}. The name
+     *  indexes are built eagerly; every other map is filled lazily on first
+     *  query. Values are never {@code null} once present, so a {@code null}
+     *  from {@code get} means "not yet computed" — except {@link #callerOfTask},
+     *  whose answer can legitimately be {@code null} and so is guarded with
+     *  {@code containsKey}. */
+    private static final class ModelCache {
+        // Eager name → object indexes.
+        final Map<String, Task>  taskByName  = new HashMap<String, Task>();
+        final Map<String, Entry> entryByName = new HashMap<String, Entry>();
+
+        // Lazy structural predicates, keyed by task or processor name.
+        final Map<String, String>  callerOfTask             = new HashMap<String, String>();
+        final Map<String, Boolean> taskHasSyncCallees       = new HashMap<String, Boolean>();
+        final Map<String, Boolean> callerFansOut            = new HashMap<String, Boolean>();
+        final Map<String, Boolean> isInfScheduledTask       = new HashMap<String, Boolean>();
+        final Map<String, Boolean> isInfProcessor           = new HashMap<String, Boolean>();
+        final Map<String, Boolean> taskHasAndFork           = new HashMap<String, Boolean>();
+        final Map<String, Boolean> hasServerDemandInSubtree = new HashMap<String, Boolean>();
+
+        // Lazy derived quantities, keyed by task name.
+        final Map<String, Double> taskThinkTimeSafe = new HashMap<String, Double>();
+        final Map<String, Double> rootRefThinkTime  = new HashMap<String, Double>();
+        final Map<String, Double> localDemand       = new HashMap<String, Double>();
+        final Map<String, Double> callerChainDemand = new HashMap<String, Double>();
+
+        // Visit-weight maps, handed back as shared immutable views (the result
+        // is read-only to every caller, so there is no need to copy per call).
+        final Map<String, Map<String, Double>> visitWeights = new HashMap<String, Map<String, Double>>();
+        final Map<String, Map<String, Map<String, Double>>> weightsFromBound = new HashMap<String, Map<String, Map<String, Double>>>();
+
+        // Entry-keyed quantities, by identity: Entry has no value-based
+        // hashCode, and one entry name can recur under several parent tasks.
+        final IdentityHashMap<Entry, Activity> boundActivity                 = new IdentityHashMap<Entry, Activity>();
+        final IdentityHashMap<Entry, Double>   hostDemandOfEntry             = new IdentityHashMap<Entry, Double>();
+        final IdentityHashMap<Entry, Double>   processorDemandOfEntry        = new IdentityHashMap<Entry, Double>();
+        final IdentityHashMap<Entry, Double>   andForkCollapsedDemandOfEntry = new IdentityHashMap<Entry, Double>();
+        final IdentityHashMap<Entry, Double>   phase1SumDemandOfEntry        = new IdentityHashMap<Entry, Double>();
+
+        // Pair-keyed sync-call quantities; key is "callerTask|calleeTask".
+        final Map<String, Double> syncCallMean                = new HashMap<String, Double>();
+        final Map<String, Double> callerTotalCallMean         = new HashMap<String, Double>();
+        final Map<String, Double> callerDemandOnTask          = new HashMap<String, Double>();
+        final Map<String, Double> callerProcessorDemandOnTask = new HashMap<String, Double>();
+
+        // Target-keyed inbound aggregates.
+        final Map<String, Double> totalInboundCallMean = new HashMap<String, Double>();
+        final Map<String, Double> sumInboundCallMean   = new HashMap<String, Double>();
+
+        // Graph-wide caller maps, expensive enough to build at most once.
+        Map<String, String> taskCalledTaskMap;
+        Map<String, String> refTaskCalledTaskMap;
+    }
+
+    /** Cache for {@code model}, building the name indexes on first use. */
+    private static ModelCache cacheFor(LayeredNetwork model) {
+        if (model == lastModel) {
+            ModelCache lc = lastCache;
+            if (lc != null) return lc;
+        }
+        synchronized (CACHE) {
+            ModelCache mc = CACHE.get(model);
+            if (mc == null) {
+                mc = new ModelCache();
+                for (Task t : model.getTasks().values())   mc.taskByName.put(t.getName(), t);
+                for (Entry e : model.getEntries().values()) mc.entryByName.put(e.getName(), e);
+                CACHE.put(model, mc);
+            }
+            lastModel = model;
+            lastCache = mc;
+            return mc;
+        }
+    }
+
+    /** Cache owning {@code entry}, or {@code null} if its model has not been
+     *  queried yet (callers then fall back to the uncached computation). An
+     *  Entry does not reference its network, so it is resolved by identity
+     *  through the name index, checking the most-recent model first. */
+    private static ModelCache cacheForEntry(Entry entry) {
+        if (entry == null) return null;
+        ModelCache lc = lastCache;
+        if (lc != null && lc.entryByName.get(entry.getName()) == entry) return lc;
+        synchronized (CACHE) {
+            for (ModelCache mc : CACHE.values()) {
+                if (mc.entryByName.get(entry.getName()) == entry) return mc;
+            }
+        }
+        return null;
+    }
+
+    /** Cache owning {@code task}; see {@link #cacheForEntry}. */
+    private static ModelCache cacheForTask(Task task) {
+        if (task == null) return null;
+        ModelCache lc = lastCache;
+        if (lc != null && lc.taskByName.get(task.getName()) == task) return lc;
+        synchronized (CACHE) {
+            for (ModelCache mc : CACHE.values()) {
+                if (mc.taskByName.get(task.getName()) == task) return mc;
+            }
+        }
+        return null;
+    }
+
+    /** Return {@code cache.get(key)} if present, else compute it once with
+     *  {@code compute}, store, and return it. Relies on cached values never
+     *  being {@code null} (the structural lookups always produce a concrete
+     *  result), so a {@code null} from {@code get} unambiguously means
+     *  "not yet computed". */
+    private static <K, V> V memoise(Map<K, V> cache, K key, Supplier<V> compute) {
+        V cached = cache.get(key);
+        if (cached != null) return cached;
+        V v = compute.get();
+        cache.put(key, v);
+        return v;
+    }
+
+    // =================================================================================
     //  Lookups
     // =================================================================================
 
     /** First task with the given name, or {@code null}. */
     public static Task findTask(LayeredNetwork model, String name) {
         if (name == null) return null;
-        for (Task t : model.getTasks().values()) {
-            if (name.equals(t.getName())) return t;
-        }
-        return null;
+        return cacheFor(model).taskByName.get(name);
     }
 
     /** First entry with the given name, or {@code null}. */
     public static Entry findEntry(LayeredNetwork model, String name) {
         if (name == null) return null;
-        for (Entry e : model.getEntries().values()) {
-            if (name.equals(e.getName())) return e;
-        }
-        return null;
+        return cacheFor(model).entryByName.get(name);
     }
 
     /** Name of <i>any</i> task whose activities issue a sync call into a task
-     *  named {@code calleeName}. Returns {@code null} if no caller exists. */
+     *  named {@code calleeName}, or {@code null} if no caller exists. The
+     *  answer is topological, so it is walked once and memoised. */
     public static String findCallerTask(LayeredNetwork model, String calleeName) {
         if (calleeName == null) return null;
+        ModelCache mc = cacheFor(model);
+        if (mc.callerOfTask.containsKey(calleeName)) return mc.callerOfTask.get(calleeName);
+
+        String caller = null;
+        search:
         for (Task task : model.getTasks().values()) {
             for (Activity act : task.getActivities()) {
                 for (String dest : act.getSyncCallDests().values()) {
-                    Entry e = findEntry(model, dest);
+                    Entry e = mc.entryByName.get(dest);
                     if (e != null && e.getParent() != null
                             && calleeName.equals(e.getParent().getName())) {
-                        return task.getName();
+                        caller = task.getName();
+                        break search;
                     }
                 }
             }
         }
-        return null;
+        mc.callerOfTask.put(calleeName, caller);
+        return caller;
     }
 
 
@@ -95,51 +243,62 @@ public final class LqnGraph {
     }
 
     public static boolean isInfScheduledTask(LayeredNetwork model, String taskName) {
-        Task t = findTask(model, taskName);
-        return t != null && t.getScheduling() == SchedStrategy.INF;
+        ModelCache mc = cacheFor(model);
+        return memoise(mc.isInfScheduledTask, taskName, () -> {
+            Task t = mc.taskByName.get(taskName);
+            return t != null && t.getScheduling() == SchedStrategy.INF;
+        });
     }
 
     /** True iff the named host is INF-scheduled (true delay server, no queueing). */
     public static boolean isInfProcessor(LayeredNetwork model, String procName) {
-        for (Host h : model.getHosts().values()) {
-            if (h.getName().equals(procName)) {
-                return h.getScheduling() == SchedStrategy.INF;
+        ModelCache mc = cacheFor(model);
+        return memoise(mc.isInfProcessor, procName, () -> {
+            for (Host h : model.getHosts().values()) {
+                if (h.getName().equals(procName)) return h.getScheduling() == SchedStrategy.INF;
             }
-        }
-        return false;
+            return false;
+        });
     }
 
     /** True iff {@code task} has at least one synchronous-call activity. */
     public static boolean taskHasSyncCallees(LayeredNetwork model, String taskName) {
-        Task t = findTask(model, taskName);
-        if (t == null) return false;
-        for (Activity act : t.getActivities()) {
-            Map<Integer, String> dests = act.getSyncCallDests();
-            if (dests != null && !dests.isEmpty()) return true;
-        }
-        return false;
+        ModelCache mc = cacheFor(model);
+        return memoise(mc.taskHasSyncCallees, taskName, () -> {
+            Task t = mc.taskByName.get(taskName);
+            if (t != null) {
+                for (Activity act : t.getActivities()) {
+                    Map<Integer, String> dests = act.getSyncCallDests();
+                    if (dests != null && !dests.isEmpty()) return true;
+                }
+            }
+            return false;
+        });
     }
 
     /** True iff {@code task} synchronously calls two or more <i>distinct</i> callee
      *  tasks (i.e. fans out). Single-callee callers do not need sibling-callee
      *  accounting or Z-update damping. */
     public static boolean callerFansOut(LayeredNetwork model, String taskName) {
-        Task t = findTask(model, taskName);
-        if (t == null) return false;
-        Set<String> distinctCallees = new HashSet<String>();
-        for (Activity act : t.getActivities()) {
-            Map<Integer, String> dests = act.getSyncCallDests();
-            if (dests == null) continue;
-            for (String dest : dests.values()) {
-                Entry e = findEntry(model, dest);
-                if (e == null || e.getParent() == null) continue;
-                String calleeName = e.getParent().getName();
-                if (taskName.equals(calleeName)) continue;
-                distinctCallees.add(calleeName);
-                if (distinctCallees.size() > 1) return true;
+        ModelCache mc = cacheFor(model);
+        return memoise(mc.callerFansOut, taskName, () -> {
+            Task t = mc.taskByName.get(taskName);
+            if (t == null) return false;
+            Set<String> distinctCallees = new HashSet<String>();
+            for (Activity act : t.getActivities()) {
+                Map<Integer, String> dests = act.getSyncCallDests();
+                if (dests == null) continue;
+                for (String dest : dests.values()) {
+                    Entry e = mc.entryByName.get(dest);
+                    if (e == null || e.getParent() == null) continue;
+                    String calleeName = e.getParent().getName();
+                    if (taskName.equals(calleeName)) continue;
+                    distinctCallees.add(calleeName);
+                    if (distinctCallees.size() > 1) return true;
+                }
             }
-        }
-        return false;
+            return false;
+        });
     }
 
     /** True iff {@code task} contains an AND_FORK→AND_JOIN region inside one
@@ -147,22 +306,29 @@ public final class LqnGraph {
      *  overwriting T:-layer D (which holds caller-perceived MAX) with the
      *  host's processor SUM. */
     public static boolean taskHasAndFork(LayeredNetwork model, String taskName) {
-        Task t = findTask(model, taskName);
-        if (t == null) return false;
-        List<ActivityPrecedence> precs = t.getPrecedences();
-        if (precs == null) return false;
-        for (ActivityPrecedence p : precs) {
-            if (ActivityPrecedenceType.POST_AND.equals(p.getPostType())) {
-                List<String> post = p.getPostActs();
-                if (post != null && post.size() >= 2) return true;
+        ModelCache mc = cacheFor(model);
+        return memoise(mc.taskHasAndFork, taskName, () -> {
+            Task t = mc.taskByName.get(taskName);
+            if (t == null) return false;
+            List<ActivityPrecedence> precs = t.getPrecedences();
+            if (precs != null) {
+                for (ActivityPrecedence p : precs) {
+                    if (ActivityPrecedenceType.POST_AND.equals(p.getPostType())) {
+                        List<String> post = p.getPostActs();
+                        if (post != null && post.size() >= 2) return true;
+                    }
+                }
             }
-        }
-        return false;
+            return false;
+        });
     }
 
     /** True iff {@code task} or any (recursive) sync callee has positive host demand. */
     public static boolean hasServerDemandInSubtree(LayeredNetwork model, String taskName) {
-        return hasServerDemandInSubtreeImpl(model, taskName, new HashSet<String>());
+        if (taskName == null) return false;
+        ModelCache mc = cacheFor(model);
+        return memoise(mc.hasServerDemandInSubtree, taskName,
+                () -> hasServerDemandInSubtreeImpl(model, taskName, new HashSet<String>()));
     }
     private static boolean hasServerDemandInSubtreeImpl(LayeredNetwork model,
                                                         String taskName, Set<String> visited) {
@@ -187,25 +353,32 @@ public final class LqnGraph {
 
     /** Task think time mean, or 0 if NaN / non-finite / unknown. */
     public static double getTaskThinkTimeSafe(LayeredNetwork model, String taskName) {
-        Task t = findTask(model, taskName);
-        if (t == null) return 0.0;
-        double m = t.getThinkTimeMean();
-        return (Double.isNaN(m) || !Double.isFinite(m)) ? 0.0 : m;
+        if (taskName == null) return 0.0;
+        ModelCache mc = cacheFor(model);
+        return memoise(mc.taskThinkTimeSafe, taskName, () -> {
+            Task t = mc.taskByName.get(taskName);
+            double m = (t == null) ? 0.0 : t.getThinkTimeMean();
+            return (Double.isNaN(m) || !Double.isFinite(m)) ? 0.0 : m;
+        });
     }
 
     /** Walk up the caller chain until a REF task is found, return its think time. */
     public static double getRootRefThinkTime(LayeredNetwork model, String taskName) {
-        Set<String> visited = new HashSet<String>();
-        String current = taskName;
-        while (current != null && visited.add(current)) {
-            Task t = findTask(model, current);
-            if (isRefTask(t)) {
-                double m = t.getThinkTimeMean();
-                return (Double.isNaN(m) || !Double.isFinite(m)) ? 0.0 : m;
+        if (taskName == null) return 0.0;
+        ModelCache mc = cacheFor(model);
+        return memoise(mc.rootRefThinkTime, taskName, () -> {
+            Set<String> visited = new HashSet<String>();
+            String current = taskName;
+            while (current != null && visited.add(current)) {
+                Task t = mc.taskByName.get(current);
+                if (isRefTask(t)) {
+                    double m = t.getThinkTimeMean();
+                    return (Double.isNaN(m) || !Double.isFinite(m)) ? 0.0 : m;
+                }
+                current = findCallerTask(model, current);
             }
-            current = findCallerTask(model, current);
-        }
-        return 0.0;
+            return 0.0;
+        });
     }
 
     /** Task's <i>local</i> demand: Σ visitWeight × hostDemand across its activities,
@@ -215,44 +388,52 @@ public final class LqnGraph {
      *  fires once and the result equals Σ hostDemand over the task's DAG-
      *  reachable activities. */
     public static double computeLocalDemand(LayeredNetwork model, String taskName) {
-        Task task = findTask(model, taskName);
-        if (task == null) return 0.0;
-        Map<String, Double> visitWeights = computeActivityVisitWeights(task);
-        double total = 0.0;
-        for (Activity act : task.getActivities()) {
-            double m = act.getHostDemandMean();
-            if (Double.isNaN(m) || m <= 1e-7) continue;
-            Double w = visitWeights.get(act.getName());
-            total += (w != null ? w : 1.0) * m;
-        }
-        return total;
+        if (taskName == null) return 0.0;
+        ModelCache mc = cacheFor(model);
+        return memoise(mc.localDemand, taskName, () -> {
+            Task task = mc.taskByName.get(taskName);
+            if (task == null) return 0.0;
+            Map<String, Double> visitWeights = computeActivityVisitWeights(task);
+            double total = 0.0;
+            for (Activity act : task.getActivities()) {
+                double m = act.getHostDemandMean();
+                if (Double.isNaN(m) || m <= 1e-7) continue;
+                Double w = visitWeights.get(act.getName());
+                total += (w != null ? w : 1.0) * m;
+            }
+            return total;
+        });
     }
 
     /** Sum of {@link #computeLocalDemand} for every caller strictly above {@code taskName}. */
     public static double computeCallerChainDemand(LayeredNetwork model, String taskName) {
-        double total = 0.0;
-        Set<String> visited = new HashSet<String>();
-        String current = taskName;
-        while (current != null && visited.add(current)) {
-            String caller = findCallerTask(model, current);
-            if (caller == null) break;
-            total += computeLocalDemand(model, caller);
-            current = caller;
-        }
-        return total;
+        if (taskName == null) return 0.0;
+        ModelCache mc = cacheFor(model);
+        return memoise(mc.callerChainDemand, taskName, () -> {
+            double total = 0.0;
+            Set<String> visited = new HashSet<String>();
+            String current = taskName;
+            while (current != null && visited.add(current)) {
+                String caller = findCallerTask(model, current);
+                if (caller == null) break;
+                total += computeLocalDemand(model, caller);
+                current = caller;
+            }
+            return total;
+        });
     }
 
     /** Caller-perceived per-call demand: phase-1 only, AND-fork branches
      *  collapsed via E[max] (caller waits for the slowest branch).
      *  See {@link #processorDemandOfEntry} for the full-DAG SUM view. */
     public static double hostDemandOfEntry(Entry destEntry) {
-        return hostDemandOfEntryImpl(destEntry, /*sumBranches=*/ false, /*phase1Only=*/ true);
+        return cachedEntryDemand(destEntry, mc -> mc.hostDemandOfEntry, false, true);
     }
 
     /** Processor-occupancy per-call demand: full DAG (phase-1 + phase-2),
      *  AND-fork branches summed (both run on the processor). */
     public static double processorDemandOfEntry(Entry destEntry) {
-        return hostDemandOfEntryImpl(destEntry, /*sumBranches=*/ true, /*phase1Only=*/ false);
+        return cachedEntryDemand(destEntry, mc -> mc.processorDemandOfEntry, true, false);
     }
 
     /** Full DAG demand with AND-fork branches collapsed via E[max].
@@ -260,14 +441,29 @@ public final class LqnGraph {
      *  exactly the join-delay gap, isolating it from the phase split for
      *  the throughput adjustment in {@code adjustAndForkTaskThroughputs}. */
     public static double andForkCollapsedDemandOfEntry(Entry destEntry) {
-        return hostDemandOfEntryImpl(destEntry, /*sumBranches=*/ false, /*phase1Only=*/ false);
+        return cachedEntryDemand(destEntry, mc -> mc.andForkCollapsedDemandOfEntry, false, false);
     }
 
     /** Phase-1 raw SUM demand (no E[max] collapse). Used as LN's
      *  {@code raw_ph1} in {@link #phase1AdjustedResponseTime} so the
      *  AND-fork join-delay gap stays out of the phase-split S1/S2 ratio. */
     public static double phase1SumDemandOfEntry(Entry destEntry) {
-        return hostDemandOfEntryImpl(destEntry, /*sumBranches=*/ true, /*phase1Only=*/ true);
+        return cachedEntryDemand(destEntry, mc -> mc.phase1SumDemandOfEntry, true, true);
+    }
+
+    /** Shared body of the four per-entry demand getters: look the entry up in
+     *  its model cache (selected by {@code cacheSel}), returning the memoised
+     *  value or computing it once via {@link #hostDemandOfEntryImpl} with the
+     *  given flags. Falls back to a direct computation if the owning model has
+     *  not been cached yet. */
+    private static double cachedEntryDemand(Entry destEntry,
+                                            Function<ModelCache, IdentityHashMap<Entry, Double>> cacheSel,
+                                            boolean sumBranches, boolean phase1Only) {
+        if (destEntry == null || destEntry.getParent() == null) return 0.0;
+        ModelCache mc = cacheForEntry(destEntry);
+        if (mc == null) return hostDemandOfEntryImpl(destEntry, sumBranches, phase1Only);
+        return memoise(cacheSel.apply(mc), destEntry,
+                () -> hostDemandOfEntryImpl(destEntry, sumBranches, phase1Only));
     }
 
     private static double hostDemandOfEntryImpl(Entry destEntry, boolean sumBranches,
@@ -581,10 +777,14 @@ public final class LqnGraph {
     /** Activity bound to {@code destEntry}, or {@code null} if none. */
     public static Activity findBoundActivity(Entry destEntry) {
         if (destEntry == null || destEntry.getParent() == null) return null;
+        ModelCache mc = cacheForEntry(destEntry);
+        if (mc != null && mc.boundActivity.containsKey(destEntry)) return mc.boundActivity.get(destEntry);
+        Activity result = null;
         for (Activity a : destEntry.getParent().getActivities()) {
-            if (destEntry.getName().equals(a.getBoundToEntry())) return a;
+            if (destEntry.getName().equals(a.getBoundToEntry())) { result = a; break; }
         }
-        return null;
+        if (mc != null) mc.boundActivity.put(destEntry, result);
+        return result;
     }
 
     /**
@@ -599,7 +799,9 @@ public final class LqnGraph {
      * per-visit demand rather than the sum across mutually-exclusive entries.
      */
     public static double callerDemandOnTask(LayeredNetwork model, String callerName, String targetTaskName) {
-        return callerDemandOnTaskImpl(model, callerName, targetTaskName, /*processorSemantics=*/ false);
+        ModelCache mc = cacheFor(model);
+        return memoise(mc.callerDemandOnTask, callerName + "|" + targetTaskName,
+                () -> callerDemandOnTaskImpl(model, callerName, targetTaskName, /*processorSemantics=*/ false));
     }
 
     /** Processor-occupancy variant of {@link #callerDemandOnTask}: every branch
@@ -607,7 +809,9 @@ public final class LqnGraph {
      *  rather than collapsing into branch-max. Use when setting P:-layer
      *  demand or computing {@code Util = ΣX·D/c}. */
     public static double callerProcessorDemandOnTask(LayeredNetwork model, String callerName, String targetTaskName) {
-        return callerDemandOnTaskImpl(model, callerName, targetTaskName, /*processorSemantics=*/ true);
+        ModelCache mc = cacheFor(model);
+        return memoise(mc.callerProcessorDemandOnTask, callerName + "|" + targetTaskName,
+                () -> callerDemandOnTaskImpl(model, callerName, targetTaskName, /*processorSemantics=*/ true));
     }
 
     private static double callerDemandOnTaskImpl(LayeredNetwork model, String callerName,
@@ -694,6 +898,13 @@ public final class LqnGraph {
      * historical bag-of-activities default).
      */
     public static Map<String, Double> computeActivityVisitWeights(Task task) {
+        if (task == null) return new HashMap<String, Double>();
+        ModelCache mc = cacheForTask(task);
+        if (mc != null) {
+            Map<String, Double> hit = mc.visitWeights.get(task.getName());
+            if (hit != null) return hit;
+        }
+
         Map<String, Double> total = new HashMap<String, Double>();
         for (Activity a : task.getActivities()) total.put(a.getName(), 0.0);
 
@@ -716,7 +927,10 @@ public final class LqnGraph {
             // treated as the historical "every activity fires once" model.
             for (Activity a : task.getActivities()) total.put(a.getName(), 1.0);
         }
-        return total;
+
+        Map<String, Double> immutable = Collections.unmodifiableMap(total);
+        if (mc != null) mc.visitWeights.put(task.getName(), immutable);
+        return immutable;
     }
 
     /** Backward-compatible alias retained for callers expecting visit counts.
@@ -737,6 +951,17 @@ public final class LqnGraph {
      * and per-activity ownership for multi-entry callers.
      */
     public static Map<String, Double> computeWeightsFromBound(Task task, Activity boundAct) {
+        if (task == null || boundAct == null) return new HashMap<String, Double>();
+        ModelCache mc = cacheForTask(task);
+        Map<String, Map<String, Double>> perBound = null;
+        if (mc != null) {
+            perBound = mc.weightsFromBound.get(task.getName());
+            if (perBound != null) {
+                Map<String, Double> hit = perBound.get(boundAct.getName());
+                if (hit != null) return hit;
+            }
+        }
+
         List<Activity> activities = task.getActivities();
         List<ActivityPrecedence> precs = task.getPrecedences();
 
@@ -744,21 +969,32 @@ public final class LqnGraph {
         for (Activity a : activities) w.put(a.getName(), 0.0);
         w.put(boundAct.getName(), 1.0);
 
-        if (precs == null || precs.isEmpty()) return w;
-
-        int maxIter = activities.size() + 5;
-        for (int iter = 0; iter < maxIter; iter++) {
-            Map<String, Double> next = new HashMap<String, Double>();
-            for (Activity a : activities) {
-                next.put(a.getName(), a.getName().equals(boundAct.getName()) ? 1.0 : 0.0);
+        Map<String, Double> result = w;
+        if (precs != null && !precs.isEmpty()) {
+            int maxIter = activities.size() + 5;
+            for (int iter = 0; iter < maxIter; iter++) {
+                Map<String, Double> next = new HashMap<String, Double>();
+                for (Activity a : activities) {
+                    next.put(a.getName(), a.getName().equals(boundAct.getName()) ? 1.0 : 0.0);
+                }
+                for (ActivityPrecedence p : precs) {
+                    applyPrecedence(p, result, next);
+                }
+                boolean converged = mapsEqual(next, result);
+                result = next;
+                if (converged) break;
             }
-            for (ActivityPrecedence p : precs) {
-                applyPrecedence(p, w, next);
-            }
-            if (mapsEqual(next, w)) return next;
-            w = next;
         }
-        return w;
+
+        Map<String, Double> immutable = Collections.unmodifiableMap(result);
+        if (mc != null) {
+            if (perBound == null) {
+                perBound = new HashMap<String, Map<String, Double>>();
+                mc.weightsFromBound.put(task.getName(), perBound);
+            }
+            perBound.put(boundAct.getName(), immutable);
+        }
+        return immutable;
     }
 
     /** Apply one precedence: read fan-in weight from {@code in}, write
@@ -884,10 +1120,12 @@ public final class LqnGraph {
      */
     public static double getSyncCallMean(LayeredNetwork model, String callerTask, String calleeTask) {
         if (callerTask == null || calleeTask == null) return 1.0;
-        Task caller = findTask(model, callerTask);
-        if (caller == null) return 1.0;
-        double cm = perVisitCallsFromCallerToTarget(model, caller, calleeTask);
-        return cm > 0 ? cm : 1.0;
+        ModelCache mc = cacheFor(model);
+        return memoise(mc.syncCallMean, callerTask + "|" + calleeTask, () -> {
+            Task caller = mc.taskByName.get(callerTask);
+            double cm = (caller == null) ? 0.0 : perVisitCallsFromCallerToTarget(model, caller, calleeTask);
+            return cm > 0 ? cm : 1.0;
+        });
     }
 
     /**
@@ -903,31 +1141,41 @@ public final class LqnGraph {
      * activity's sync calls into {@code target}).
      */
     public static double getTotalInboundCallMean(LayeredNetwork model, String targetTask) {
-        double max = 0.0;
-        for (Task caller : model.getTasks().values()) {
-            double cm = perVisitCallsFromCallerToTarget(model, caller, targetTask);
-            if (cm > max) max = cm;
-        }
-        return max;
+        if (targetTask == null) return 0.0;
+        ModelCache mc = cacheFor(model);
+        return memoise(mc.totalInboundCallMean, targetTask, () -> {
+            double max = 0.0;
+            for (Task caller : model.getTasks().values()) {
+                double cm = perVisitCallsFromCallerToTarget(model, caller, targetTask);
+                if (cm > max) max = cm;
+            }
+            return max;
+        });
     }
 
     /** Sum of call means from {@code caller} to all entries on {@code target},
      *  across all activities. Denominator when splitting a callee's Q by activity. */
     public static double getCallerTotalCallMean(LayeredNetwork model, String callerName, String targetTask) {
-        Task caller = findTask(model, callerName);
-        if (caller == null) return 1.0;
-        double sum = sumCallsFromCallerToTarget(model, caller, targetTask);
-        return Math.max(1.0, sum);
+        ModelCache mc = cacheFor(model);
+        return memoise(mc.callerTotalCallMean, callerName + "|" + targetTask, () -> {
+            Task caller = mc.taskByName.get(callerName);
+            double sum = (caller == null) ? 0.0 : sumCallsFromCallerToTarget(model, caller, targetTask);
+            return Math.max(1.0, sum);
+        });
     }
 
     /** Sum of call means into {@code target} across ALL callers. Denominator when
      *  apportioning a callee's Q across callers: caller_share = caller_mean / total. */
     public static double getSumInboundCallMean(LayeredNetwork model, String targetTask) {
-        double total = 0.0;
-        for (Task caller : model.getTasks().values()) {
-            total += sumCallsFromCallerToTarget(model, caller, targetTask);
-        }
-        return total;
+        if (targetTask == null) return 0.0;
+        ModelCache mc = cacheFor(model);
+        return memoise(mc.sumInboundCallMean, targetTask, () -> {
+            double total = 0.0;
+            for (Task caller : model.getTasks().values()) {
+                total += sumCallsFromCallerToTarget(model, caller, targetTask);
+            }
+            return total;
+        });
     }
 
     private static double sumCallsFromCallerToTarget(LayeredNetwork model, Task caller, String targetTask) {
@@ -999,12 +1247,14 @@ public final class LqnGraph {
 
     /** Caller task name → (last-seen) synchronously-called task name. */
     public static Map<String, String> buildTaskCalledTaskMap(LayeredNetwork model) {
+        ModelCache mc = cacheFor(model);
+        if (mc.taskCalledTaskMap != null) return mc.taskCalledTaskMap;
         Map<String, String> result = new HashMap<String, String>();
         for (Task task : model.getTasks().values()) {
             for (Activity act : task.getActivities()) {
                 if (act.getSyncCallDests() == null) continue;
                 for (String dest : act.getSyncCallDests().values()) {
-                    Entry e = findEntry(model, dest);
+                    Entry e = mc.entryByName.get(dest);
                     if (e == null || e.getParent() == null) continue;
                     String calledTaskName = e.getParent().getName();
                     if (!task.getName().equals(calledTaskName)) {
@@ -1013,18 +1263,21 @@ public final class LqnGraph {
                 }
             }
         }
-        return result;
+        mc.taskCalledTaskMap = Collections.unmodifiableMap(result);
+        return mc.taskCalledTaskMap;
     }
 
     /** REF task name → (last-seen) synchronously-called task name. */
     public static Map<String, String> buildRefTaskCalledTaskMap(LayeredNetwork model) {
+        ModelCache mc = cacheFor(model);
+        if (mc.refTaskCalledTaskMap != null) return mc.refTaskCalledTaskMap;
         Map<String, String> result = new HashMap<String, String>();
         for (Task task : model.getTasks().values()) {
             if (!isRefTask(task)) continue;
             for (Activity act : task.getActivities()) {
                 if (act.getSyncCallDests() == null) continue;
                 for (String dest : act.getSyncCallDests().values()) {
-                    Entry e = findEntry(model, dest);
+                    Entry e = mc.entryByName.get(dest);
                     if (e == null || e.getParent() == null) continue;
                     String calledTaskName = e.getParent().getName();
                     if (!task.getName().equals(calledTaskName)) {
@@ -1033,7 +1286,8 @@ public final class LqnGraph {
                 }
             }
         }
-        return result;
+        mc.refTaskCalledTaskMap = Collections.unmodifiableMap(result);
+        return mc.refTaskCalledTaskMap;
     }
 
 
