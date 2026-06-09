@@ -18,6 +18,7 @@ import jline.solvers.ln_simple.results.ResultsCollector;
 import jline.util.matrix.Matrix;
 
 import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -97,6 +98,21 @@ public class SolverLNSimple {
     /** Cached throughput per callee task. Companion to {@link #taskSojournCache}. */
     private final Map<String, Double> taskThroughputCache = new HashMap<String, Double>();
 
+    // === Topologically-invariant specialisation caches (one fill per solve) ===
+    /** Per-(Network, taskName) result of {@link #findClassByTaskName}. A null
+     *  match is itself cached, so {@code containsKey} is the miss probe. */
+    private final IdentityHashMap<Network, Map<String, JobClass>> classByTaskCache = new IdentityHashMap<Network, Map<String, JobClass>>();
+    /** Per-Network result of {@link #findActiveQueueClass}. Permits null values,
+     *  so {@code containsKey} distinguishes "computed null" from "absent". */
+    private final IdentityHashMap<Network, JobClass> activeQueueClassCache = new IdentityHashMap<Network, JobClass>();
+    /** Per-task result of {@link #isInfOnMultiServerPs} (purely topological). */
+    private final Map<String, Boolean> isInfOnMultiServerPsCache = new HashMap<String, Boolean>();
+    /** Per-caller {calleeName → Σ actWeight·callMean} map for
+     *  {@link #computeSiblingCalleeBlocking}. The map structure is graph-only;
+     *  only the {@code excludedCallee} filter and the iteration-time sojourn
+     *  reads vary per call, so it is built once and folded over thereafter. */
+    private final Map<String, Map<String, Double>> siblingCallMeansCache = new HashMap<String, Map<String, Double>>();
+
     /** Result table from the most recent {@link #iterateCoupledMva} run. */
     private LayeredNetworkAvgTable lastAvgTable;
 
@@ -115,6 +131,12 @@ public class SolverLNSimple {
         this.queueNameToLayer   = init.queueNameToLayer;
         this.taskToProcessor    = init.taskToProcessor;
         this.rebuiltHostLayers  = init.rebuiltHostLayers;
+
+        // EnsembleInitialiser's Case-B rebuild adds per-caller R: classes to
+        // existing host layers after snapshotBaselines/fixCallerClassDemands may
+        // already have populated MvaInputs' per-layer cache. Drop those entries
+        // so the iteration loop rebuilds them against the finished ensemble.
+        MvaInputs.invalidateAllLayerCaches();
     }
 
 
@@ -176,13 +198,18 @@ public class SolverLNSimple {
         double prevMaxDelta = Double.NaN;
         int    stableHits   = 0;
 
+        // Bounce sweep over layers: indices 0,1,…,N-1,N-2,…,1. Constant across
+        // iterations, so hoist the length out of the loop and compute the layer
+        // index with a direct expression rather than a per-step helper call.
+        final int sweepLen  = 2 * N_LAYERS - 1;
+        final int nLayersM1 = N_LAYERS - 1;
+
         for (int iter = 0; iter < maxIter; iter++) {
             long solveStartTime = System.nanoTime();
             double maxDeltaX = 0.0;
 
-            int sweepLen = 2 * N_LAYERS - 1;
             for (int si = 0; si < sweepLen; si++) {
-                int l = computeSweepLayerIndex(si);
+                int l = (si < N_LAYERS) ? si : 2 * nLayersM1 - si;
 
                 LayerSolve s = solveLayer(l);
                 if (s == null) return;             // MVA threw; bail out
@@ -477,32 +504,18 @@ public class SolverLNSimple {
      * Z is finite and non-degenerate.
      */
     private double computeSiblingCalleeBlocking(String callerTask, String excludedCallee) {
-        Task caller = LqnGraph.findTask(lqnModel, callerTask);
-        if (caller == null) return 0.0;
-        Map<String, Double> visitWeights = LqnGraph.computeActivityVisitWeights(caller);
-        Map<String, Double> siblingCallMean = new HashMap<String, Double>();
-        for (Activity act : caller.getActivities()) {
-            Map<Integer, String> dests = act.getSyncCallDests();
-            if (dests == null || dests.isEmpty()) continue;
-            Double actWeight = visitWeights.get(act.getName());
-            if (actWeight == null || actWeight <= 1e-12) continue;
-            Matrix means = act.getSyncCallMeans();
-            for (Map.Entry<Integer, String> e : dests.entrySet()) {
-                Entry destEntry = LqnGraph.findEntry(lqnModel, e.getValue());
-                if (destEntry == null || destEntry.getParent() == null) continue;
-                String calleeName = destEntry.getParent().getName();
-                if (calleeName.equals(excludedCallee) || calleeName.equals(callerTask)) continue;
-                int idx = e.getKey();
-                double cMean = (means != null && means.getNumCols() > idx) ? means.get(0, idx) : 1.0;
-                if (!Double.isFinite(cMean) || cMean <= 0) cMean = 1.0;
-                double weighted = actWeight * cMean;
-                Double accum = siblingCallMean.get(calleeName);
-                siblingCallMean.put(calleeName, (accum != null ? accum : 0.0) + weighted);
-            }
+        // The sibling call-mean map is purely topological; build it once per
+        // caller and fold over it here, applying only the per-call excludedCallee
+        // skip and the iteration-time sojourn reads.
+        Map<String, Double> siblingCallMean = siblingCallMeansCache.get(callerTask);
+        if (siblingCallMean == null) {
+            siblingCallMean = precomputeSiblingCallMeans(callerTask);
+            siblingCallMeansCache.put(callerTask, siblingCallMean);
         }
         double total = 0.0;
         for (Map.Entry<String, Double> e : siblingCallMean.entrySet()) {
             String sibling = e.getKey();
+            if (sibling.equals(excludedCallee)) continue;
             double cMean = e.getValue();
             Double rCached = taskSojournCache.get(sibling);
             double rContrib;
@@ -515,6 +528,39 @@ public class SolverLNSimple {
             total += rContrib;
         }
         return total;
+    }
+
+    /** Build the per-caller {@code calleeName → Σ actWeight·callMean} map used by
+     *  {@link #computeSiblingCalleeBlocking}. Depends only on the LQN graph and
+     *  per-activity call means, so it is invariant across the solve. Self-loop
+     *  callees are dropped here; the {@code excludedCallee} filter is left to the
+     *  caller. Returns an empty map (never null) when the caller has no sync
+     *  callees. */
+    private Map<String, Double> precomputeSiblingCallMeans(String callerTask) {
+        Map<String, Double> siblingCallMean = new HashMap<String, Double>();
+        Task caller = LqnGraph.findTask(lqnModel, callerTask);
+        if (caller == null) return siblingCallMean;
+        Map<String, Double> visitWeights = LqnGraph.computeActivityVisitWeights(caller);
+        for (Activity act : caller.getActivities()) {
+            Map<Integer, String> dests = act.getSyncCallDests();
+            if (dests == null || dests.isEmpty()) continue;
+            Double actWeight = visitWeights.get(act.getName());
+            if (actWeight == null || actWeight <= 1e-12) continue;
+            Matrix means = act.getSyncCallMeans();
+            for (Map.Entry<Integer, String> e : dests.entrySet()) {
+                Entry destEntry = LqnGraph.findEntry(lqnModel, e.getValue());
+                if (destEntry == null || destEntry.getParent() == null) continue;
+                String calleeName = destEntry.getParent().getName();
+                if (calleeName.equals(callerTask)) continue;
+                int idx = e.getKey();
+                double cMean = (means != null && means.getNumCols() > idx) ? means.get(0, idx) : 1.0;
+                if (!Double.isFinite(cMean) || cMean <= 0) cMean = 1.0;
+                double weighted = actWeight * cMean;
+                Double accum = siblingCallMean.get(calleeName);
+                siblingCallMean.put(calleeName, (accum != null ? accum : 0.0) + weighted);
+            }
+        }
+        return siblingCallMean;
     }
 
     /** Step (2): keep the caller's own T: layer Clients up-to-date with the
@@ -872,14 +918,21 @@ public class SolverLNSimple {
     private static final double D_RELAX_ALPHA = 0.5;
 
     /** True iff {@code taskName} is INF-scheduled on a finite-server PS/FCFS
-     *  processor. */
+     *  processor. Topological, so cached per task. */
     private boolean isInfOnMultiServerPs(String taskName) {
-        if (!LqnGraph.isInfScheduledTask(lqnModel, taskName)) return false;
-        Task t = LqnGraph.findTask(lqnModel, taskName);
-        if (t == null || t.getProcessor() == null) return false;
-        if (LqnGraph.isInfProcessor(lqnModel, t.getProcessor().getName())) return false;
-        int procServers = t.getProcessor().getMultiplicity();
-        return procServers > 1 && procServers != Integer.MAX_VALUE;
+        Boolean cached = isInfOnMultiServerPsCache.get(taskName);
+        if (cached != null) return cached;
+        boolean v = false;
+        if (LqnGraph.isInfScheduledTask(lqnModel, taskName)) {
+            Task t = LqnGraph.findTask(lqnModel, taskName);
+            if (t != null && t.getProcessor() != null
+                    && !LqnGraph.isInfProcessor(lqnModel, t.getProcessor().getName())) {
+                int procServers = t.getProcessor().getMultiplicity();
+                v = procServers > 1 && procServers != Integer.MAX_VALUE;
+            }
+        }
+        isInfOnMultiServerPsCache.put(taskName, v);
+        return v;
     }
 
 
@@ -888,29 +941,42 @@ public class SolverLNSimple {
     // =================================================================================
 
     private Delay findClientsDelay(Network net) {
-        for (Node node : net.getNodes()) {
-            if (node instanceof Delay && "Clients".equals(node.getName())) return (Delay) node;
-        }
-        return null;
+        return MvaInputs.findClientsDelay(net);
     }
 
     /** Find any class in {@code net} whose service mean at the non-Delay queue
-     *  is not NaN — i.e. the "active" class for the layer's queue. */
+     *  is not NaN — i.e. the "active" class for the layer's queue. The server
+     *  queue and its NaN/non-NaN pattern are fixed across the solve, so the
+     *  result (including a null) is cached per Network. */
     private JobClass findActiveQueueClass(Network net) {
+        if (activeQueueClassCache.containsKey(net)) return activeQueueClassCache.get(net);
         Queue q = MvaInputs.findNonDelayQueue(net);
-        if (q == null) return null;
-        for (JobClass jc : net.getClasses()) {
-            if (!Double.isNaN(q.getServiceProcess(jc).getMean())) return jc;
+        JobClass found = null;
+        if (q != null) {
+            for (JobClass jc : net.getClasses()) {
+                if (!Double.isNaN(q.getServiceProcess(jc).getMean())) { found = jc; break; }
+            }
         }
-        return null;
+        activeQueueClassCache.put(net, found);
+        return found;
     }
 
-    /** Find a class on {@code net} whose unprefixed name matches {@code taskName}. */
+    /** Find a class on {@code net} whose unprefixed name matches {@code taskName}.
+     *  Cached per (Network, taskName); the result (including a null) is invariant
+     *  for the lifetime of the solve. */
     private JobClass findClassByTaskName(Network net, String taskName) {
+        Map<String, JobClass> netCache = classByTaskCache.get(net);
+        if (netCache != null && netCache.containsKey(taskName)) return netCache.get(taskName);
+        JobClass found = null;
         for (JobClass jc : net.getClasses()) {
-            if (taskName.equals(LqnGraph.stripPrefix(jc.getName()))) return jc;
+            if (taskName.equals(LqnGraph.stripPrefix(jc.getName()))) { found = jc; break; }
         }
-        return null;
+        if (netCache == null) {
+            netCache = new HashMap<String, JobClass>();
+            classByTaskCache.put(net, netCache);
+        }
+        netCache.put(taskName, found);
+        return found;
     }
 
 
@@ -921,11 +987,5 @@ public class SolverLNSimple {
     /** Clamp a value into the safe MVA-input range to avoid 0 / NaN / Inf. */
     private static double clamp(double v) {
         return Math.max(CLAMP_FLOOR, Math.min(v, MAX_PROTECTION));
-    }
-
-    /** Map sweep index 0..2N-2 to layer index, producing the bounce sequence
-     *  {@code 0,1,...,N-1,N-2,...,1}. */
-    private int computeSweepLayerIndex(int sweepIndex) {
-        return (sweepIndex < N_LAYERS) ? sweepIndex : 2 * N_LAYERS - 2 - sweepIndex;
     }
 }

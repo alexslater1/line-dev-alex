@@ -14,6 +14,7 @@ import jline.util.matrix.Matrix;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.WeakHashMap;
 
 /**
  * MVA matrix-builder utilities for {@link SolverLNSimple}.
@@ -32,39 +33,117 @@ public final class MvaInputs {
 
     private MvaInputs() {}
 
-    /** All Queue and Delay nodes in {@code layer}, preserving network order. */
-    public static List<Node> getQueueNodes(Network layer) {
-        List<Node> nodes = new ArrayList<Node>();
-        for (Node node : layer.getNodes()) {
-            if (node instanceof Queue || node instanceof Delay) {
-                nodes.add(node);
+    // =================================================================================
+    //  Per-Network structural cache
+    //
+    //  A layer's node list, closed-class set, server queue and Clients delay are
+    //  fixed once EnsembleInitialiser.initialise(...) finishes — the solve only
+    //  varies per-class service rates, never the layer shape. The solver
+    //  re-queries this structure on every iteration, so it is computed once per
+    //  Network and held behind a WeakHashMap, with a volatile most-recent pair
+    //  as the lock-free fast path.
+    //
+    //  Invalidation: EnsembleInitialiser's Case-B rebuild adds caller classes to
+    //  existing layers, which can happen after an early query already populated
+    //  the cache. The SolverLNSimple constructor therefore calls
+    //  {@link #invalidateAllLayerCaches()} once the ensemble is final, so the
+    //  iteration loop always sees a cache built against the finished shape.
+    // =================================================================================
+    private static final WeakHashMap<Network, LayerInfo> LAYER_CACHE = new WeakHashMap<Network, LayerInfo>();
+    private static volatile Network   lastLayer;
+    private static volatile LayerInfo lastInfo;
+
+    private static final class LayerInfo {
+        final List<Node>        mvaNodes      = new ArrayList<Node>();
+        final List<ClosedClass> closed        = new ArrayList<ClosedClass>();
+        JobClass                mainClass;
+        Queue                   nonDelayQueue;
+        Delay                   clientsDelay;
+    }
+
+    private static LayerInfo infoFor(Network net) {
+        if (net == lastLayer) {
+            LayerInfo li = lastInfo;
+            if (li != null) return li;
+        }
+        synchronized (LAYER_CACHE) {
+            LayerInfo li = LAYER_CACHE.get(net);
+            if (li == null) {
+                li = computeLayerInfo(net);
+                LAYER_CACHE.put(net, li);
+            }
+            lastLayer = net;
+            lastInfo = li;
+            return li;
+        }
+    }
+
+    private static LayerInfo computeLayerInfo(Network net) {
+        LayerInfo li = new LayerInfo();
+        // Delay extends Queue, so the two must be distinguished explicitly.
+        for (Node node : net.getNodes()) {
+            boolean isDelay = node instanceof Delay;
+            if (!isDelay && !(node instanceof Queue)) continue;
+            li.mvaNodes.add(node);
+            if (isDelay) {
+                if (li.clientsDelay == null && "Clients".equals(node.getName())) {
+                    li.clientsDelay = (Delay) node;
+                }
+            } else if (li.nonDelayQueue == null) {
+                li.nonDelayQueue = (Queue) node;
             }
         }
-        return nodes;
+        for (JobClass jc : net.getClasses()) {
+            if (jc instanceof ClosedClass && ((ClosedClass) jc).getNumberOfJobs() > 0) {
+                li.closed.add((ClosedClass) jc);
+            }
+        }
+        li.mainClass = li.closed.isEmpty() ? net.getClasses().get(0) : li.closed.get(0);
+        return li;
+    }
+
+    /** Drop the cached structure for one Network — for callers that legitimately
+     *  re-shape a layer (e.g. EnsembleInitialiser's Case-B rebuild). */
+    public static void invalidateLayerCache(Network net) {
+        synchronized (LAYER_CACHE) {
+            LAYER_CACHE.remove(net);
+            if (lastLayer == net) { lastLayer = null; lastInfo = null; }
+        }
+    }
+
+    /** Drop every cached layer. Called once at the end of the SolverLNSimple
+     *  constructor so the iteration loop never reuses an entry that was
+     *  populated mid-initialise, before the Case-B rebuild added caller
+     *  classes. */
+    public static void invalidateAllLayerCaches() {
+        synchronized (LAYER_CACHE) {
+            LAYER_CACHE.clear();
+            lastLayer = null;
+            lastInfo = null;
+        }
+    }
+
+    /** All Queue and Delay nodes in {@code layer}, preserving network order. */
+    public static List<Node> getQueueNodes(Network layer) {
+        return infoFor(layer).mvaNodes;
     }
 
     /** First closed class with positive population (the "main" class); falls back
      *  to the very first class of any kind when the layer has no active customers. */
     public static JobClass getMainClass(Network net) {
-        for (JobClass jc : net.getClasses()) {
-            if (jc instanceof ClosedClass && ((ClosedClass) jc).getNumberOfJobs() > 0) {
-                return jc;
-            }
-        }
-        return net.getClasses().get(0);
+        return infoFor(net).mainClass;
     }
 
     /** Closed classes with N &gt; 0. Classes with N = 0 are filtered so disabled
      *  classes (e.g. the aggregate-T class in rebuilt Case-B layers) do not appear
      *  in the MVA matrices. */
     public static List<ClosedClass> getClosedClasses(Network net) {
-        List<ClosedClass> result = new ArrayList<ClosedClass>();
-        for (JobClass jc : net.getClasses()) {
-            if (jc instanceof ClosedClass && ((ClosedClass) jc).getNumberOfJobs() > 0) {
-                result.add((ClosedClass) jc);
-            }
-        }
-        return result;
+        return infoFor(net).closed;
+    }
+
+    /** Cached {@code Delay} node named "Clients", or {@code null} if absent. */
+    public static Delay findClientsDelay(Network net) {
+        return infoFor(net).clientsDelay;
     }
 
     /**
@@ -139,17 +218,13 @@ public final class MvaInputs {
     /** Row vector Z of per-class think times read from the layer's
      *  {@code Clients} delay node. NaN means are treated as 0. */
     public static Matrix buildThinkTimeMatrix(Network net) {
-        List<ClosedClass> closed = getClosedClasses(net);
-        int R = closed.size();
+        LayerInfo li = infoFor(net);
+        int R = li.closed.size();
         Matrix z = new Matrix(1, R);
-        for (Node node : net.getNodes()) {
-            if (node instanceof Delay && "Clients".equals(node.getName())) {
-                for (int r = 0; r < R; r++) {
-                    double mean = ((Delay) node).getServiceProcess(closed.get(r)).getMean();
-                    z.set(0, r, Double.isNaN(mean) ? 0.0 : mean);
-                }
-                break;
-            }
+        if (li.clientsDelay == null) return z;
+        for (int r = 0; r < R; r++) {
+            double mean = li.clientsDelay.getServiceProcess(li.closed.get(r)).getMean();
+            z.set(0, r, Double.isNaN(mean) ? 0.0 : mean);
         }
         return z;
     }
@@ -307,11 +382,6 @@ public final class MvaInputs {
     /** The first {@link Queue} that is not a {@link Delay} — i.e. the server
      *  station of a single-server two-node layer. Returns {@code null} if none. */
     public static Queue findNonDelayQueue(Network net) {
-        for (Node node : net.getNodes()) {
-            if (node instanceof Queue && !(node instanceof Delay)) {
-                return (Queue) node;
-            }
-        }
-        return null;
+        return infoFor(net).nonDelayQueue;
     }
 }
