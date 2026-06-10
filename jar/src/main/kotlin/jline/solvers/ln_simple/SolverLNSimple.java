@@ -169,8 +169,8 @@ public class SolverLNSimple {
      * transient ({@code Δ_k < LIMIT_CYCLE_DELTA_CAP}), declare limit-cycle
      * convergence and break.
      */
-    private static final int    LIMIT_CYCLE_WINDOW    = 3;
-    private static final double LIMIT_CYCLE_REL        = 1e-4;
+    private static final int    LIMIT_CYCLE_WINDOW    = 1;
+    private static final double LIMIT_CYCLE_REL        = 1e-3;
     private static final double LIMIT_CYCLE_DELTA_CAP  = 10.0;
 
     public void iterateCoupledMva() {
