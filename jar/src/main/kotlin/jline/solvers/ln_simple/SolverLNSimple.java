@@ -439,7 +439,10 @@ public class SolverLNSimple {
         }
     }
 
-    /** Under-relaxation weight for fan-out caller Clients-Z updates. */
+    /** Under-relaxation weight for fan-out caller Clients-Z updates. Kept damped
+     *  at 0.5: a first-party sweep showed removing it drives saturated fan-out
+     *  callers toward the iteration cap, so unlike the INF-task D weight below it
+     *  is retained. */
     private static final double Z_RELAX_ALPHA = 0.5;
 
     /**
@@ -914,8 +917,10 @@ public class SolverLNSimple {
     }
 
     /** Under-relaxation weight for D-writes into T: layers of INF tasks on
-     *  finite-server PS/FCFS processors. */
-    private static final double D_RELAX_ALPHA = 0.5;
+     *  finite-server PS/FCFS processors. Dropped to 1.0 (no damping): a
+     *  first-party sweep found un-damping this write reduces iterations
+     *  monotonically across the corpus with no accuracy regression. */
+    private static final double D_RELAX_ALPHA = 1.0;
 
     /** True iff {@code taskName} is INF-scheduled on a finite-server PS/FCFS
      *  processor. Topological, so cached per task. */
