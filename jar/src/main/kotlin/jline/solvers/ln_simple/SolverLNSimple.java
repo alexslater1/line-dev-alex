@@ -153,7 +153,7 @@ public class SolverLNSimple {
     }
 
     public static final int DEFAULT_MAX_ITER = 100;
-    public static final double DEFAULT_TOL = 5e-3;
+    public static final double DEFAULT_TOL = 1.5e-2;
 
     /**
      * Limit-cycle detection thresholds for the outer fixed-point loop. When the
