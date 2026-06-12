@@ -57,11 +57,12 @@ import java.util.Map;
  * </ul>
  *
  * <h2>Iteration</h2>
- * {@link #iterateCoupledMva} runs a bounce sweep (sequence
- * {@code 0,1,...,N-1,N-2,...,1}) over all layers per outer iteration so that
- * information flows both ways through the call chain in a single pass. Each layer
- * is solved by {@code pfqn_mvams}; its result then propagates into coupled
- * layers via {@code Clients} think times and queue service rates. Stop when
+ * {@link #iterateCoupledMva} sweeps all layers once per outer iteration using
+ * the elevator order: a single forward pass {@code 0..N-1} on even iterations
+ * and a reverse pass {@code N-1..0} on odd ones, so information flows both ways
+ * through the call chain across successive iterations. Each layer is solved by
+ * {@code pfqn_mvams}; its result then propagates into coupled layers via
+ * {@code Clients} think times and queue service rates. Stop when
  * {@code max |ΔX| < tol}.
  *
  * <h2>Notation (used in comments throughout)</h2>
@@ -186,10 +187,10 @@ public class SolverLNSimple {
     }
 
     /**
-     * Outer fixed-point loop. Each outer iteration runs a bounce sweep over all
-     * layers (index sequence {@code 0,1,...,N-1,N-2,...,1}) so that information
-     * flows both ways through the call chain in a single pass. Convergence:
-     * {@code max_l |X_l^(k) - X_l^(k-1)| < tol}.
+     * Outer fixed-point loop. Each outer iteration alternates a forward pass
+     * (0..N-1) and a reverse pass (N-1..0) so that information flows both ways
+     * through the call chain across successive iterations.
+     * Convergence: {@code max_l |X_l^(k) - X_l^(k-1)| < tol}.
      */
     public void iterateCoupledMva(int maxIter, double tol, Runnable afterIteration) {
         long outerStartTime = System.nanoTime();
@@ -198,18 +199,20 @@ public class SolverLNSimple {
         double prevMaxDelta = Double.NaN;
         int    stableHits   = 0;
 
-        // Bounce sweep over layers: indices 0,1,…,N-1,N-2,…,1. Constant across
-        // iterations, so hoist the length out of the loop and compute the layer
-        // index with a direct expression rather than a per-step helper call.
-        final int sweepLen  = 2 * N_LAYERS - 1;
-        final int nLayersM1 = N_LAYERS - 1;
+        // Elevator: forward (0..N-1) on even iters, reverse (N-1..0) on odd.
+        final int[] elevatorFwd = new int[N_LAYERS];
+        final int[] elevatorRev = new int[N_LAYERS];
+        for (int i = 0; i < N_LAYERS; i++) { elevatorFwd[i] = i; elevatorRev[i] = N_LAYERS - 1 - i; }
 
         for (int iter = 0; iter < maxIter; iter++) {
             long solveStartTime = System.nanoTime();
             double maxDeltaX = 0.0;
 
+            final int[] seq = (iter % 2 == 0) ? elevatorFwd : elevatorRev;
+            final int   sweepLen = seq.length;
+
             for (int si = 0; si < sweepLen; si++) {
-                int l = (si < N_LAYERS) ? si : 2 * nLayersM1 - si;
+                int l = seq[si];
 
                 LayerSolve s = solveLayer(l);
                 if (s == null) return;             // MVA threw; bail out
