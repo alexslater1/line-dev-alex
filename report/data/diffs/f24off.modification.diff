@@ -1,0 +1,12 @@
+--- a/jar/src/main/kotlin/jline/solvers/ln/SolverLN.java
++++ b/jar/src/main/kotlin/jline/solvers/ln/SolverLN.java
+@@ -3238,6 +3238,9 @@
+             }
+         }
+ 
++        // F24-off ablation: skip the ptaskcallers random walk (output is computed but never consumed).
++        if (true) return;
++
+         this.ptaskcallers = new Matrix(this.ptaskcallers.getNumRows(), this.ptaskcallers.getNumCols(), this.ptaskcallers.getNumRows() * this.ptaskcallers.getNumCols() - 1);
+ 
+         for (int i = 0; i < this.ptaskcallers.getNumRows(); i++) {

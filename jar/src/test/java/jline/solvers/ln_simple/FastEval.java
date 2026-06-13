@@ -32,7 +32,7 @@ import java.util.function.Supplier;
  *
  * <pre>
  *   -Dfasteval.ref=report/data/f20axis-20260605T173243Z/baseline.tables.csv
- *   -Dfasteval.out=jar/overnight-exploration/data/run-XXX.csv
+ *   -Dfasteval.out=report/data/overnight-exploration/perf-port/run-XXX.csv
  *   -Dfasteval.repeats=5         (timed repeats; defaults to 1)
  *   -Dfasteval.warmup=3          (JIT warmup runs per fixture)
  *   -Dfasteval.fixtures=A1_*,C2_infTaskSimple   (optional filter)
@@ -124,7 +124,6 @@ public final class FastEval {
         FIXTURES.put("A5_seqMultiEntry",     EvaluationSuite::A5_seqMultiEntry);
         FIXTURES.put("A5_replyAtBound",      EvaluationSuite::A5_replyAtBound);
         FIXTURES.put("A5_combinedDag",       EvaluationSuite::A5_combinedDag);
-        FIXTURES.put("A5_multiclassAndFork", EvaluationSuite::A5_multiclassAndFork);
 
         FIXTURES.put("B_scaleAxis_tasks5_chain",   EvaluationSuite::B_scaleAxis_tasks5_chain);
         FIXTURES.put("B_scaleAxis_tasks10_chain",  EvaluationSuite::B_scaleAxis_tasks10_chain);
@@ -174,6 +173,7 @@ public final class FastEval {
         FIXTURES.put("C5_satFanoutCaller_w3",   EvaluationSuite::C5_satFanoutCaller_w3);
         FIXTURES.put("C5_satFanoutCaller_w4",   EvaluationSuite::C5_satFanoutCaller_w4);
         FIXTURES.put("C6_andForkPsHost",        EvaluationSuite::C6_andForkPsHost);
+        FIXTURES.put("C6_multiclassAndFork",    EvaluationSuite::C6_multiclassAndFork);
         FIXTURES.put("C7_deepChainMultiCall",   EvaluationSuite::C7_deepChainMultiCall);
         FIXTURES.put("C7_deepChainAllExp",      EvaluationSuite::C7_deepChainAllExp);
     }
@@ -354,14 +354,14 @@ public final class FastEval {
 
     public static void main(String[] args) throws Exception {
         String refPath = System.getProperty("fasteval.ref",
-                "jar/overnight-exploration/data/ln-reference.tables.csv");
+            "report/data/overnight-exploration/data/ln-reference.tables.csv");
         // The LQNS reference comes from the existing baseline.tables.csv —
         // LQNS values are stable across sessions (REST call to a Docker
         // service), so the existing capture is reusable.
         String lqnsRefPath = System.getProperty("fasteval.lqnsref",
                 "report/data/f20axis-20260605T173243Z/baseline.tables.csv");
         String outPath = System.getProperty("fasteval.out",
-                "jar/overnight-exploration/data/fasteval-latest.csv");
+            "report/data/overnight-exploration/perf-port/fasteval-latest.csv");
         int repeats = Integer.getInteger("fasteval.repeats", 1);
         int warmup  = Integer.getInteger("fasteval.warmup", 3);
         String filter = System.getProperty("fasteval.fixtures", "");

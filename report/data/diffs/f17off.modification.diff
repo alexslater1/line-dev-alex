@@ -1,0 +1,10 @@
+--- a/jar/src/main/kotlin/jline/solvers/ln/SolverLN.java
++++ b/jar/src/main/kotlin/jline/solvers/ln/SolverLN.java
+@@ -192,6 +192,7 @@
+     public SolverLN(LayeredNetwork lqnmodel, SolverFactory solverFactory, SolverOptions options) {
+         super(null, "SolverLN", options); // first argument is null as the ensemble cannot be built yet
+         this.lqn = lqnmodel.getStruct();
++        this.options.config.interlocking = false; // F17-off ablation: disable the interlock pipeline
+ 
+         // Detect and initialize phase-2 support
+         this.hasPhase2 = false;

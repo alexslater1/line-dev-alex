@@ -25,14 +25,29 @@ import java.util.function.Supplier;
  * and C1 fan-outs that 9 fixtures failed against it).
  *
  * <pre>
- *   -Dcaptureln.out=jar/overnight-exploration/data/ln-reference.tables.csv
+ *   -Dcaptureln.out=report/data/overnight-exploration/data/ln-reference.tables.csv
+ *   -Dcapture.condition=baseline    (value of the CSV condition column; set per ablation)
+ *   -Dcapture.fixtures=A1_*,C2_infTaskSimple   (optional fixture filter)
  * </pre>
+ *
+ * <p>Invoke via the JUnit wrapper {@link #runLnCapture()} (so Surefire's
+ * {@code -Dtest=CaptureLnReference} actually executes it — a bare {@code main}
+ * is not run by {@code mvn test}).
  */
 public final class CaptureLnReference {
 
+    /** JUnit entry point — {@code mvn test -Dtest=CaptureLnReference} runs this. */
+    @org.junit.jupiter.api.Test
+    @org.junit.jupiter.api.Timeout(value = 7200)
+    public void runLnCapture() throws Exception {
+        main(new String[0]);
+    }
+
     public static void main(String[] args) throws Exception {
         String outPath = System.getProperty("captureln.out",
-                "jar/overnight-exploration/data/ln-reference.tables.csv");
+            "report/data/overnight-exploration/data/ln-reference.tables.csv");
+        String condition = System.getProperty("capture.condition", "baseline");
+        String filter = System.getProperty("capture.fixtures", "");
 
         GlobalConstants.setVerbose(VerboseLevel.SILENT);
 
@@ -53,6 +68,7 @@ public final class CaptureLnReference {
         int n = 0;
         for (Map.Entry<String, Supplier<LayeredNetwork>> e : FastEval.FIXTURES_PUBLIC().entrySet()) {
             String name = e.getKey();
+            if (!matchesFilter(name, filter)) continue;
             String partition = partitionOf(name);
             LayeredNetwork model = e.getValue().get();
 
@@ -79,8 +95,8 @@ public final class CaptureLnReference {
             for (int i = 0; i < nodeNames.size(); i++) {
                 String nodeName = nodeNames.get(i);
                 String nodeType = (nodeTypes != null && i < nodeTypes.size()) ? nodeTypes.get(i) : "";
-                bw.write(String.format("%s,%s,baseline,LN,%s,%s,1,%s,%s,%s,%s,%s%n",
-                        name, partition, nodeName, nodeType,
+                bw.write(String.format("%s,%s,%s,LN,%s,%s,1,%s,%s,%s,%s,%s%n",
+                        name, partition, condition, nodeName, nodeType,
                         fmt(q.get(i)), fmt(u.get(i)), fmt(rt.get(i)),
                         fmt(rd.get(i)), fmt(tp.get(i))));
             }
@@ -110,5 +126,21 @@ public final class CaptureLnReference {
         if (name.startsWith("C3_")) return "C3";
         if (name.startsWith("C4_")) return "C4";
         return "?";
+    }
+
+    /** Comma-separated patterns; {@code foo*} = prefix match, else exact.
+     *  Empty filter matches everything. Mirrors {@link FastEval}'s filter. */
+    static boolean matchesFilter(String name, String filter) {
+        if (filter == null || filter.isEmpty()) return true;
+        for (String pat : filter.split(",")) {
+            pat = pat.trim();
+            if (pat.isEmpty()) continue;
+            if (pat.endsWith("*")) {
+                if (name.startsWith(pat.substring(0, pat.length() - 1))) return true;
+            } else if (name.equals(pat)) {
+                return true;
+            }
+        }
+        return false;
     }
 }

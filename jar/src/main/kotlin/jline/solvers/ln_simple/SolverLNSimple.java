@@ -156,6 +156,18 @@ public class SolverLNSimple {
     public static final int DEFAULT_MAX_ITER = 100;
     public static final double DEFAULT_TOL = 1.5e-2;
 
+    /** Under-relaxation weight for fan-out caller Clients-Z updates. Kept damped
+     *  at 0.5: a first-party sweep showed removing it drives saturated fan-out
+     *  callers toward the iteration cap, so unlike the INF-task D weight below it
+     *  is retained. */
+    private static final double Z_RELAX_ALPHA = 0.5;
+
+    /** Under-relaxation weight for D-writes into T: layers of INF tasks on
+     *  finite-server PS/FCFS processors. Dropped to 1.0 (no damping): a
+     *  first-party sweep found un-damping this write reduces iterations
+     *  monotonically across the corpus with no accuracy regression. */
+    private static final double D_RELAX_ALPHA = 1.0;
+
     /**
      * Limit-cycle detection thresholds for the outer fixed-point loop. When the
      * fixed-point iteration enters a 2-cycle (state alternating A,B,A,B,…),
@@ -441,12 +453,6 @@ public class SolverLNSimple {
             calleeClients.setService(callerCl, Exp.fitMean(clamp(calleeThink)));
         }
     }
-
-    /** Under-relaxation weight for fan-out caller Clients-Z updates. Kept damped
-     *  at 0.5: a first-party sweep showed removing it drives saturated fan-out
-     *  callers toward the iteration cap, so unlike the INF-task D weight below it
-     *  is retained. */
-    private static final double Z_RELAX_ALPHA = 0.5;
 
     /**
      * Z formula for a single caller class.
@@ -918,12 +924,6 @@ public class SolverLNSimple {
             tq.setService(tc, Exp.fitMean(value));
         }
     }
-
-    /** Under-relaxation weight for D-writes into T: layers of INF tasks on
-     *  finite-server PS/FCFS processors. Dropped to 1.0 (no damping): a
-     *  first-party sweep found un-damping this write reduces iterations
-     *  monotonically across the corpus with no accuracy regression. */
-    private static final double D_RELAX_ALPHA = 1.0;
 
     /** True iff {@code taskName} is INF-scheduled on a finite-server PS/FCFS
      *  processor. Topological, so cached per task. */

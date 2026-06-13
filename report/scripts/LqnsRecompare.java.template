@@ -1,0 +1,145 @@
+// =============================================================================
+// LqnsRecompare — post-run re-derivation harness (TEMPLATE, do NOT add to the
+// test tree while the overnight run is live; a compile slip would break the
+// next capture). Drop into
+//   jar/src/test/java/jline/solvers/ln_simple/LqnsRecompare.java
+// AFTER the run finishes and AFTER the D2 (util helpers) + D3 (OR-fork writeXML)
+// fixes are applied + compiled.
+//
+// Purpose: recompute the LQNS-comparison columns ONLY (the D2/D3-affected ones),
+// reusing the run's CACHED SolverLN per-node tables so SolverLN is never re-run.
+// Emits recompare.csv, which patch-baseline-lqns.py then merges surgically.
+//
+// Output CSV columns (consumed by patch-baseline-lqns.py):
+//   fixture_name,lqns_iters,lqns_time_ms,sim_vs_lqns_max_rel_diff,matches_within_tol
+//   (optionally sim_vs_ln_max_rel_diff — should be ~unchanged; include for audit)
+//
+// Run (post-fix):
+//   mvn -Dtmp=false test -Dtest=LqnsRecompare#run \
+//     -Drecompare.lnref=report/data/f20axis-<ts>/baseline.tables.csv \
+//     -Drecompare.out=report/data/recompare.csv
+// =============================================================================
+package jline.solvers.ln_simple;
+
+import jline.GlobalConstants;
+import jline.VerboseLevel;
+import jline.lang.layered.LayeredNetwork;
+import jline.solvers.LayeredNetworkAvgTable;
+// FastEval is now in this same package (jline.solvers.ln_simple) — no import needed.
+// Its FIXTURES_PUBLIC() set was verified to exactly match the run's 78 baseline fixtures.
+
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.function.Supplier;
+
+public final class LqnsRecompare {
+
+    @org.junit.jupiter.api.Test
+    @org.junit.jupiter.api.Timeout(value = 3600)
+    public void run() throws Exception {
+        String lnRefPath = System.getProperty("recompare.lnref",
+                "report/data/baseline.tables.csv");
+        String outPath   = System.getProperty("recompare.out",
+                "report/data/recompare.csv");
+        // Optional filter (FastEval glob semantics) — default the full corpus.
+        String filter    = System.getProperty("recompare.fixtures", "");
+
+        GlobalConstants.setVerbose(VerboseLevel.SILENT);
+
+        // Cached SolverLN per-node tables: Map<fixture, Map<node, double[]{q,u,rt,rd,t}>>.
+        // FastEval.loadReference already parses the .tables.csv schema and filters by solver label.
+        Map<String, Map<String, double[]>> lnRef = FastEval.loadReference(lnRefPath, "LN");
+
+        LinkedHashMap<String, Supplier<LayeredNetwork>> fixtures = FastEval.FIXTURES_PUBLIC();
+
+        BufferedWriter bw = new BufferedWriter(new FileWriter(outPath));
+        bw.write("fixture_name,lqns_iters,lqns_time_ms,sim_vs_lqns_max_rel_diff,"
+                + "sim_vs_ln_max_rel_diff,matches_within_tol\n");
+
+        for (Map.Entry<String, Supplier<LayeredNetwork>> e : fixtures.entrySet()) {
+            String name = e.getKey();
+            if (!FastEval.matchesFilterPublic(name, filter)) continue; // (expose matchesFilter in FastEval)
+            Map<String, double[]> lnRow = lnRef.get(name);
+            if (lnRow == null) {
+                System.err.println("[recompare] no cached LN table for " + name + " — skipping");
+                continue;
+            }
+
+            // Fresh Sim (model #1) and fresh LQNS (model #2 — fresh instance to avoid shared state).
+            LayeredNetworkAvgTable simTable = util.runSolverLNSimple(e.getValue().get());
+            int    simIters = util.lastSimpleIters;     // (already correct; not written here)
+
+            LayeredNetworkAvgTable lqnsTable;
+            boolean lqnsOk;
+            try {
+                lqnsTable = util.runSolverLQNS(e.getValue().get());  // D3 fix lets the OR-fork ones solve
+                lqnsOk = lqnsTable != null;
+            } catch (Throwable t) {
+                lqnsTable = null; lqnsOk = false;
+                System.err.println("[recompare] LQNS still unavailable for " + name + ": " + t.getMessage());
+            }
+            Integer lqnsIters   = lqnsOk ? util.lastLqnsIters   : null;
+            Long    lqnsTimeMs  = lqnsOk ? util.lastLqnsTimeMs  : null;
+
+            // ===== THE COMPARISON =====
+            // Reuse util's *exact* comparison (synthesis of LQNS ResidT=Q/X and Util=X*D/c, the
+            // per-server Util/c normalisation, the server-count + host-demand maps) but against the
+            // CACHED LN table instead of a live SolverLN run, and with the D2 NaN-skip fix.
+            //
+            // POST-RUN REFACTOR REQUIRED (in util.java, alongside the D2 fix):
+            //   public static Recompared compareCachedLN(LayeredNetwork model,
+            //                                            LayeredNetworkAvgTable simTable,
+            //                                            Map<String,double[]> lnRefRow,   // q,u,rt,rd,t
+            //                                            LayeredNetworkAvgTable lqnsTable) {...}
+            // Factor it out of assertResultsMatchSolverLN: build lnVals from lnRefRow (cached) rather
+            // than from a live lnTable; everything else (lqns synthesis/normalisation, rawRelDiff with
+            // NaN-skip, maxSlackVsLn / maxSlackVsLqns -> match classification) is the existing code.
+            util.Recompared c = util.compareCachedLN(e.getValue().get(), simTable, lnRow, lqnsTable);
+
+            bw.write(String.format("%s,%s,%s,%s,%s,%s%n",
+                    name,
+                    lqnsIters  == null ? "" : lqnsIters.toString(),
+                    lqnsTimeMs == null ? "" : lqnsTimeMs.toString(),
+                    fmt(c.simVsLqns),            // NaN/empty if LQNS unavailable
+                    fmt(c.simVsLn),
+                    c.match));                   // match-ln | match-lqns-only | match-neither
+            bw.flush();
+        }
+        bw.close();
+        System.out.println("[recompare] wrote " + outPath);
+    }
+
+    private static String fmt(double v) {
+        if (Double.isNaN(v)) return "";
+        if (Double.isInfinite(v)) return v > 0 ? "Infinity" : "-Infinity"; // should NEVER appear post-fix
+        return Double.toString(v);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// SUPPORTING POST-RUN EDITS (apply together, then compile, then run this):
+//
+//   1. util.java D2 fix: rawRelDiff + relativeSlackWith (+ relativeSlack) return Double.NaN for
+//      NaN-vs-finite; the max-loops skip NaN. (Optionally stop synthesising LQNS ResidT/Util where
+//      Sim is NaN.) Verify residual sim_vs_lqns isn't dominated by the IS/INF processor-Util
+//      convention; if it is, skip Util on IS/INF rows or extend the /c normalisation to single-server INF.
+//
+//   2. util.java refactor: extract `compareCachedLN(model, simTable, lnRefRow, lqnsTable)` returning
+//      a small `Recompared {double simVsLn, simVsLqns; String match;}` from the existing comparison
+//      loop in assertResultsMatchSolverLN, sourcing LN values from lnRefRow instead of a live table.
+//
+//   3. API GAPS verified against the current tree (resolve when dropping in):
+//      - FastEval.FIXTURES_PUBLIC() : public ✓ (78 keys, exactly match the run's baseline set).
+//      - FastEval.loadReference(path,label) : package-private ✓ (harness is same package now).
+//      - FastEval has NO `matchesFilter` anymore -> give the harness its own 3-line glob filter
+//        (or just drop the filter and always run the full 78).
+//      - util.lastSimpleIters / lastLqnsIters / lastLqnsTimeMs are PRIVATE -> the harness cannot read
+//        them. Cleanest: have `compareCachedLN(...)` RUN LQNS internally and return everything in
+//        `Recompared {double simVsLn, simVsLqns; String match; Integer lqnsIters; Long lqnsTimeMs;}`,
+//        so the harness never touches util's private state. (Then the harness loop just calls
+//        compareCachedLN(model, simTable, lnRow) and writes its fields.)
+//
+//   4. LayeredNetwork.writeXML D3 fix: correct the OR-fork emission (the AND-join quorum analogue).
+// ---------------------------------------------------------------------------

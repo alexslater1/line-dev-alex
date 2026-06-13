@@ -481,9 +481,10 @@ public class EvaluationSuite {
     // use activity graphs, A5 is the systematic capability sweep: OR-fork
     // branching (absent from the rest of the corpus), AND-fork E[max] across
     // branch count and structure, multi-entry DAG walks, the reply phase split
-    // at the bound activity, the all-features integration DAG, and the
-    // multi-class × activity-graph cross. All on INF/clean hosts so they are
-    // positive coverage; the finite-server-host AND-fork boundary is C6.
+    // at the bound activity, and the all-features integration DAG. All seven
+    // are on INF/clean hosts so they are positive coverage; the AND-fork
+    // join-correction boundary (finite-server contention and the multi-class
+    // shared-callee cross) is consolidated in C6.
     // =========================================================================
 
     /** A5: two-branch OR-fork (p=0.7/0.3) into demands 1.0/0.2. Per-call demand
@@ -646,38 +647,6 @@ public class EvaluationSuite {
         T2.addPrecedence(ActivityPrecedence.AndFork(A_after_or, Arrays.asList(A_and_p1, A_and_p2)));
         T2.addPrecedence(ActivityPrecedence.AndJoin(Arrays.asList(A_and_p1, A_and_p2), A_join));
         T2.addPrecedence(ActivityPrecedence.Serial(A_join, A_phase2));
-        return m;
-    }
-
-    /** A5: multi-class × activity-graph cross — two REF classes each call their
-     *  own entry on a shared INF callee, and each entry runs an AND-fork/join.
-     *  Exercises per-class visit-weight walks plus the E[max] correction
-     *  together (the interaction A2 and the AND-fork fixtures probe separately). */
-    public static LayeredNetwork A5_multiclassAndFork() {
-        LayeredNetwork m = new LayeredNetwork("A5_multiclassAndFork");
-        Processor PR = new Processor(m, "PR", Integer.MAX_VALUE, SchedStrategy.INF);
-        Processor PS = new Processor(m, "PS", Integer.MAX_VALUE, SchedStrategy.INF);
-        Task R1 = new Task(m, "R1", 15, SchedStrategy.REF).on(PR).setThinkTime(Exp.fitMean(2.0));
-        Task R2 = new Task(m, "R2", 15, SchedStrategy.REF).on(PR).setThinkTime(Exp.fitMean(2.5));
-        Task T2 = new Task(m, "T2", Integer.MAX_VALUE, SchedStrategy.INF).on(PS);
-        Entry ER1 = new Entry(m, "ER1").on(R1);
-        Entry ER2 = new Entry(m, "ER2").on(R2);
-        Entry E2a = new Entry(m, "E2a").on(T2);
-        Entry E2b = new Entry(m, "E2b").on(T2);
-        new Activity(m, "A1", Immediate.getInstance()).on(R1).boundTo(ER1).synchCall(E2a, 1);
-        new Activity(m, "A2", Immediate.getInstance()).on(R2).boundTo(ER2).synchCall(E2b, 1);
-        Activity Af_a = new Activity(m, "Af_a", Immediate.getInstance()).on(T2).boundTo(E2a);
-        Activity Aa1  = new Activity(m, "Aa1",  Exp.fitMean(0.5)).on(T2);
-        Activity Aa2  = new Activity(m, "Aa2",  Exp.fitMean(0.5)).on(T2);
-        Activity Aj_a = new Activity(m, "Aj_a", Immediate.getInstance()).on(T2).repliesTo(E2a);
-        T2.addPrecedence(ActivityPrecedence.AndFork(Af_a, Arrays.asList(Aa1, Aa2)));
-        T2.addPrecedence(ActivityPrecedence.AndJoin(Arrays.asList(Aa1, Aa2), Aj_a));
-        Activity Af_b = new Activity(m, "Af_b", Immediate.getInstance()).on(T2).boundTo(E2b);
-        Activity Ab1  = new Activity(m, "Ab1",  Exp.fitMean(0.4)).on(T2);
-        Activity Ab2  = new Activity(m, "Ab2",  Exp.fitMean(0.6)).on(T2);
-        Activity Aj_b = new Activity(m, "Aj_b", Immediate.getInstance()).on(T2).repliesTo(E2b);
-        T2.addPrecedence(ActivityPrecedence.AndFork(Af_b, Arrays.asList(Ab1, Ab2)));
-        T2.addPrecedence(ActivityPrecedence.AndJoin(Arrays.asList(Ab1, Ab2), Aj_b));
         return m;
     }
 
@@ -986,14 +955,19 @@ public class EvaluationSuite {
     public static LayeredNetwork C5_satFanoutCaller_w4() { return saturatedFanOutCaller("C5_satCaller_w4", 4, 2); }
 
     // =========================================================================
-    // Partition C6: Activity-graph boundary (finite-server-host AND-fork)
+    // Partition C6: AND-fork join-correction boundary
     // The Step-6 E[max] join correction assumes the parallel branches run on
-    // independent notional servers (exact on an INF host). On a finite-server
-    // PS host the siblings contend for the shared queue, which the closed-form
-    // does not capture (Franks 5.2.1 CCD overlap compensation, out of scope).
-    // This is the activity-graph analogue of C5's saturation boundary: the INF
-    // counterpart A4_parallelService_andFork passes, so the divergence isolates
-    // to the host side. Reported honestly rather than left @Disabled.
+    // independent notional servers (exact on an INF host, single class). The two
+    // C6 fixtures drive that assumption past its bound from two sides:
+    //   - C6_andForkPsHost: finite-server PS host, so the siblings contend for
+    //     the shared queue (Franks 5.2.1 CCD overlap compensation, out of scope).
+    //     Its INF counterpart A4_parallelService_andFork passes, isolating the
+    //     divergence to the host side.
+    //   - C6_multiclassAndFork: two REF classes AND-forking on a shared INF
+    //     callee, so the per-class E[max] corrections interact. Its single-class
+    //     siblings (A5_andForkThreeWay, A5_combinedDag) pass, isolating the
+    //     divergence to the multi-class join interaction.
+    // Reported honestly rather than left @Disabled.
     // =========================================================================
 
     /** C6 AND-fork / AND-join on a single-server PS host: two equal-demand
@@ -1018,6 +992,39 @@ public class EvaluationSuite {
         Activity A_join = new Activity(m, "A_join", Immediate.getInstance()).on(T2).repliesTo(E2);
         T2.addPrecedence(ActivityPrecedence.AndFork(A_fork, Arrays.asList(A_p1, A_p2)));
         T2.addPrecedence(ActivityPrecedence.AndJoin(Arrays.asList(A_p1, A_p2), A_join));
+        return m;
+    }
+
+    /** C6 multi-class AND-fork: two REF classes each call their own entry on a
+     *  shared INF callee, and each entry runs an AND-fork/join. The per-class
+     *  E[max] join corrections interact, driving the closed-form past its bound
+     *  even on an INF host (the single-class A5 AND-fork fixtures pass). Exercises
+     *  per-class visit-weight walks plus the E[max] correction together. */
+    public static LayeredNetwork C6_multiclassAndFork() {
+        LayeredNetwork m = new LayeredNetwork("C6_multiclassAndFork");
+        Processor PR = new Processor(m, "PR", Integer.MAX_VALUE, SchedStrategy.INF);
+        Processor PS = new Processor(m, "PS", Integer.MAX_VALUE, SchedStrategy.INF);
+        Task R1 = new Task(m, "R1", 15, SchedStrategy.REF).on(PR).setThinkTime(Exp.fitMean(2.0));
+        Task R2 = new Task(m, "R2", 15, SchedStrategy.REF).on(PR).setThinkTime(Exp.fitMean(2.5));
+        Task T2 = new Task(m, "T2", Integer.MAX_VALUE, SchedStrategy.INF).on(PS);
+        Entry ER1 = new Entry(m, "ER1").on(R1);
+        Entry ER2 = new Entry(m, "ER2").on(R2);
+        Entry E2a = new Entry(m, "E2a").on(T2);
+        Entry E2b = new Entry(m, "E2b").on(T2);
+        new Activity(m, "A1", Immediate.getInstance()).on(R1).boundTo(ER1).synchCall(E2a, 1);
+        new Activity(m, "A2", Immediate.getInstance()).on(R2).boundTo(ER2).synchCall(E2b, 1);
+        Activity Af_a = new Activity(m, "Af_a", Immediate.getInstance()).on(T2).boundTo(E2a);
+        Activity Aa1  = new Activity(m, "Aa1",  Exp.fitMean(0.5)).on(T2);
+        Activity Aa2  = new Activity(m, "Aa2",  Exp.fitMean(0.5)).on(T2);
+        Activity Aj_a = new Activity(m, "Aj_a", Immediate.getInstance()).on(T2).repliesTo(E2a);
+        T2.addPrecedence(ActivityPrecedence.AndFork(Af_a, Arrays.asList(Aa1, Aa2)));
+        T2.addPrecedence(ActivityPrecedence.AndJoin(Arrays.asList(Aa1, Aa2), Aj_a));
+        Activity Af_b = new Activity(m, "Af_b", Immediate.getInstance()).on(T2).boundTo(E2b);
+        Activity Ab1  = new Activity(m, "Ab1",  Exp.fitMean(0.4)).on(T2);
+        Activity Ab2  = new Activity(m, "Ab2",  Exp.fitMean(0.6)).on(T2);
+        Activity Aj_b = new Activity(m, "Aj_b", Immediate.getInstance()).on(T2).repliesTo(E2b);
+        T2.addPrecedence(ActivityPrecedence.AndFork(Af_b, Arrays.asList(Ab1, Ab2)));
+        T2.addPrecedence(ActivityPrecedence.AndJoin(Arrays.asList(Ab1, Ab2), Aj_b));
         return m;
     }
 

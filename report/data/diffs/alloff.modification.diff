@@ -1,0 +1,73 @@
+--- a/jar/src/main/kotlin/jline/solvers/ln/SolverLN.java
++++ b/jar/src/main/kotlin/jline/solvers/ln/SolverLN.java
+@@ -192,6 +192,7 @@
+     public SolverLN(LayeredNetwork lqnmodel, SolverFactory solverFactory, SolverOptions options) {
+         super(null, "SolverLN", options); // first argument is null as the ensemble cannot be built yet
+         this.lqn = lqnmodel.getStruct();
++        this.options.config.interlocking = false; // F17-off ablation: disable the interlock pipeline
+ 
+         // Detect and initialize phase-2 support
+         this.hasPhase2 = false;
+@@ -1623,7 +1624,7 @@
+          * If the iteration keeps fulfilling the error requirements for convergence, the solver completes.*/
+ 
+         boolean bool = false;
+-        int iter_min = FastMath.max(2 * this.ensemble.length, (int) FastMath.ceil(this.options.iter_max / 4.0));
++        int iter_min = 1; // F20-off: disable the iter_min convergence floor
+         int E = this.nlayers;
+         Map<Integer, Map<Integer, SolverResult>> results = this.results;
+ 
+@@ -1660,7 +1661,7 @@
+             double mov_avg_weight = 1.0 / (double) wnd_size;
+             results = this.results;
+             // assume ready state
+-            if (it >= iter_min) {
++            if (false) { // F20-off: disable the moving-average smoothing
+                 for (int e = 0; e < E; e++) {
+                     Matrix filler = results.get(results.size()).get(e).QN.copy();
+                     filler.fill(mov_avg_weight);
+@@ -1782,31 +1783,9 @@
+         }
+         if (it == 0 && (this.options.verbose != VerboseLevel.SILENT)) {
+             // Debug output removed
+-        } else if ((it > iter_min) && (this.maxitererr.get(it) < this.options.iter_tol) && (this.maxitererr.get(it - 1) < this.options.iter_tol) && (this.maxitererr.get(it - 2) < this.options.iter_tol)) {
+-            // if potential convergence has just been detected, do a hard reset of every layer to check that this is
+-            // really the fixed point
+-            if (!this.hasconverged) {
+-                for (int e = 0; e < E; e++) {
+-                    this.ensemble[e].reset(false);
+-                }
+-                if (this.options.verbose != VerboseLevel.SILENT) {
+-                    //if (this.solvers[this.solvers.length - 1].options.verbose != VerboseLevel.SILENT) {
+-                    // Debug output removed
+-                    //}
+-                }
+-                //If it passes the change again next time then complete
+-                this.hasconverged = true;
+-            } else {
+-                if (this.options.verbose != VerboseLevel.SILENT) {
+-                    //if (this.solvers[this.solvers.length - 1].options.verbose != VerboseLevel.SILENT) {
+-                    //    String msg = String.format("SolverLN completed in %d iterations.", results.get(1).size());
+-                    //    System.out.println(msg);
+-                    //} else {
+-                    // Debug output removed
+-                    //}
+-                }
+-                bool = true;
+-            }
++        } else if ((it > 1) && (this.maxitererr.get(it) < this.options.iter_tol)) {
++            // F20-off: single-iteration detection — no iter_min floor, no 3-iteration confirmation, no hard-reset verification pass.
++            bool = true;
+         } else {
+             this.hasconverged = false;
+         }
+@@ -3237,6 +3216,9 @@
+                 }
+             }
+         }
++
++        // F24-off ablation: skip the ptaskcallers random walk (output is computed but never consumed).
++        if (true) return;
+ 
+         this.ptaskcallers = new Matrix(this.ptaskcallers.getNumRows(), this.ptaskcallers.getNumCols(), this.ptaskcallers.getNumRows() * this.ptaskcallers.getNumCols() - 1);
+ 

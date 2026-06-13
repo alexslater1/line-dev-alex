@@ -178,9 +178,18 @@ public class util {
                 // to compare against on this metric.
                 double lqnsResidDerived = lqnsResidT.get(i);
                 if (Double.isNaN(lqnsResidDerived)) {
+                    double simResid = simpleResidT.get(i);
                     double q = lqnsQLen.get(i);
                     double x = lqnsTput.get(i);
-                    if (Double.isFinite(q) && Double.isFinite(x) && x > 0) {
+                    // D2: only synthesize LQNS ResidT = Q/X to enable a *genuine*
+                    // comparison — i.e. when Sim reports a finite, non-zero ResidT
+                    // for this row. REF (client) tasks and their bound immediate
+                    // caller activity report Sim ResidT = 0 by convention; the
+                    // synthesized Q/X (the task's cycle time) against that 0 is a
+                    // spurious 0-vs-finite mismatch that otherwise inflates every
+                    // fixture's sim_vs_lqns to ~1.0 and masks the lqns-only signal.
+                    if (Double.isFinite(simResid) && Math.abs(simResid) > 1e-9
+                            && Double.isFinite(q) && Double.isFinite(x) && x > 0) {
                         lqnsResidDerived = q / x;
                     }
                 }
@@ -257,6 +266,157 @@ public class util {
         if (maxSlack > 1.0) {
             fail(worstMsg);
         }
+    }
+
+    // =========================================================================
+    //  Post-run LQNS re-derivation (D2/D3 patch harness)
+    // =========================================================================
+
+    /** Result of {@link #recompareCachedLN}: exactly the LQNS-comparison columns
+     *  the post-run patch overwrites, plus {@code simVsLn} for an audit that the
+     *  cached-LN path reproduces the live capture (it must, since the D2 fix
+     *  leaves the LN side unchanged). {@code simVs*} are {@code NaN} when not
+     *  comparable; {@code lqns*} are {@code null} when LQNS is unavailable. */
+    public static final class Recompared {
+        public Integer lqnsIters;
+        public Long    lqnsTimeMs;
+        public double  simVsLn   = Double.NaN;
+        public double  simVsLqns = Double.NaN;
+        public String  match;
+    }
+
+    /**
+     * Re-derive the LQNS-comparison metrics for one fixture WITHOUT re-running
+     * the (slow) SolverLN: SolverLNSimple and SolverLQNS are run fresh on the
+     * supplied models, while SolverLN's per-node values are read from the run's
+     * cached tables ({@code lnByName}: node name → {q, u, respt, residt, tput}).
+     *
+     * <p>This duplicates the comparison loop of
+     * {@link #assertResultsMatchSolverLN(Supplier)} verbatim (same synthesis of
+     * LQNS ResidT=Q/X and per-server Util, same tolerances, same classification)
+     * so the patched values are bit-for-bit what the live capture would have
+     * produced under the D2 fix. The live method is deliberately left untouched.
+     */
+    public static Recompared recompareCachedLN(LayeredNetwork modelForSimple,
+                                               LayeredNetwork modelForLqns,
+                                               Map<String, double[]> lnByName) {
+        lastLqnsIters = null;  lastLqnsTimeMs = null;  lastLqnsAvailable = false;
+
+        LayeredNetworkAvgTable simpleTable = runSolverLNSimple(modelForSimple);
+        LayeredNetworkAvgTable lqnsTable = null;
+        try {
+            lqnsTable = runSolverLQNS(modelForLqns);
+            lastLqnsAvailable = true;
+        } catch (Throwable t) {
+            lastLqnsIters = null;
+            lastLqnsTimeMs = null;
+        }
+
+        List<Double> simpleQLen  = simpleTable.getQLen();
+        List<Double> simpleUtil  = simpleTable.getUtil();
+        List<Double> simpleRespT = simpleTable.getRespT();
+        List<Double> simpleResidT= simpleTable.getResidT();
+        List<Double> simpleTput  = simpleTable.getTput();
+        List<String> nodeNames   = simpleTable.getNodeNames();
+
+        List<Double> lqnsQLen  = lqnsTable != null ? lqnsTable.getQLen()   : Collections.<Double>emptyList();
+        List<Double> lqnsUtil  = lqnsTable != null ? lqnsTable.getUtil()   : Collections.<Double>emptyList();
+        List<Double> lqnsRespT = lqnsTable != null ? lqnsTable.getRespT()  : Collections.<Double>emptyList();
+        List<Double> lqnsResidT= lqnsTable != null ? lqnsTable.getResidT() : Collections.<Double>emptyList();
+        List<Double> lqnsTput  = lqnsTable != null ? lqnsTable.getTput()   : Collections.<Double>emptyList();
+
+        Map<String, Integer> nodeServerCount = buildNodeServerCountMap(modelForSimple);
+        Map<String, Double> activityHostDemand = buildActivityHostDemandMap(modelForSimple);
+
+        double maxSlackVsLn   = 0.0;
+        double maxSlackVsLqns = 0.0;
+        double maxRelDiffVsLn   = 0.0;
+        double maxRelDiffVsLqns = 0.0;
+        boolean anyComparableLn   = false;
+        boolean anyComparableLqns = false;
+        String[] metrics = {"QLen", "Util", "RespT", "ResidT", "Tput"};
+
+        for (int i = 0; i < nodeNames.size(); i++) {
+            String name = nodeNames.get(i);
+            double[] ln = lnByName.get(name);
+            // Node names are unique within a LayeredNetwork, and the cached LN
+            // tables cover every node of the model. A miss means a stale/mismatched
+            // reference table — fail loudly rather than silently skip.
+            if (ln == null) {
+                throw new RuntimeException("recompareCachedLN: no cached LN row for node '"
+                        + name + "' (stale or wrong reference table?)");
+            }
+            double[] lnVals = { ln[0], ln[1], ln[2], ln[3], ln[4] };
+
+            double[] lqnsVals;
+            if (lqnsTable != null && i < lqnsQLen.size()) {
+                double lqnsResidDerived = lqnsResidT.get(i);
+                if (Double.isNaN(lqnsResidDerived)) {
+                    double simResid = simpleResidT.get(i);
+                    double q = lqnsQLen.get(i);
+                    double x = lqnsTput.get(i);
+                    // D2: see assertResultsMatchSolverLN — only synthesize when Sim
+                    // reports a finite, non-zero ResidT, so the REF-task Q/X-vs-0
+                    // artifact never enters the comparison.
+                    if (Double.isFinite(simResid) && Math.abs(simResid) > 1e-9
+                            && Double.isFinite(q) && Double.isFinite(x) && x > 0) {
+                        lqnsResidDerived = q / x;
+                    }
+                }
+                double lqnsUtilNormalised = lqnsUtil.get(i);
+                Integer c = nodeServerCount.get(name);
+                if (c != null && c > 1 && Double.isFinite(lqnsUtilNormalised)) {
+                    lqnsUtilNormalised = lqnsUtilNormalised / c;
+                } else if (Double.isNaN(lqnsUtilNormalised)) {
+                    Double hd = activityHostDemand.get(name);
+                    double x = lqnsTput.get(i);
+                    if (hd != null && Double.isFinite(hd) && hd > 0
+                            && Double.isFinite(x) && x > 0 && c != null && c > 0) {
+                        lqnsUtilNormalised = x * hd / c;
+                    }
+                }
+                lqnsVals = new double[]{
+                    lqnsQLen.get(i), lqnsUtilNormalised, lqnsRespT.get(i),
+                    lqnsResidDerived, lqnsTput.get(i)
+                };
+            } else {
+                lqnsVals = new double[]{Double.NaN, Double.NaN, Double.NaN, Double.NaN, Double.NaN};
+            }
+            double[] simpleVals = {
+                simpleQLen.get(i), simpleUtil.get(i), simpleRespT.get(i),
+                simpleResidT.get(i), simpleTput.get(i)
+            };
+            for (int m = 0; m < metrics.length; m++) {
+                double actual = simpleVals[m];
+                double slackLn = relativeSlack(lnVals[m], actual);
+                if (slackLn > maxSlackVsLn) maxSlackVsLn = slackLn;
+                double relLn = rawRelDiff(lnVals[m], actual);
+                if (relLn > maxRelDiffVsLn) maxRelDiffVsLn = relLn;
+                if (!(Double.isNaN(lnVals[m]) && Double.isNaN(actual))) anyComparableLn = true;
+                if (lastLqnsAvailable) {
+                    double slackLqnsLoose = relativeSlackWith(lqnsVals[m], actual,
+                            LQNS_DATASET_ATOL, LQNS_DATASET_RTOL);
+                    if (slackLqnsLoose > maxSlackVsLqns) maxSlackVsLqns = slackLqnsLoose;
+                    double relLqns = rawRelDiff(lqnsVals[m], actual);
+                    if (relLqns > maxRelDiffVsLqns) maxRelDiffVsLqns = relLqns;
+                    if (!(Double.isNaN(lqnsVals[m]) && Double.isNaN(actual))) anyComparableLqns = true;
+                }
+            }
+        }
+
+        Recompared r = new Recompared();
+        r.lqnsIters  = lastLqnsAvailable ? lastLqnsIters  : null;
+        r.lqnsTimeMs = lastLqnsAvailable ? lastLqnsTimeMs : null;
+        r.simVsLn   = anyComparableLn ? maxRelDiffVsLn : Double.NaN;
+        r.simVsLqns = (lastLqnsAvailable && anyComparableLqns) ? maxRelDiffVsLqns : Double.NaN;
+        if (maxSlackVsLn <= 1.0) {
+            r.match = "match-ln";
+        } else if (lastLqnsAvailable && maxSlackVsLqns <= 1.0) {
+            r.match = "match-lqns-only";
+        } else {
+            r.match = "match-neither";
+        }
+        return r;
     }
 
     // =========================================================================
@@ -345,7 +505,12 @@ public class util {
     private static double relativeSlackWith(double expected, double actual,
                                              double atol, double rtol) {
         if (Double.isNaN(expected) && Double.isNaN(actual)) return 0.0;
-        if (Double.isNaN(expected) || Double.isNaN(actual)) return Double.POSITIVE_INFINITY;
+        // D2 fix: NaN-vs-finite is a metric-availability mismatch (e.g. LQNS
+        // synthesises ResidT=Q/X where Sim reports NaN, or leaves activity Util
+        // NaN where Sim is finite), NOT a genuine disagreement. Return NaN so the
+        // max-loops skip it (NaN > x is false) instead of inflating the worst
+        // slack to +Inf and mis-tagging match-lqns-only fixtures as match-neither.
+        if (Double.isNaN(expected) || Double.isNaN(actual)) return Double.NaN;
         double diff = Math.abs(expected - actual);
         double allowed = atol + rtol * Math.abs(expected);
         return diff / allowed;
@@ -353,11 +518,15 @@ public class util {
 
     /** Raw relative difference {@code |actual − expected| / max(|expected|, 1e-6)}
      *  for dataset reporting. The {@code 1e-6} floor prevents division blowups
-     *  when {@code expected} is zero. NaN handling matches the slack helpers:
-     *  NaN-vs-NaN → 0, NaN-vs-finite → {@code +Infinity}. */
+     *  when {@code expected} is zero. NaN handling: NaN-vs-NaN → 0 (trivial
+     *  match), NaN-vs-finite → {@code NaN} (skip — not a comparable cell). */
     private static double rawRelDiff(double expected, double actual) {
         if (Double.isNaN(expected) && Double.isNaN(actual)) return 0.0;
-        if (Double.isNaN(expected) || Double.isNaN(actual)) return Double.POSITIVE_INFINITY;
+        // D2 fix: NaN-vs-finite returns NaN (skip) rather than +Infinity, so the
+        // reported sim_vs_*_max_rel_diff is the max over genuinely-comparable
+        // (both-finite) cells. NaN-vs-NaN already returns 0 above. The max-loops
+        // ignore NaN automatically (NaN > x is false).
+        if (Double.isNaN(expected) || Double.isNaN(actual)) return Double.NaN;
         double diff = Math.abs(actual - expected);
         double denom = Math.max(Math.abs(expected), 1e-6);
         return diff / denom;
@@ -426,9 +595,9 @@ public class util {
     }
 
     public static LayeredNetworkAvgTable runSolverLNSimple(LayeredNetwork model) {
-        SolverLNSimple solver = new SolverLNSimple(model);
         int[] iters = {0};
         long start = System.currentTimeMillis();
+        SolverLNSimple solver = new SolverLNSimple(model);
         suppressOutput(() -> solver.iterateCoupledMva(() -> iters[0]++));
         long elapsed = System.currentTimeMillis() - start;
         lastSimpleIters = iters[0];
@@ -436,6 +605,11 @@ public class util {
         System.out.printf("[SolverLNSimple] %.3f s, %d iters%n", elapsed / 1000.0, iters[0]);
         return solver.getAvgTable();
     }
+
+    /** Iteration count of the most recent {@link #runSolverLNSimple} call. */
+    static Integer getLastSimpleIters()  { return lastSimpleIters; }
+    /** Wall time (ms) of the most recent {@link #runSolverLNSimple} call. */
+    static Long    getLastSimpleTimeMs() { return lastSimpleTimeMs; }
 
     public static LayeredNetworkAvgTable runSolverLN(LayeredNetwork model) {
         final LayeredNetworkAvgTable[] holder = new LayeredNetworkAvgTable[1];

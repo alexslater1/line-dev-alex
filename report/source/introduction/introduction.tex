@@ -1,0 +1,38 @@
+\chapter{Introduction}
+
+\section{Motivation}
+
+Modern software systems have become increasingly more complex due to the widespread adoption of distributed, multi-tier architectures. Client-server and microservice-based systems \cite{lewis2014microservices} are commonly used to achieve scalability and flexibility; however, they also introduce significant performance analysis challenges \cite{heinrich2017}. Synchronous request-reply interactions, limited server concurrency and shared hardware resources can lead to blocking, contention and non-linear behaviour \cite{urgaonkar2005}, making it difficult to predict system performance.
+
+A well-established approach to understanding such systems is an analytical performance modelling technique known as queueing network models. A queueing network models a system as a collection of interconnected service stations, each with an associated queue of jobs awaiting service. By analysing these models, it is possible to derive important performance metrics such as average response time, throughput, queue length and resource utilisation \cite{lazowska84}. These can be used to guide architectural decisions and identify bottlenecks early in the design process of computer systems.
+
+Queueing network models have been widely applied within computer systems research, including the analysis of processors and I/O devices, transaction processing systems and distributed applications \cite{lazowska84}. Their importance has increased as modern systems demand high throughput and low latency, allowing performance considerations to be addressed before implementation. Compared to techniques such as measurement or simulation, analytical models allow rapid exploration of system designs at a relatively low cost, making them particularly valuable during the initial stages of development \cite{franks99}.
+
+In this project, we focus on the application of queueing models on distributed server systems. 
+Whilst analytical techniques on classical queueing network models allow for efficient solutions, they rely on the assumption of product-form behaviour and a lack of blocking \cite{lazowska84}, which are frequently violated in client-server systems. For example, synchronous remote procedure calls introduce simultaneous resource possession, where both client and server resources are held during a call, invalidating the product-form independence assumptions \cite{franks99}.
+
+To address these limitations, Layered Queueing Networks (LQNs) were introduced as a natural extension: able to represent software entities, such as tasks and entries, with their limited concurrency and synchronous interactions, while also modelling hardware resources, such as processors. By structuring the model into layers and representing synchronous calls as rendezvous interactions, LQNs are able to capture blocking, nested service demands and contention effects that arise naturally in multi-tier systems \cite{franks99, franks2009, woodside2002}.
+
+However, the increased modelling power of LQNs comes at the cost of increased computational and implementation complexity. LQN solvers rely on decomposition techniques, surrogate delays and approximate mean-value analysis (MVA) variants, combined with fixed-point iteration \cite{lazowska84,franks99}. These techniques have been used in LQNS and other advanced solver tools, which support a wide range of modelling constructs such as interlocking, multiservers and complex activity graphs \cite{franks99}. While this generality enables the analysis of realistic systems, it also results in large, complex codebases that are difficult to understand, modify, or extend and overall lead to less efficient solvers.
+
+% ***
+% This becomes a problem
+% Researchers/deveopers use queuing networks to rapidly test thousands of permutaions of their system
+% with a slow solver, this becomes expensive
+% ***
+
+This project aims to explore the trade-off between modelling power and solver complexity by implementing a simplified LQN solver inspired by LQNS. Rather than reproducing the full functionality of existing solvers, the project focuses on a restricted but representative subset of LQN features, extending the solver only when necessary. The objective is to develop a solver that is easier to understand and extend, solving LQNs more efficiently, while retaining a high level of accuracy. This will in turn allow us to explore the design of existing LQN solvers, identifying the key pieces of machinery that contribute to their performance and accuracy.
+
+
+\section{Contributions}
+
+The report makes the following contributions:
+
+\begin{enumerate}
+\item \textbf{\texttt{SolverLNSimple}, a simplified LQN solver built bottom-up} Construction of this solver began from a minimal baseline solution, with six sets of features added, each driven by a specific class of LQN model the existing design could not handle. Initially delegating the inner MVA kernel to the same closed-form routine the established comparators use, we focused on writing the outer coupling iteration from scratch. The solver handles single-class chains, fan-out caller topologies, multi-class shared-callee topologies, multi-entry and reference-task models, multi-server processors, deep infinite-server topologies, and the activity-graph feature set. A second phase then optimises the iteration count and runtime of the solver, exploiting its non-generalised design in a way general-purpose solvers cannot.
+The solver matches \texttt{SolverLN}/\texttt{LQNS} within standard tolerance on closed LQN models, with an improvement in iteration count and execution time.
+
+
+\item \textbf{An evaluation of \texttt{SolverLNSimple} against \texttt{SolverLN} and \texttt{LQNS}} On a 78-fixture evaluation corpus developed to consider a wide range of model classes, the simple solver matches either \texttt{SolverLN}'s or \texttt{LQNS}'s outputs within standard tolerance on all fixtures we expect it to, whilst outperforming both on iteration count and execution time.
+An ablation study of \texttt{SolverLN} is also performed, isolating its \texttt{iter\_min} floor and moving-average convergence detection, as well as its unconditional interlock traversal and detection logic, enabling us to quantify each machinery's contribution to the gap in iteration count to \texttt{SolverLNSimple}. The combined decomposition accounts for 73.6\% of the corpus-aggregate iteration-count difference, leaving a 26.4\% residual identified structurally as genuine algorithmic difference. We also explore the small accuracy cost occurring as a result of these omissions.
+\end{enumerate}

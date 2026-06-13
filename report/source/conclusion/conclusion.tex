@@ -1,0 +1,84 @@
+\chapter{Conclusions}
+\label{ch:conclusion}
+
+The Evaluation chapter closes by asking what its result means beyond the corpus it measured and whether a solver that omits \texttt{SolverLN}'s convergence smoothing and interlock random walk is a defensible architecture for closed LQN models in general, or a localised finding valid only on the fixtures we built. This chapter answers that question, assessing the evidence against the project's two contributions and separating the simple solver's deliberate scope decisions from the limits of the bottom-up methodology. Every quantitative claim is drawn from the Evaluation chapter (Chapter~\ref{ch:eval}) or the build (Chapter~\ref{ch:contrib}) such that this chapter is an assessment rather than a measurement.
+
+
+
+
+\section{Assessing the result}
+\label{sec:concl-assess}
+
+The spine claim the project commits to is that the difference between \texttt{SolverLN} and \texttt{SolverLNSimple} on closed LQN models is real, but decomposable across both iteration count (approximately three-quarters is \texttt{SolverLN}'s convergence control rather than a slower fixed point, while the remaining quarter genuine algorithmic difference) and on runtime (the interlock correction imposes per-iteration cost that grows with fan-out breadth while touching neither iteration count nor accuracy on this corpus). The price for omitting both machineries is a small, bounded accuracy cost on a minority of fixtures, each of which still lands within a reference's tolerance. The evaluation confirms this claim, and the assessment below grades the project's two contributions against it.
+
+\textbf{The construction is correct where it claims to be.} Of the 78 fixtures, 71 pass: every one of Partition A's 43 positive-evidence fixtures matches \texttt{SolverLN} to within the 5\% bar on every metric, and every Partition B fixture matches one of the two references (Section~\ref{sec:eval-correctness}, Table~\ref{tab:eval-correctness-map}). The seven \texttt{match-neither} failures all sit in the three adversarial Partition C subpartitions (three saturated fan-outs, two AND-fork joins, two deep all-Exp chains) that were constructed to push the closed-form kernels past the regimes they are derived for. The largest residual from the positive-evidence set was a multi-class $\times$ multi-entry A4 fixture, falling just within the 5\% tolerance, evidencing this class as the corpus's most accuracy-sensitive sub-partition (Section~\ref{sec:eval-boundary}). Therefore, correctness holds in its intended scope.
+
+\textbf{The performance measure decomposition is delivered.} On iteration count, \texttt{SolverLNSimple} uses 539 outer iterations against \texttt{SolverLN}'s 4,835 ($9\times$) and LQNS's 985 ($1.8\times$). Disabling \texttt{SolverLN}'s convergence control cuts its corpus total to 1,672, closing $73.6\%$ of the gap by allowing it to converge to its true fixed point and leaving a $26.4\%$ residual of 1,133 iterations attributed structurally (Section~\ref{sec:eval-residual}, Table~\ref{tab:eval-f20-iter-counts}). The floor is structural rather than incidental, dominating on 63 of 78 fixtures, so on those fixtures disabling the floor is essentially disabling the gap. On runtime, the $131\times$ wall-clock advantage over \texttt{SolverLN} (22{,}184\,ms against 2{,}917{,}118\,ms) is carried by the interlock correction, where the gap decreases to $59\times$ (1{,}310{,}156\,ms) once it is disabled, while leaving every iteration count and output metric unchanged (Section~\ref{sec:eval-interlock}, Table~\ref{tab:eval-interlock-per-iter}). Against LQNS, the runtime is comparable ($1.06\times$ as measured, $0.99\times$ net of the REST round-trip).
+
+\textbf{The accuracy price is quantified.} \texttt{SolverLNSimple} is not a better algorithm than \texttt{SolverLN}, it is instead that the difference is specific, named machinery that does not have a large impact on this corpus, made visible because the bottom-up build deliberately omitted it. The contribution is the construction and characterisation, not a claim of algorithmic superiority. Disabling \texttt{SolverLN}'s convergence smoothing moves 7 of 78 of its own outputs off the fixed point by more than 5\%, up to 32\%, all on cells that oscillate around the fixed point (Section~\ref{sec:eval-f20}, Table~\ref{tab:eval-f20-accuracy-losses}). This is the cost \texttt{SolverLNSimple} accepts for omitting the moving-average machinery, allowing a real but concentrated accuracy cost on a tenth of the corpus, and small enough that the simple solver still lands within a 5\% tolerance of the reference on every fixture in the corpus.
+
+
+\section{Is \texttt{SolverLNSimple} a defensible architecture?}
+\label{sec:concl-defensible}
+
+For the class of closed LQN model the corpus exercises, the stripped architecture is defensible. The two machineries the simple solver omits do nothing the corpus requires, such that the \texttt{iter\_min} floor only delays convergence, while the interlock correction would never actually fire, so removing them recovers most of the iteration-count gap and a large share of the per-iteration runtime at a bounded accuracy cost. The host-layer disagreement sharpens the point in the simple solver's favour, where on the fourteen \texttt{match-lqns-only} fan-out fixtures in the corpus, it is \texttt{SolverLNSimple} that keeps the rigorous closed-PFQN M/M/c queueing tail and tracks the mature LQNS, while \texttt{SolverLN} falls back to the cheaper M/M/$\infty$-like \texttt{R$\approx$D} substitution (Section~\ref{sec:eval-boundary}, Table~\ref{tab:eval-divergent-partitions-reldiff}), showing the simpler solver is not simpler by approximating more aggressively.
+
+However, the result is still localised. The corpus never instantiates a server with two or more distinct client tasks, so it never fires the interlock correction. The probe showed us that where the correction does fire it is genuine accuracy machinery, improving the worst-case error against an \texttt{lqsim} ground truth by $0.19$ to $1.41$ percent (Section~\ref{sec:eval-interlock}, Table~\ref{tab:eval-interlock-accuracy-probe}). The convergence smoothing does real work on oscillation-prone fixtures, as its removal cost shows. The seven boundary failures also locate exactly where the closed-form kernels the solver uses break. The honest statement is therefore that the architecture is defensible \emph{for the class it claims}, not in general. However, this corpus was built top-down from five measurement goals, deliberately separate from the fixtures that drove construction, so that evaluation is not shaped by construction, preventing the use of a survivorship artefact (Section~\ref{sec:eval-corpus}).
+
+
+
+\section{The surfaced algorithmic candidates}
+\label{sec:concl-candidate}
+
+The bottom-up methodology was expected to surface algorithmic choices worth investigation in their own right, the main one being a structural predicate-gated under-relaxation. The fan-out capability (Section~\ref{sec:contrib-step5}) introduces a fixed-$\alpha$ damping (\texttt{Z\_RELAX\_ALPHA = 0.5}) gated on a static predicate, \texttt{LqnGraph.callerFansOut}, that is true when a caller has more than one distinct synchronous callee. The mechanism is distinct from \texttt{SolverLN}'s adaptive under-relaxation, which detects oscillation by sign-change, and pays three to four detection iterations before damping starts. On fan-out workloads, the false-saturation fixed-point locks in before adaptive damping arrives, whereas structural gating fires from the first sweep on the topology that needs it and is off elsewhere. Despite our prediction however, its trade-off is visible. On Partition C1, the fixed predicate-gated damping being always-on actually costs more iterations than LQNS's adaptive scheme as the damping prevents reaching the fixed point quickly. This is therefore the one case in this build where omitting the more complex mechanism costs rather than saves (Section~\ref{sec:eval-iteration-comparison}, Table~\ref{tab:alpha-tol}). A true evaluation towards the trade-off of approaches is noted as potential future work in Section~\ref{sec:concl-future}, but as the candidate is simply surfaced and not established, the project does not claim it as a contribution.
+
+We also had a bounce-sweep iteration order and considered it a second candidate, as we thought propagating values in both directions more quickly and reducing the effect of the per-iteration overhead would lead to faster convergence, however this was not the case. The optimisation work re-examined sweep order and migrated to the elevator pattern the references already use (Section~\ref{sec:DRAFT-perf-optimisation}, Table~\ref{tab:DRAFT-sweep}), chosen for a like-for-like iteration comparison in the Evaluation chapter. Whilst we saw a decrease in iteration count for the bounce-sweep, this was simply due to it performing double the work per iteration, as the runtime showed very little performance difference.
+
+
+\section{Out of scope vs Out of reach}
+\label{sec:concl-scope}
+
+The simple solver is missing modelling constructs that \texttt{SolverLN} and LQNS support, falling into two categories. 
+
+\textbf{Out of scope} are constructs the bottom-up build has a clear shape introducing, where the only thing missing is a motivating fixture that forces the addition. Open-class arrivals on entries, call forwarding, full per-iteration threading of phase-2 background work and the interlock correction all sit within this category. Each would be a coupling-channel or post-hoc extension that would not disturb the inner MVA kernel.
+
+\textbf{Out of reach} are constructs the methodology cannot introduce naturally, as they require changing the inner kernel, the coupling channel, or the per-layer solver dispatch. Cache-modelling would require new node types and per-iteration routing re-derivation \cite{gao2024}, richer 3-moment APH (Acyclic Phase-Type) propagation needs a kernel that carries an SCV (Squared Coefficient of Variance) parameter rather than the mean-only closed-form kernel the simple solver uses \cite{bobbio2005}, class-switching at iteration time interacts with the coupling structure in a way the per-layer client/host channel does not express \cite{baskett75}, and the AND-fork case where sibling branches contend on a finite-server PS host needs Franks's CCD overlap compensation \cite{franks99} rather than the closed-form $E[\max]$ join.
+
+The $26.4\%$ residual we identify is attributed structurally to three choices the simple solver makes (predicate-gated damping, structural service-time propagation rather than snap-back arrays for failure recovery, and single-iteration convergence detection rather than three-iteration confirmation). However, we do not separately perform ablations on these as the project's ablations were spent on the comparator side rather than self-ablation.
+
+
+
+\section{Field-level reflection}
+\label{sec:concl-reflection}
+
+The project raises a small set of observations about LQN solver research as an area. Each is offered as a suggestion supported by the project's findings, not as a general principle it has established.
+
+\textbf{The outer loop has been under-audited.} The iteration-economy literature has decomposed the inner loop but not the outer one. Franks and Li's One-Step MVA \cite{franksli2012} collapses the inner AMVA convergence on the argument that the outer fixed point will invalidate any over-precise submodel solve \cite{franksli2012}. The LN paper \cite{casale2024} describes its outer convergence test and elevator order but does not analyse the individual outer-loop machineries against the correctness-efficiency trade-off removing them exposes. Work that recognises specific outer-loop costs, such as surrogate-delay iteration and Flow-Equivalent Service Centre (FESC) evaluation \cite{islam2022}, doesn't perform per-machinery decomposition (Section~\ref{sec:lqn-related-work}). The project's evaluation, isolating the convergence floor and the interlock walk, and pricing each, is a contribution toward that gap.
+
+\textbf{Accreted machinery propagates by porting.} \texttt{SolverLN} inherits significant machinery from LQNS by direct porting (Section~\ref{sec:lqn-solverln}). If accuracy is the primary concern, porting of trusted machinery is the right thing to do, however it means that machinery once added for a specific hard case remains across generations of tools. The bottom-up build is a deliberate response to this pattern, instead starting from a base case and adding only what a specific model forces, rather than inheriting machinery and assuming it is necessary.
+
+\textbf{The methodological pattern.} The shape of the work (a build from a base case, machinery added only when a model forces it, with the test corpus treated as an instrument that records what each step had to handle) is what made the per-machinery attribution possible. The build's omissions are what let the difference against an established tool be pinned to named machinery rather than vague design choices. Whether the pattern transfers beyond LQN solvers is a question the project cannot answer. General-purpose ODE solvers, with decades of accreted heuristics around stiffness detection and error estimation \cite{shampine1997}, are a plausible candidate by analogy, however this is left open for future work.
+
+
+
+
+\section{Future work}
+\label{sec:concl-future}
+
+The bottom-up methodology extends in three directions, each a continuation of the same build:
+
+\textbf{Feature parity with the established tools.} The out-of-scope constructs of Section~\ref{sec:concl-scope} come in when motivating fixtures force them. We suggest adding open-class arrivals on entries for external-traffic-driven systems, call forwarding for reverse-proxy topologies, full per-iteration threading of phase-2 background work for transactional-middleware models and the finite-server PS host AND-fork via CCD overlap compensation. 
+
+\textbf{Research-frontier LINE constructs.} \texttt{SolverLN} handles constructs LQNS does not, such as cache-modelling nodes, FunctionTask/setupTime/delayOff for serverless workloads, and 3-moment APH propagation, which are recent additions attributable to specific published work \cite{casale2024}. The claim here is that the bottom-up build can look to integrate them in the same shape, treating each as porting work forced by a motivating model.
+
+\textbf{Measurement follow-ups.} Two measurement gaps would tighten the evaluation's own claims. Firstly, the per-mechanism self-ablation that converts the $26.4\%$ residual's structural claim into a measured one, and an \texttt{lqsim} ground-truth study at corpus scale to adjudicate the host-layer disagreement between solvers (Section~\ref{sec:eval-discussion}). Work such as the broader-corpus comparison against adaptive relaxation would move like-features from surfaced ideas to characterised features.
+
+
+
+
+\section{Conclusion}
+\label{sec:concl-conclusion}
+
+The project has shown that \texttt{SolverLNSimple}, a closed-LQN solver built bottom-up from a minimal base case, matches \texttt{SolverLN} to standard tolerance across a broad class of closed LQN models, with its few divergences accounted for. It has decomposed the difference between the two solvers across iteration count, $73.6\%$ is \texttt{SolverLN}'s convergence control rather than a slower fixed point and $26.4\%$ is genuine algorithmic difference, and runtime, the interlock correction carries a per-iteration cost that grows with fan-out breadth without touching iteration count or accuracy on this corpus. The price of the omissions is a small, quantified accuracy cost on seven fixtures, with each still remaining within a reference's tolerance.
+
+The project has not shown that the candidate features are confirmed contributions, it has just surfaced them for further work, it has not closed the literature gap on per-machinery decomposition of an LQN solver's outer loop, despite its evaluation being one contribution towards it, and it has not shown that the bottom-up pattern generalises beyond LQN solvers, it is instead offered as a suggestion. What the project does establish is narrower and concrete: on the closed-LQN class it claims, a solver that omits the convergence-smoothing machinery and the interlock walk is a defensible architecture, and the difference between it and a mature general-purpose tool is specific, named and measured rather than left as a gap.

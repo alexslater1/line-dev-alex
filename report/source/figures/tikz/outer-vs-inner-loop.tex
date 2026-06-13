@@ -1,0 +1,77 @@
+\begin{tikzpicture}[
+    >={Stealth[length=2mm]},
+    every node/.style={font=\small},
+    submodel/.style={
+        rectangle, rounded corners=2pt, draw=black!60, line width=0.4pt,
+        text width=22mm, align=center, minimum height=6mm, fill=blue!4,
+        inner sep=1.2mm,
+    },
+    submodelfocus/.style={
+        rectangle, rounded corners=2pt, draw=black!85, line width=0.8pt,
+        text width=22mm, align=center, minimum height=6mm, fill=blue!14,
+        inner sep=1.2mm,
+    },
+    mvanode/.style={
+        rectangle, rounded corners=1pt, draw=black!60, line width=0.35pt,
+        fill=white, inner sep=0.8mm, font=\footnotesize,
+        text width=13mm, align=center, minimum height=4mm,
+    },
+    arr/.style={->, line width=0.4pt, draw=black!60},
+    tinyarr/.style={->, line width=0.35pt, draw=black!55},
+    looparr/.style={->, line width=0.5pt, draw=black!75},
+    callout/.style={dashed, draw=black!45, line width=0.4pt},
+]
+    % Row of submodel-solve boxes representing the outer loop's per-iter sweep.
+    % S2 is highlighted because it is the submodel being expanded below.
+    \node[submodel] (s1) at (0, 0) {Submodel 1\\solve};
+    \node[submodelfocus, right=4mm of s1] (s2) {Submodel 2\\solve};
+    \node[submodel, right=4mm of s2] (s3) {Submodel 3\\solve};
+    \node[right=4mm of s3, font=\small] (sk) {$\cdots$};
+    \node[submodel, right=4mm of sk] (sn) {Submodel $E$\\solve};
+
+    \draw[arr] (s1) -- (s2);
+    \draw[arr] (s2) -- (s3);
+    \draw[arr] (s3) -- (sk);
+    \draw[arr] (sk) -- (sn);
+
+    % Outer-loop back-arrow ABOVE the row; bold label sits above the arrow.
+    \draw[looparr]
+        (sn.north) -- ++(0,6mm) -| (s1.north);
+    \node[font=\footnotesize\bfseries, above=0.3mm]
+          at ($(s1.north)!0.5!(sn.north)+(0,6mm)$)
+          {Outer Loop: coupling fixed-point iteration};
+
+    % Expanded inner-solve view directly below the focused submodel (S2).
+    \node[draw=black!80, line width=0.6pt, rounded corners=2pt, fill=orange!6,
+          below=16mm of s2, anchor=north, inner sep=2mm,
+          label={[font=\footnotesize, yshift=1mm]above:%
+                  {\textbf{Inner Solve: exact MVA recursion}}}]
+          (innerbox) {%
+        \begin{tikzpicture}[baseline]
+            \node[mvanode] (mva1) {$Q_k(N{-}1)$};
+            \node[mvanode, right=14mm of mva1] (mva2) {$R_k(N)$};
+            \node[mvanode, right=14mm of mva2] (mva3) {$X(N)$};
+            \node[mvanode, right=14mm of mva3] (mva4) {$Q_k(N)$};
+            \draw[tinyarr] (mva1) -- (mva2)
+                node[midway, above=1mm, font=\scriptsize, inner sep=0.5pt] {Arrival}
+                node[midway, below=0.3mm, font=\scriptsize, inner sep=0.5pt] {Theorem};
+            \draw[tinyarr] (mva2) -- (mva3)
+                node[midway, above=1mm, font=\scriptsize, inner sep=0.5pt] {Little's}
+                node[midway, below=0.3mm, font=\scriptsize, inner sep=0.5pt] {Law};
+            \draw[tinyarr] (mva3) -- (mva4)
+                node[midway, above=1mm, font=\scriptsize, inner sep=0.5pt] {$Q_k {=} X R_k$};
+            % Flat back-arrow; modest depth keeps the inner box compact.
+            \draw[tinyarr, looseness=0.5] (mva4.south) to[out=-90,in=-90]
+                node[below, font=\scriptsize, inner sep=1pt]
+                    {$N \to N{+}1$}
+                (mva1.south);
+        \end{tikzpicture}%
+    };
+
+    % Zoom-callout cone: two dashed lines diverging from S2 down to the inner box.
+    \begin{pgfonlayer}{background}
+        \draw[callout] (s2.south west) -- (innerbox.north west);
+        \draw[callout] (s2.south east) -- (innerbox.north east);
+    \end{pgfonlayer}
+
+\end{tikzpicture}

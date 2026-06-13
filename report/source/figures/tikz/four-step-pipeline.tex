@@ -1,0 +1,35 @@
+\begin{tikzpicture}[
+    >={Stealth[length=2.2mm]},
+    node distance=10mm and 8mm,
+    every node/.style={font=\small},
+    pipestage/.style={
+        rectangle, rounded corners=2pt, draw=black!70, line width=0.5pt,
+        text width=24mm, align=center, minimum height=11mm, fill=blue!4,
+    },
+    decision/.style={
+        diamond, draw=black!70, line width=0.5pt, aspect=2.6,
+        text width=21mm, align=center, inner sep=1pt, fill=orange!8,
+    },
+    output/.style={
+        rectangle, rounded corners=2pt, draw=black!70, line width=0.5pt,
+        text width=22mm, align=center, minimum height=9mm, fill=green!6,
+    },
+    arr/.style={->, line width=0.5pt, draw=black!70},
+    looplabel/.style={font=\footnotesize, fill=white, inner sep=1pt},
+]
+    \node[pipestage] (decompose) {\textbf{Step 1}\\Decompose\\into PFQN\\submodels};
+    \node[pipestage, right=of decompose] (solve) {\textbf{Step 2}\\Solve each\\submodel\\(inner MVA)};
+    \node[pipestage, right=of solve] (couple) {\textbf{Step 3}\\Couple via\\service/\,think-\\time updates};
+    \node[decision, right=of couple] (conv) {\textbf{Step 4}\\Converged?};
+    \node[output, right=14mm of conv] (out) {Output\\AvgTable};
+
+    \draw[arr] (decompose) -- (solve);
+    \draw[arr] (solve) -- (couple);
+    \draw[arr] (couple) -- (conv);
+    \draw[arr] (conv) -- node[above, font=\footnotesize] {yes} (out);
+
+    % Outer loop back-arrow: from "no" outcome of decision back to Step 2.
+    \draw[arr]
+        (conv.south) -- ++(0,-10mm) node[looplabel, pos=0.5, right=1mm] {no}
+        -| (solve.south);
+\end{tikzpicture}

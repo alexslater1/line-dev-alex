@@ -1,0 +1,13 @@
+\begin{abstract}
+\noindent
+Layered queueing networks (LQNs) extend classical queueing networks by 
+modelling synchronous calls between layered services and the blocking they induce, enabling the analysis of distributed software systems. 
+LQNS and LINE's \texttt{SolverLN} are two general-purpose tools for solving LQN models, however they have become bloated over years of development.
+This
+report describes the construction of \texttt{SolverLNSimple},
+a simplified LQN solver, built as the minimal solution under the paradigm of only adding necessary features based on the set of models considered. The build proceeds through a series of features, each triggered by a specific case of LQN model the existing design failed to handle: ensemble prefix coupling, graph-derived coupling, multi-class models, an MVA-kernel overhaul, larger fan-out callers and activity graph integrations. 
+This bottom-up discipline restricts the machinery added, providing a lightweight, efficient solver for a large class of LQN models. Once the solver was sufficiently correct, its non-generality was exploited to discover performance benefits.
+An evaluation of the solver, on a 78-fixture corpus, against \texttt{SolverLN} and LQNS verifies its correctness and characterises its performance, where we see a large performance win whilst maintaining accuracy on the set of models the solver claims to handle. 
+73.6\% of the iteration count difference is attributable to \texttt{SolverLN}'s \texttt{iter\_min} convergence floor, with the rest reflecting genuine algorithmic difference, however the omission of a moving-average convergence detection and interlock machinery carries a small, quantified accuracy cost.
+Regarding runtime, much of the difference is attributed to \texttt{SolverLN}'s interlock correction, where cost grows with fan-out breadth, and a computed-but-not-consumed task-caller traversal. 
+\end{abstract}

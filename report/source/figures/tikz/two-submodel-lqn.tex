@@ -1,0 +1,23 @@
+\begin{tikzpicture}[
+    >={Stealth[length=2.2mm]},
+    every node/.style={font=\small},
+    task/.style={
+        rectangle, rounded corners=2pt, draw=black!70, line width=0.5pt,
+        text width=14mm, align=center, minimum height=8mm, fill=blue!4,
+    },
+    refnode/.style={task, fill=green!8},
+    proc/.style={
+        ellipse, draw=black!70, line width=0.5pt, inner sep=1pt,
+        minimum width=15mm, minimum height=7mm, fill=orange!8,
+    },
+    callarr/.style={->, line width=0.5pt, draw=black!70},
+    hostarr/.style={-, line width=0.5pt, draw=black!60, dashed},
+    elabel/.style={font=\footnotesize, color=black!75},
+]
+    \node[refnode] (T1) at (0, 0) {T1\\(REF)};
+    \node[task, below=10mm of T1] (T2) {T2};
+    \node[proc, below=10mm of T2] (P1) {P1};
+
+    \draw[callarr] (T1) -- node[elabel, right=1mm] {sync call} (T2);
+    \draw[hostarr] (T2) -- node[elabel, right=1mm] {hosted on} (P1);
+\end{tikzpicture}

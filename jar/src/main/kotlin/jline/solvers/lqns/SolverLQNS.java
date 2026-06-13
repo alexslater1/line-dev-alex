@@ -478,6 +478,14 @@ public class SolverLQNS extends Solver {
                                         actPos = entry.getKey().intValue();
                                     }
                                 }
+                                // Activities present in the LQNS output but absent from the
+                                // LINE model are serialization-only artifacts (e.g. the
+                                // synthetic immediate OR-join/reply activity emitted by
+                                // writeXML to satisfy LQNS's reply-from-branch restriction).
+                                // They carry no host demand, so skip mapping their results.
+                                if (actPos == 0) {
+                                    continue;
+                                }
                                 NodeList actResult = actElement.getElementsByTagName("result-activity");
                                 double uRes = Double.parseDouble(actResult.item(0).getAttributes().getNamedItem("utilization").getNodeValue());
                                 double stRes = Double.parseDouble(actResult.item(0).getAttributes().getNamedItem("service-time").getNodeValue());
@@ -634,6 +642,7 @@ public class SolverLQNS extends Solver {
             }
         }
         this.result = new LayeredSolverResult();
+        this.result.iter = iterations; // carry the parsed lqns iteration count (was dropped, leaving result.iter=0)
 
         ((LayeredSolverResult) this.result).PN = new Matrix(AvgNodesProcUtilization);
         ((LayeredSolverResult) this.result).SN = new Matrix(AvgNodesPhase1ServiceTime);
@@ -851,7 +860,7 @@ public class SolverLQNS extends Solver {
                 jsonBuilder.append("}");
             } else {
                 // LQSIM options
-                jsonBuilder.append(",\"blocks\":30");
+                jsonBuilder.append(",\"blocks\":").append(Integer.getInteger("lqsim.blocks", 30));
                 if (options.samples > 0) {
                     jsonBuilder.append(",\"run_time\":").append(options.samples);
                 }

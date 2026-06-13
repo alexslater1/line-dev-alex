@@ -1,0 +1,74 @@
+\begin{tikzpicture}[
+    >={Stealth[length=2.5mm]},
+    every node/.style={font=\small},
+    submodel/.style={
+        rectangle, rounded corners=3pt, draw=black!70, line width=0.6pt,
+        align=center, fill=blue!3, inner sep=3mm,
+    },
+    queue/.style={
+        rectangle, draw=black!70, fill=orange!12,
+        minimum width=12mm, minimum height=9mm,
+        font=\scriptsize, align=center,
+    },
+    delay/.style={
+        ellipse, draw=black!70, fill=green!12,
+        inner sep=1pt, minimum width=13mm, minimum height=9mm,
+        font=\scriptsize, align=center,
+    },
+    flow/.style={->, line width=0.4pt, draw=black!60},
+    couple/.style={->, line width=0.9pt, draw=red!70!black},
+    pushbadge/.style={
+        circle, draw=red!75!black, fill=red!8,
+        line width=0.5pt, inner sep=0pt,
+        minimum size=4.5mm, font=\footnotesize\bfseries,
+        text=red!75!black,
+    },
+    solvebadge/.style={
+        circle, draw=black!70, fill=yellow!22,
+        line width=0.5pt, inner sep=0pt,
+        minimum size=4.5mm, font=\footnotesize\bfseries,
+        text=black!85,
+    },
+    sublabel/.style={font=\footnotesize, color=black!85, align=center},
+    boxtitle/.style={font=\small\bfseries},
+]
+
+    %---- HOST submodel (left) ----
+    \node[submodel] (host) {%
+        \begin{tikzpicture}[baseline]
+            \node[delay] (t1h) {T1\\(IS-delay)};
+            \node[queue, right=8mm of t1h] (p1) {P1\\(queue)};
+            \draw[flow] (t1h.east) -- (p1.west);
+        \end{tikzpicture}%
+    };
+    \node[boxtitle, above=0.5mm of host] {Host Submodel P1};
+    \node[solvebadge] at ([xshift=4mm,yshift=-4mm]host.north west) {1};
+
+    %---- TASK submodel (right) ----
+    \node[submodel, right=30mm of host] (task) {%
+        \begin{tikzpicture}[baseline]
+            \node[delay] (t1t) {T1\\(client)};
+            \node[queue, right=8mm of t1t] (t2) {T2\\(queue)};
+            \draw[flow] (t1t.east) -- (t2.west);
+        \end{tikzpicture}%
+    };
+    \node[boxtitle, above=0.5mm of task] {Task Submodel T2};
+    \node[solvebadge] at ([xshift=4mm,yshift=-4mm]task.north west) {3};
+
+    %---- Step 2: forward push (arc over the top, host -> task) ----
+    \draw[couple] (host.north east) to[out=45, in=135]
+        coordinate[midway] (topmid)
+        (task.north west);
+    \node[pushbadge] (b2) at (topmid) {2};
+    \node[sublabel, above=0.5mm of b2, align=center]
+        {push $R_{T2}^{P1}$\\$\to$ T2's service time};
+
+    %---- Step 4: back push (arc under the bottom, task -> host) ----
+    \draw[couple] (task.south west) to[out=-135, in=-45]
+        coordinate[midway] (botmid)
+        (host.south east);
+    \node[pushbadge] (b4) at (botmid) {4};
+    \node[sublabel, below=0.5mm of b4, align=center]
+        {push $R_{T1}^{T2}$\\$\to$ T1's think time};
+
+\end{tikzpicture}

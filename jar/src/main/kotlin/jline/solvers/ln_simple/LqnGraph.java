@@ -77,8 +77,8 @@ public final class LqnGraph {
     private static volatile ModelCache     lastCache;
 
     /** Memoised structural lookups for one {@link LayeredNetwork}. The name
-     *  indexes and the struct-derived caller relation are built eagerly; every
-     *  other map is filled lazily on first query. Lazy values are never
+     *  indexes are built eagerly; the struct-derived caller relation and every
+     *  other map are filled lazily on first query. Lazy values are never
      *  {@code null} once present, so a {@code null} from {@code get} means
      *  "not yet computed". */
     private static final class ModelCache {
@@ -87,7 +87,8 @@ public final class LqnGraph {
         final Map<String, Entry> entryByName = new HashMap<String, Entry>();
 
         // Struct-derived task-level caller relation, used by findCallerTask.
-        // Built once from model.getStruct().issynccaller (see buildCallerRelation).
+        // Built lazily on the first caller query from model.getStruct().issynccaller
+        // (see buildCallerRelation); memoised here when caching is enabled.
         // Task index t runs 1..ntasks; callerOfT[t] is the first sync-caller of
         // task t in task-index order (0 = no caller).
         Map<String, Integer> taskIndexByName;  // bare task name → t
@@ -136,8 +137,8 @@ public final class LqnGraph {
         Map<String, String> refTaskCalledTaskMap;
     }
 
-    /** Cache for {@code model}, building the name indexes and the struct-derived
-     *  caller relation on first use. */
+    /** Cache for {@code model}, building the name indexes on first use. The
+     *  struct-derived caller relation is built lazily by {@link #findCallerTask}. */
     private static ModelCache cacheFor(LayeredNetwork model) {
         if (model == lastModel) {
             ModelCache lc = lastCache;
@@ -149,7 +150,6 @@ public final class LqnGraph {
                 mc = new ModelCache();
                 for (Task t : model.getTasks().values())   mc.taskByName.put(t.getName(), t);
                 for (Entry e : model.getEntries().values()) mc.entryByName.put(e.getName(), e);
-                buildCallerRelation(model, mc);
                 CACHE.put(model, mc);
             }
             lastModel = model;
@@ -166,6 +166,7 @@ public final class LqnGraph {
      *  is exactly the one the previous OO graph walk returned. Absolute task
      *  index is {@code tidx = t + tshift}. */
     private static void buildCallerRelation(LayeredNetwork model, ModelCache mc) {
+        if (mc.callerOfT != null) return;   // already built (memoised) for this cache
         LayeredNetworkStruct s = model.getStruct();
         final int tshift = s.tshift;
         final int nt = s.ntasks;
@@ -257,6 +258,7 @@ public final class LqnGraph {
     public static String findCallerTask(LayeredNetwork model, String calleeName) {
         if (calleeName == null) return null;
         ModelCache mc = cacheFor(model);
+        buildCallerRelation(model, mc);   // lazy: built on first caller query, memoised when caching is on
         Integer t = mc.taskIndexByName.get(calleeName);
         if (t == null) return null;
         int caller = mc.callerOfT[t];

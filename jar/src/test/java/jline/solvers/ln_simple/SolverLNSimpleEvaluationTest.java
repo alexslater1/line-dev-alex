@@ -40,7 +40,6 @@ public class SolverLNSimpleEvaluationTest {
                 util.assertResultsMatchSolverLN(EvaluationSuite::A1_chain_d3_N50);
             }
         } catch (Throwable ignored) {
-            // Warmup failures are not fatal — log and continue.
             System.err.println("[warmup] iteration failed: " + ignored.getMessage());
         } finally {
             util.dataCaptureSuspended = false;
@@ -107,14 +106,13 @@ public class SolverLNSimpleEvaluationTest {
     // Partition A5: Activity-graph capability coverage
     // =========================================================================
 
-    @Test @Timeout(180) public void A5_orForkUneven()      { assertResultsMatchSolverLN(EvaluationSuite::A5_orForkUneven);      }
-    @Test @Timeout(180) public void A5_orForkThreeWay()    { assertResultsMatchSolverLN(EvaluationSuite::A5_orForkThreeWay);    }
-    @Test @Timeout(180) public void A5_andForkThreeWay()   { assertResultsMatchSolverLN(EvaluationSuite::A5_andForkThreeWay);   }
-    @Test @Timeout(180) public void A5_andForkMultiAct()   { assertResultsMatchSolverLN(EvaluationSuite::A5_andForkMultiAct);   }
-    @Test @Timeout(180) public void A5_seqMultiEntry()     { assertResultsMatchSolverLN(EvaluationSuite::A5_seqMultiEntry);     }
-    @Test @Timeout(180) public void A5_replyAtBound()      { assertResultsMatchSolverLN(EvaluationSuite::A5_replyAtBound);      }
-    @Test @Timeout(240) public void A5_combinedDag()       { assertResultsMatchSolverLN(EvaluationSuite::A5_combinedDag);       }
-    @Test @Timeout(180) public void A5_multiclassAndFork() { assertResultsMatchSolverLN(EvaluationSuite::A5_multiclassAndFork); }
+    @Test @Timeout(180) public void A5_orForkUneven()    { assertResultsMatchSolverLN(EvaluationSuite::A5_orForkUneven);    }
+    @Test @Timeout(180) public void A5_orForkThreeWay()  { assertResultsMatchSolverLN(EvaluationSuite::A5_orForkThreeWay);  }
+    @Test @Timeout(180) public void A5_andForkThreeWay() { assertResultsMatchSolverLN(EvaluationSuite::A5_andForkThreeWay); }
+    @Test @Timeout(180) public void A5_andForkMultiAct() { assertResultsMatchSolverLN(EvaluationSuite::A5_andForkMultiAct); }
+    @Test @Timeout(180) public void A5_seqMultiEntry()   { assertResultsMatchSolverLN(EvaluationSuite::A5_seqMultiEntry);   }
+    @Test @Timeout(180) public void A5_replyAtBound()    { assertResultsMatchSolverLN(EvaluationSuite::A5_replyAtBound);    }
+    @Test @Timeout(240) public void A5_combinedDag()     { assertResultsMatchSolverLN(EvaluationSuite::A5_combinedDag);     }
 
     // =========================================================================
     // Partition B: Scale axis for F24
@@ -129,7 +127,7 @@ public class SolverLNSimpleEvaluationTest {
     @Test @Timeout(300)  public void B_scaleAxis_tasks10_fanout() { assertResultsMatchSolverLN(EvaluationSuite::B_scaleAxis_tasks10_fanout); }
     @Test @Timeout(600)  public void B_scaleAxis_tasks20_fanout() { assertResultsMatchSolverLN(EvaluationSuite::B_scaleAxis_tasks20_fanout); }
     @Test @Timeout(1200) @Disabled public void B_scaleAxis_tasks40_fanout() { assertResultsMatchSolverLN(EvaluationSuite::B_scaleAxis_tasks40_fanout); }
-    @Test @Timeout(2400) @Disabled /*LN takes ~16 min — left enabled so baseline capture covers all 61 fixtures.*/ public void B_scaleAxis_tasks60_fanout() { assertResultsMatchSolverLN(EvaluationSuite::B_scaleAxis_tasks60_fanout); }
+    @Test @Timeout(2400) @Disabled public void B_scaleAxis_tasks60_fanout() { assertResultsMatchSolverLN(EvaluationSuite::B_scaleAxis_tasks60_fanout); }
 
     // =========================================================================
     // Partition C1: Fan-out caller topologies
@@ -183,10 +181,11 @@ public class SolverLNSimpleEvaluationTest {
     @Test @Timeout(300) public void C5_satFanoutCaller_w4()  { assertResultsMatchSolverLN(EvaluationSuite::C5_satFanoutCaller_w4);  }
 
     // =========================================================================
-    // Partition C6: Activity-graph boundary (finite-server-host AND-fork)
+    // Partition C6: AND-fork join-correction boundary
     // =========================================================================
 
-    @Test @Timeout(180) public void C6_andForkPsHost() { assertResultsMatchSolverLN(EvaluationSuite::C6_andForkPsHost); }
+    @Test @Timeout(180) public void C6_andForkPsHost()     { assertResultsMatchSolverLN(EvaluationSuite::C6_andForkPsHost);     }
+    @Test @Timeout(180) public void C6_multiclassAndFork() { assertResultsMatchSolverLN(EvaluationSuite::C6_multiclassAndFork); }
 
     // =========================================================================
     // Partition C7: Deep-chain stress (convergence-rate boundary)

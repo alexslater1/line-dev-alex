@@ -18,8 +18,8 @@ src/main/kotlin/jline/solvers/ln_simple/
 │   ├── QueueLengthSolver.java  ← Phase 3 + REF inheritance + chain walker
 │   ├── OutputTableBuilder.java ← Phase 5 (proc/task/entry/activity rows)
 │   └── ResultsState.java       ← mutable bag of maps threaded between phases
-├── notes/                      ← this README + reference PDFs
-└── fyp-thesis/                 ← thesis / interim report sources
+
+Reference docs now live under the top-level docs/ln_simple/ folder.
 
 src/test/java/jline/solvers/ln_simple/
 ├── SolverLNSimple*Test.java    ← Junit tests vs SolverLN / SolverLQNS
@@ -75,13 +75,21 @@ Responsibilities at a glance:
 
 ### 2. Iteration — `iterateCoupledMva`
 
-Outer loop, at most `maxIter` outer iterations. Each iteration runs a **bounce sweep** of length `2N − 1` over the `N` layers:
+Outer loop, at most `maxIter` outer iterations. The sweep order is configurable
+(`SweepOrder`); the production default is **elevator**, which runs a single
+forward pass over the `N` layers on even iterations and a reverse pass on odd
+ones:
 
 ```
-0, 1, 2, …, N−1, N−2, …, 2, 1
+even iter: 0, 1, 2, …, N−1
+odd  iter: N−1, …, 2, 1, 0
 ```
 
-so information flows forward and backward through the call chain in one pass.
+so information flows forward and backward through the call chain over successive
+iterations. This matches the single-direction sweep used by the reference
+solvers (SolverLN, LQNS). The original **bounce** sweep — a single `2N − 1`
+bidirectional pass per iteration (`0,…,N−1,N−2,…,1`) — and the other orders are
+retained for the sweep-order sensitivity study.
 
 For each layer in the sweep:
 
@@ -184,4 +192,4 @@ Open in this order for the smoothest path:
 4. **`LqnGraph.java`** — query helpers organised by family (lookups / predicates / quantities / caller maps).
 5. **`results/ResultsCollector.java`** — the five-phase orchestration. Phases 1, 3, 5 delegate to sibling files; Phases 2 and 4 are inline.
 
-For the underlying mathematics see `notes/LN-docs-java.pdf` and the thesis sources under `fyp-thesis/`.
+For the underlying mathematics see `docs/ln_simple/notes/LN-docs-java.pdf` and the thesis sources under `docs/ln_simple/fyp-thesis/`.

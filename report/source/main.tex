@@ -1,0 +1,278 @@
+\documentclass[a4paper, twoside, 11pt]{report}
+
+%% Language and font encodings
+\usepackage[british]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+
+%% Allow line breaks within \texttt{} for long code identifiers.
+%% Hyphenat[htt] enables hyphenation in tt font; the wrapper around
+%% \texttt inserts an invisible \allowbreak at camelCase transitions
+%% and after _, ., / so identifiers like updateThinkTimeFromUtilization
+%% can wrap without overfull boxes. No visible hyphen is inserted.
+\usepackage[htt]{hyphenat}
+\setlength{\emergencystretch}{3em}
+\usepackage{xparse}
+\ExplSyntaxOn
+\tl_new:N \l_codett_tmp_tl
+\NewDocumentCommand{\InsertCodeBreaks}{m}{%
+  \tl_set:Nn \l_codett_tmp_tl {#1}%
+  \regex_replace_all:nnN { ([a-z])([A-Z]) } { \1\c{allowbreak}\2 } \l_codett_tmp_tl
+  \regex_replace_all:nnN { _ } { _\c{allowbreak} } \l_codett_tmp_tl
+  \regex_replace_all:nnN { \. } { .\c{allowbreak} } \l_codett_tmp_tl
+  \regex_replace_all:nnN { / } { /\c{allowbreak} } \l_codett_tmp_tl
+  \tl_use:N \l_codett_tmp_tl
+}
+\ExplSyntaxOff
+\let\OrigTexttt\texttt
+\renewcommand{\texttt}[1]{\OrigTexttt{\InsertCodeBreaks{#1}}}
+
+%% Sets page size and margins
+\usepackage[a4paper,top=2.5cm,bottom=2.5cm,left=2.5cm,right=2.5cm,marginparwidth=1.75cm]{geometry}
+
+%% Tighter section heading spacing for page-count reduction
+\usepackage{titlesec}
+\titlespacing*{\section}{0pt}{2ex}{1ex}
+\titlespacing*{\subsection}{0pt}{1.5ex}{0.8ex}
+\titlespacing*{\subsubsection}{0pt}{1ex}{0.5ex}
+
+%% Math
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsfonts}
+
+%% Figures and tables
+\usepackage{graphicx}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{placeins}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage{tabularx}
+
+%% TikZ for hand-drawn diagrams (Background §5)
+\usepackage{tikz}
+\usetikzlibrary{positioning, arrows.meta, shapes.geometric, fit, calc, backgrounds}
+
+%% Code listings and verbatim
+\usepackage{listings}
+\usepackage{verbatim}
+\usepackage{fancyvrb}
+
+%% Spacing and floats
+\usepackage{setspace}
+\singlespacing  % Reduced from \onehalfspacing for page-count management
+\raggedbottom   % Prevent flushbottom from redistributing stretch into gaps around unbreakable minipages (e.g. algorithm env)
+
+\usepackage{listings}
+\usepackage{xcolor}
+
+\lstset{
+  basicstyle=\ttfamily\footnotesize,
+  breaklines=true,
+  frame=single,
+  columns=fullflexible,
+  keepspaces=true
+}
+
+%% Algorithm environments — ruled float (\floatstyle{ruled}-style box with
+%% thick rules above and below the caption block) plus an algorithmic list
+%% with automatic line numbers. \State / \For / \EndFor / \Repeat / \Until.
+\DeclareCaptionType[within=chapter]{algocaption}[Algorithm][List of Algorithms]
+\captionsetup[algocaption]{labelsep=colon,singlelinecheck=false,justification=centering,belowskip=0pt,aboveskip=0pt}
+\newcommand{\algThickRule}{\par\noindent\hrule height 0.8pt\par}
+\newcommand{\algThinRule}{\par\noindent\hrule height 0.4pt\par}
+\newenvironment{algorithm}{%
+\par\medskip
+\captionsetup{type=algocaption}
+\algThickRule
+\vspace{0.4ex}
+}{%
+\vspace{0.4ex}
+\algThickRule
+\medskip
+}
+\newcounter{algLineNo}
+\newcounter{algIndent}
+\newlength{\algIndentUnit}
+\setlength{\algIndentUnit}{1.5em}
+\newcommand{\algIndentSkip}{\hspace*{\dimexpr\value{algIndent}\algIndentUnit\relax}}
+\newenvironment{algorithmic}[1][]{%
+\setcounter{algIndent}{0}%
+\par\vspace{0.4ex}\algThinRule\par\vspace{0.6ex}
+\begin{list}{\arabic{algLineNo}:}{%
+\usecounter{algLineNo}
+\setlength{\leftmargin}{2.6em}
+\setlength{\rightmargin}{0pt}
+\setlength{\labelwidth}{2em}
+\setlength{\labelsep}{0.6em}
+\setlength{\itemsep}{0pt}
+\setlength{\topsep}{0pt}
+\setlength{\parsep}{0pt}
+\setlength{\partopsep}{0pt}
+\renewcommand{\makelabel}[1]{##1\hfill}%
+}
+}{%
+\end{list}
+}
+\newcommand{\State}{\item\algIndentSkip}
+\newcommand{\For}[1]{\item\algIndentSkip\textbf{for} #1 \textbf{do}\stepcounter{algIndent}}
+\newcommand{\EndFor}{\addtocounter{algIndent}{-1}\item\algIndentSkip\textbf{end for}}
+\newcommand{\Repeat}{\item\algIndentSkip\textbf{repeat}\stepcounter{algIndent}}
+\newcommand{\Until}[1]{\addtocounter{algIndent}{-1}\item\algIndentSkip\textbf{until} #1}
+
+%% Unicode characters used in chapter prose.
+%% Greek letters and math symbols are rendered in text mode using
+%% \ensuremath{} so they work inside both math and text contexts.
+\DeclareUnicodeCharacter{03B1}{\ensuremath{\alpha}}
+\DeclareUnicodeCharacter{0394}{\ensuremath{\Delta}}
+\DeclareUnicodeCharacter{03B5}{\ensuremath{\varepsilon}}
+\DeclareUnicodeCharacter{03BB}{\ensuremath{\lambda}}
+\DeclareUnicodeCharacter{03BC}{\ensuremath{\mu}}
+\DeclareUnicodeCharacter{03A0}{\ensuremath{\Pi}}
+\DeclareUnicodeCharacter{03C0}{\ensuremath{\pi}}
+\DeclareUnicodeCharacter{03C1}{\ensuremath{\rho}}
+\DeclareUnicodeCharacter{03A3}{\ensuremath{\Sigma}}
+\DeclareUnicodeCharacter{03C9}{\ensuremath{\omega}}
+\DeclareUnicodeCharacter{03A9}{\ensuremath{\Omega}}
+\DeclareUnicodeCharacter{03B4}{\ensuremath{\delta}}
+\DeclareUnicodeCharacter{03B2}{\ensuremath{\beta}}
+\DeclareUnicodeCharacter{03B3}{\ensuremath{\gamma}}
+\DeclareUnicodeCharacter{03B8}{\ensuremath{\theta}}
+\DeclareUnicodeCharacter{03BD}{\ensuremath{\nu}}
+\DeclareUnicodeCharacter{03BE}{\ensuremath{\xi}}
+\DeclareUnicodeCharacter{03C3}{\ensuremath{\sigma}}
+\DeclareUnicodeCharacter{03C4}{\ensuremath{\tau}}
+\DeclareUnicodeCharacter{03C6}{\ensuremath{\varphi}}
+\DeclareUnicodeCharacter{03C7}{\ensuremath{\chi}}
+\DeclareUnicodeCharacter{03C8}{\ensuremath{\psi}}
+\DeclareUnicodeCharacter{2200}{\ensuremath{\forall}}
+\DeclareUnicodeCharacter{2203}{\ensuremath{\exists}}
+\DeclareUnicodeCharacter{2208}{\ensuremath{\in}}
+\DeclareUnicodeCharacter{2209}{\ensuremath{\notin}}
+\DeclareUnicodeCharacter{2212}{\ensuremath{-}}
+\DeclareUnicodeCharacter{2248}{\ensuremath{\approx}}
+\DeclareUnicodeCharacter{2260}{\ensuremath{\neq}}
+\DeclareUnicodeCharacter{2261}{\ensuremath{\equiv}}
+\DeclareUnicodeCharacter{2264}{\ensuremath{\leq}}
+\DeclareUnicodeCharacter{2265}{\ensuremath{\geq}}
+\DeclareUnicodeCharacter{221E}{\ensuremath{\infty}}
+\DeclareUnicodeCharacter{220F}{\ensuremath{\prod}}
+\DeclareUnicodeCharacter{2211}{\ensuremath{\sum}}
+\DeclareUnicodeCharacter{222B}{\ensuremath{\int}}
+\DeclareUnicodeCharacter{222A}{\ensuremath{\cup}}
+\DeclareUnicodeCharacter{2229}{\ensuremath{\cap}}
+\DeclareUnicodeCharacter{2227}{\ensuremath{\wedge}}
+\DeclareUnicodeCharacter{2228}{\ensuremath{\vee}}
+\DeclareUnicodeCharacter{2194}{\ensuremath{\leftrightarrow}}
+\DeclareUnicodeCharacter{2192}{\ensuremath{\rightarrow}}
+\DeclareUnicodeCharacter{2190}{\ensuremath{\leftarrow}}
+\DeclareUnicodeCharacter{21D2}{\ensuremath{\Rightarrow}}
+\DeclareUnicodeCharacter{21D0}{\ensuremath{\Leftarrow}}
+\DeclareUnicodeCharacter{21D4}{\ensuremath{\Leftrightarrow}}
+\DeclareUnicodeCharacter{00D7}{\ensuremath{\times}}
+\DeclareUnicodeCharacter{00F7}{\ensuremath{\div}}
+\DeclareUnicodeCharacter{00B1}{\ensuremath{\pm}}
+\DeclareUnicodeCharacter{00B7}{\ensuremath{\cdot}}
+\DeclareUnicodeCharacter{2026}{\ldots}
+\DeclareUnicodeCharacter{2080}{\ensuremath{_0}}
+\DeclareUnicodeCharacter{2081}{\ensuremath{_1}}
+\DeclareUnicodeCharacter{2082}{\ensuremath{_2}}
+\DeclareUnicodeCharacter{2083}{\ensuremath{_3}}
+\DeclareUnicodeCharacter{2084}{\ensuremath{_4}}
+\DeclareUnicodeCharacter{2085}{\ensuremath{_5}}
+\DeclareUnicodeCharacter{2086}{\ensuremath{_6}}
+\DeclareUnicodeCharacter{2087}{\ensuremath{_7}}
+\DeclareUnicodeCharacter{2088}{\ensuremath{_8}}
+\DeclareUnicodeCharacter{2089}{\ensuremath{_9}}
+\DeclareUnicodeCharacter{208A}{\ensuremath{_+}}
+\DeclareUnicodeCharacter{2070}{\ensuremath{^0}}
+\DeclareUnicodeCharacter{00B9}{\ensuremath{^1}}
+\DeclareUnicodeCharacter{00B2}{\ensuremath{^2}}
+\DeclareUnicodeCharacter{00B3}{\ensuremath{^3}}
+\DeclareUnicodeCharacter{2074}{\ensuremath{^4}}
+\DeclareUnicodeCharacter{2075}{\ensuremath{^5}}
+\DeclareUnicodeCharacter{2076}{\ensuremath{^6}}
+\DeclareUnicodeCharacter{2077}{\ensuremath{^7}}
+\DeclareUnicodeCharacter{2078}{\ensuremath{^8}}
+\DeclareUnicodeCharacter{2079}{\ensuremath{^9}}
+\DeclareUnicodeCharacter{1D62}{\ensuremath{_i}}
+\DeclareUnicodeCharacter{1D63}{\ensuremath{_r}}
+\DeclareUnicodeCharacter{2605}{\ensuremath{\star}}
+\DeclareUnicodeCharacter{2606}{\ensuremath{\star}}
+\DeclareUnicodeCharacter{2020}{\ensuremath{\dagger}}
+\DeclareUnicodeCharacter{2021}{\ensuremath{\ddagger}}
+\DeclareUnicodeCharacter{00A7}{\S}
+\DeclareUnicodeCharacter{00B6}{\P}
+\DeclareUnicodeCharacter{20D7}{} % combining right arrow above (vector) — drop
+\DeclareUnicodeCharacter{00A0}{ } % non-breaking space
+
+%% Hyperlinks
+\usepackage[colorlinks=true, linkcolor=black, citecolor=blue, urlcolor=blue, filecolor=blue]{hyperref}
+
+%% Listings configuration for code blocks
+\lstset{
+    basicstyle=\ttfamily\footnotesize,
+    breaklines=true,
+    columns=fullflexible,
+    frame=single,
+    keepspaces=true,
+    showstringspaces=false,
+    xleftmargin=0.5em,
+    xrightmargin=0.5em,
+    aboveskip=0.5em,
+    belowskip=0.5em
+}
+
+%% Section numbering depth
+\setcounter{secnumdepth}{3}
+\setcounter{tocdepth}{1}
+
+\title{A Bottom-Up Layered Queueing Network Solver: Construction and Characterisation}
+\author{Alex Slater}
+
+\begin{document}
+\input{title/title.tex}
+
+\pagenumbering{roman}
+
+% Abstract
+\input{abstract/abstract.tex}
+
+% Acknowledgements
+\renewcommand{\abstractname}{Acknowledgements}
+\begin{abstract}
+\noindent
+I would like to thank my supervisor, Dr.\ Giuliano Casale, for
+his guidance throughout this project. His maintenance of the LINE
+codebase, specifically \texttt{SolverLN}, provided the primary comparator 
+for my solver, and his time and insights have been invaluable.
+\end{abstract}
+
+\tableofcontents
+\listoffigures
+
+\clearpage
+\pagenumbering{arabic}
+
+\input{introduction/introduction.tex}
+\input{background/background.tex}
+\input{contribution/contribution.tex}
+\input{evaluation/evaluation.tex}
+\input{conclusion/conclusion.tex}
+
+% Force inclusion of every BibTeX entry — the related work section (§3.7)
+% references several sources in author-year prose rather than via \cite,
+% but the references list should still include them.
+\nocite{*}
+\bibliographystyle{ieeetr}
+\bibliography{bibs/sample}
+
+\input{declarations/declarations.tex}
+
+\input{appendix/appendix.tex}
+
+\end{document}
